@@ -97,3 +97,18 @@ test('solid actuals and hatched remaining needs stay distinct, unknown actuals s
   assert.deepEqual(progressParts(null,3),{solid:0,planned:100,known:false});
   assert.deepEqual(progressParts(0,0),{solid:0,planned:0,known:true});
 });
+
+import {dayAllocation,remainingPV} from '../custom_components/solar_pilot/frontend/energy-budget.js';
+test('one daily allocation includes each historical and future PV kWh exactly once',()=>{
+  const ledger={available:true,day:'2026-10-27',updated:1000,actual:{house:2,storage:1,tesla:3,other:2,solar:8,house_load:3.7,pv_hours:4}};
+  const b=dayAllocation(ledger,budgetSnapshot,budgetConfig,12,2.5,'2026-10-27',1000);
+  assert.equal(b.total,20);assert.equal(b.extraLeft,0);
+  assert.ok(Math.abs(Object.values(b.actual).reduce((a,v)=>a+v,0)+Object.values(b.future).reduce((a,v)=>a+v,0)-20)<1e-9);
+  assert.equal(dayAllocation({...ledger,day:'2026-10-26'},budgetSnapshot,budgetConfig,12,2.5,'2026-10-27',1000),null);
+  assert.equal(dayAllocation(ledger,budgetSnapshot,budgetConfig,12,2.5,'2026-10-27',2000),null);
+});
+test('remaining P50 energy is integrated from now, never the obsolete day total minus actual',()=>{
+  const points=[{t:0,p:2},{t:1800000,p:4}];
+  assert.equal(remainingPV(points,900000,3600000),2.5);
+  assert.equal(remainingPV([{t:1800000,p:4}],0,3600000),null);
+});
