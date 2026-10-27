@@ -82,3 +82,18 @@ test('budget accepts a reached reserve, rejects missing/stale data and does not 
   const n=energyBudget({...budgetSnapshot,daylight:false,hours_left:20},budgetConfig,2.5,1000);
   assert.equal(n.forecast,0);assert.equal(n.houseNeed,0);assert.equal(n.tesla,0);
 });
+
+import {dailyEnergy,progressParts} from '../custom_components/solar_pilot/frontend/energy-budget.js';
+test('daily actuals require valid units and a state from this local day',()=>{
+  const entity={state:'50324',last_updated:'2026-10-27T10:00:00Z',attributes:{unit_of_measurement:'Wh'}},start=Date.parse('2026-10-26T23:00:00Z'),now=Date.parse('2026-10-27T12:00:00Z');
+  assert.equal(dailyEnergy(entity,start,now),50.324);
+  assert.equal(dailyEnergy({...entity,state:'unavailable'},start,now),null);
+  assert.equal(dailyEnergy({...entity,last_updated:'2026-10-26T10:00:00Z'},start,now),null);
+  assert.equal(dailyEnergy({...entity,attributes:{unit_of_measurement:'W'}},start,now),null);
+});
+test('solid actuals and hatched remaining needs stay distinct, unknown actuals stay unknown',()=>{
+  assert.deepEqual(progressParts(3.2,0,5),{solid:64,planned:0,known:true});
+  assert.deepEqual(progressParts(2,1,5),{solid:40,planned:20,known:true});
+  assert.deepEqual(progressParts(null,3),{solid:0,planned:100,known:false});
+  assert.deepEqual(progressParts(0,0),{solid:0,planned:0,known:true});
+});
