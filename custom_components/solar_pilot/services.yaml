@@ -1,0 +1,52 @@
+activate:
+  name: Automatik übernehmen
+  description: Deaktiviert die zugeordnete Ladeautomation und übernimmt die Gerätesteuerung.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    mode:
+      default: auto
+      selector:
+        select:
+          options: [auto, storage_first, charge_minimum]
+release:
+  name: Zur bisherigen Automation
+  description: Gibt die Steuerung zurück und stellt unveränderte eigene Einstellungen soweit möglich zurück.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+evaluate:
+  name: Neu berechnen
+  description: Berechnet neu. Im aktiven Modus werden bei Bedarf Gerätebefehle gesendet.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+set_mode:
+  name: Betriebsmodus setzen
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    mode:
+      required: true
+      selector:
+        select:
+          options: [observe, auto, storage_first, charge_minimum, paused]
+configure:
+  name: Einstellungen ändern
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    settings:
+      required: true
+      selector:
+        object:

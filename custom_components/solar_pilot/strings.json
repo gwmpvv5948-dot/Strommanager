@@ -1,0 +1,92 @@
+{
+  "title": "Strommanager",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Energieanlage zuordnen",
+        "description": "Bestehende Entitäten auswählen. Strommanager startet ohne Gerätebefehle im Beobachtungsmodus.",
+        "data": {
+          "house_soc": "Hausspeicher · Ladestand",
+          "battery_power": "Batterieleistung (+ Laden)",
+          "discharge_limit": "Maximale Entladeleistung (steuerbar)",
+          "grid_charge": "Netzladung des Hausspeichers",
+          "pv_power": "PV-Istleistung",
+          "grid_power": "Netzleistung (+ Einspeisung)",
+          "wallbox_power": "Wallbox-Leistung",
+          "wallbox_enabled": "Wallbox eingeschaltet",
+          "forecast": "PV-Restprognose heute",
+          "forecast_updated": "Letzter Prognoseabruf",
+          "sun": "Sonnenstand",
+          "legacy_automation": "Bisherige Ladeautomation (für Übernahme)"
+        }
+      },
+      "vehicle": {
+        "title": "Fahrzeug zuordnen",
+        "description": "Tesla Fleet bleibt für Anmeldung und Kommunikation zuständig.",
+        "data": {
+          "car_soc": "Fahrzeug · Ladestand",
+          "car_limit": "Fahrzeug · Ladelimit",
+          "car_current": "Fahrzeug · Ladestrom",
+          "car_charge": "Fahrzeug · Ladefreigabe",
+          "car_home": "Fahrzeug · Standort",
+          "car_cable": "Fahrzeug · Ladekabel",
+          "car_online": "Fahrzeug · Online"
+        }
+      },
+      "preferences": {
+        "title": "Ladeziele und Reserven",
+        "description": "70 % sind ein Mindestziel für den Abend, keine Ladeobergrenze. Netzladung des Hausspeichers bleibt aus.",
+        "data": {
+          "reserve_soc": "Abendreserve (%)",
+          "capacity_kwh": "Speicherkapazität (kWh)",
+          "car_min_soc": "Tesla-Mindeststand (%)",
+          "phases": "Ladephasen (1 oder 3)",
+          "max_amps": "Maximaler Ladestrom (8–48 A)",
+          "normal_discharge_w": "Normale Entladeleistung (W)",
+          "max_charge_w": "Maximales Speicher-Ladebudget (W)",
+          "forecast_factor": "Anteil der Prognose einplanen (0,1–1)",
+          "buffer_kwh": "Energiepuffer (kWh)",
+          "margin_w": "Leistungspuffer (W)",
+          "minimum_house_w": "Hauslast mindestens einplanen (W)",
+          "cloud_interval_s": "Mindestabstand Tesla-Befehle (Sekunden)",
+          "grid_export_positive": "Positive Netzleistung = Einspeisung",
+          "battery_charge_positive": "Positive Batterieleistung = Laden"
+        }
+      }
+    },
+    "error": {
+      "entity_missing": "Entität fehlt oder hat den falschen Typ.",
+      "duplicate_entity": "Jeder Eingang benötigt eine eigene Entität.",
+      "invalid_settings": "Werte und Ladephasen prüfen. Mindestens 8 A maximaler Ladestrom; Prozentwerte 0–100."
+    },
+    "abort": {
+      "already_configured": "Strommanager ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Strommanager konfigurieren",
+        "data": {
+          "reserve_soc": "Abendreserve (%)",
+          "capacity_kwh": "Speicherkapazität (kWh)",
+          "car_min_soc": "Tesla-Mindeststand (%)",
+          "phases": "Ladephasen (1 oder 3)",
+          "max_amps": "Maximaler Ladestrom (8–48 A)",
+          "normal_discharge_w": "Normale Entladeleistung (W)",
+          "max_charge_w": "Maximales Speicher-Ladebudget (W)",
+          "forecast_factor": "Anteil der Prognose einplanen (0,1–1)",
+          "buffer_kwh": "Energiepuffer (kWh)",
+          "margin_w": "Leistungspuffer (W)",
+          "minimum_house_w": "Hauslast mindestens einplanen (W)",
+          "cloud_interval_s": "Mindestabstand Tesla-Befehle (Sekunden)",
+          "grid_export_positive": "Positive Netzleistung = Einspeisung",
+          "battery_charge_positive": "Positive Batterieleistung = Laden"
+        }
+      }
+    },
+    "error": {
+      "invalid_settings": "Werte und Ladephasen prüfen."
+    }
+  }
+}

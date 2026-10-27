@@ -1,0 +1,11 @@
+{
+  "domain": "solar_pilot",
+  "name": "Strommanager",
+  "version": "0.1.0",
+  "config_flow": true,
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "dependencies": ["frontend", "http", "panel_custom", "websocket_api"],
+  "requirements": [],
+  "codeowners": []
+}
