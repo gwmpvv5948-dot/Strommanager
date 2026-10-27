@@ -2,7 +2,7 @@
 
 Eigene Home-Assistant-Integration mit einem Panel in der Seitenleiste für PV, Hausspeicher und Tesla. Interner Integrationsname: `solar_pilot`.
 
-**Entwicklungsstand 0.1.1 — unter Home Assistant 2026.10.4 im Beobachtungsmodus erprobt.** Einrichtung, fünf Sensoren, eigenes Panel mit Livewerten, Neuberechnung sowie Speichern der Einstellungen mit Integrations-Neuladen wurden geprüft. 47 lokale Tests und die GitHub-Prüfung bestehen. Schreibender Gerätebetrieb und Langzeitregelung sind noch nicht live abgenommen. Die vorhandene Ladeautomation bleibt bis zur ausdrücklichen Übernahme aktiv.
+**Entwicklungsstand 0.1.3.** Eigenes HA-Panel, persistente Tagesbilanz und einstellbare Tesla-/Speicher-Ladehysterese. 73 Python- und 20 JavaScript-Tests prüfen Berechnung, Befehlsplanung und Adapter-Verträge. Die neue Grenzwertsteuerung ist noch nicht durch einen vollständigen echten Ladezyklus live abgenommen.
 
 ## Was die erste Version enthält
 
@@ -15,7 +15,11 @@ Eigene Home-Assistant-Integration mit einem Panel in der Seitenleiste für PV, H
 
 ## Verhalten
 
-Das Auto lädt ausschließlich mit verfügbarem PV-Überschuss, auch unterhalb des Tesla-Mindeststands. Der Mindeststand von 50 % ist ein Ziel ohne zeitliche Garantie. Der eingestellte Fahrzeug-Ladegrenzwert hat immer Vorrang. Oberhalb des Mindeststands wird PV-orientiert bis zu diesem Fahrzeuglimit geladen. Während Autoladung bleibt die Entladegrenze des Hausspeichers bei 0 W. Tagsüber unter der Abendreserve wird die Entladung ebenfalls gesperrt; das kann Netzbezug für andere Hausverbraucher verursachen. Nachts ohne Autoladung wird die normale Entladeleistung freigegeben.
+Unter der einstellbaren Tesla-Untergrenze (Vorgabe 20 %) startet eine Mindestladung mit erlaubtem Netzstrom bis zum Mindestziel (Vorgabe 50 %). Diese Freigabe bleibt nach Überschreiten der Untergrenze bestehen, bis das Mindestziel oder das kleinere Fahrzeuglimit erreicht ist. Der Hausspeicher bleibt dabei auf 0 W Entnahme begrenzt. Die Freigabe wird dauerhaft gespeichert, auch über Neustarts.
+
+Sonst beginnt Laden bei Netzeinspeisung mit ausreichendem PV-Budget oder oberhalb der Speicherfreigabe (Vorgabe 80 %). Die Speicherfreigabe bleibt bis zur Abendreserve erhalten. Entladung wird dort für Tesla auf 0 W begrenzt; falls PV weiter reicht, kann das Auto weiterladen. Ohne PV und Speicherfreigabe wird pausiert. Das Fahrzeuglimit bleibt die obere Grenze. Die Entladeleistung ist eine gemeinsame Obergrenze für Haus und Auto. Im Modus „Nur Tesla-Mindeststand“ endet jede Ladung am Mindestziel. Untergrenze < Mindestziel und Speicherfreigabe >= Abendreserve werden validiert.
+
+Aktuelle Messungen sind Voraussetzung für Befehle. Start- und Strombefehle warten auf die bestätigte erlaubte Entladegrenze und abgeschaltete Netzladung des Hausspeichers. Cloud- und Messverzögerungen können kurze Netzbezüge sowie Abweichungen an SoC-Grenzen verursachen; es handelt sich nicht um eine hardwareseitige SoC-Sperre. Ohne Autoladung bleibt die bisherige Hausversorgung erhalten.
 
 70 % sind **keine Obergrenze**: Strommanager verändert weder die Speicher-Ladeobergrenze noch die normale minimale Entladeschwelle. Ohne ausreichend PV ist das Abendziel nicht garantiert. Der aktuelle Hausverbrauch dient als Schätzung des Restbedarfs; es gibt in dieser Version noch kein gelerntes Lastprofil. Die PV-Prognose wird so verwendet, wie die ausgewählte Entität sie liefert. Bei Solcast kann das beispielsweise `estimate10` sein.
 
@@ -87,3 +91,10 @@ Eigene Sensoren `PV heute Haus`, `PV heute Speicher`, `PV heute Tesla`, `PV heut
 Die aktuelle Tageserwartung ist bisher bilanzierte PV plus verbleibende P50-Kurve. Eine frühere, inzwischen nicht mehr realistische Tagesprognose wird nicht als noch verfügbare Energie behandelt. Die zukünftigen Anteile berücksichtigen Prognosefaktor, Energiepuffer, Grundbedarf bis Abend, fehlende Speicherreserve inklusive Ladeverlusten und verbleibendes Tesla-Budget. Bereits erfolgte Speicherladung bleibt im historischen Anteil, auch wenn sie über das heute eingestellte Reserveziel hinausging.
 
 `Zusätzlicher Hausbedarf pro PV-Tag` (Vorgabe 2,5 kWh) wird jetzt zentral in der HA-Konfiguration gespeichert. Aus der bilanzierten Hauslast während PV-Zeiten wird der bereits erfolgte Mehrverbrauch über der Grundlast abgezogen; verbrauchter Zusatzbedarf wird nicht erneut reserviert. Der frühere lokale Browser-Planwert wird nicht übernommen. Die gesamte Budgetberechnung dient der Anzeige, ändert keine Gerätebefehle und garantiert weder Ladeleistung noch das Abendziel. Die bestehende Regelung bleibt maßgeblich.
+
+
+### Neu in 0.1.3: Ladegrenzen und Batterieanzeige
+
+Tesla-Untergrenze und Mindestziel sowie Speicherfreigabe und Abendreserve bilden zwei getrennte Hysteresen. Die vertikale Batterieanzeige markiert beide Speichergrenzen und den aktuellen Füllstand; Symbole für Haus, Auto und Freigabe erklären die Bereiche. Der Füllstand wird zusätzlich in kWh angezeigt, unbekannte oder veraltete Daten werden gekennzeichnet. Die Grafik nutzt dieselben Einstellungen wie die Regelung.
+
+Ein notwendiger Ladestopp wartet nicht auf den normalen Cloud-Abstand. Wiederholte Stoppversuche haben weiterhin mindestens zwei Minuten Abstand und Fehler-Backoff.
