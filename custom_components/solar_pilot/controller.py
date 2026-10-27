@@ -239,39 +239,8 @@ class Controller:
             await self.persist()
         await self.async_update()
 
-    async def async_release(self):
-        """Return ownership explicitly; retain records if restoration fails."""
-        async with self.lock:
-            self.mode = "observe"
-            await self.persist()
-            for command in self.executor.restoration(self.current_settings()):
-                s = self.read()
-                if command.channel == "car_current":
-                    # Restoring an amperage is still a cloud command. Never send it away from home.
-                    if not (s.at_home and s.cable and s.online and s.location_age <= self.settings.car_max_age_s):
-                        continue
-                    # Restoration is explicitly requested and may follow restoration of discharge power.
-                    state = self.state("car_current")
-                    if state:
-                        if not state.attributes.get("min", 0) <= command.value <= state.attributes.get("max", 0):
-                            raise ServiceValidationError("Ursprünglicher Ladestrom liegt außerhalb aktueller Gerätegrenzen")
-                        await self.hass.services.async_call("number", "set_value", {
-                            "entity_id": self.entities["car_current"], "value": command.value}, blocking=True)
-                    self.executor.owned.pop(command.channel, None)
-                    continue
-                await self._send(command)
-                self.executor.owned.pop(command.channel, None)
-            if self.legacy_owned:
-                await self.hass.services.async_call("automation", "turn_on", {
-                    "entity_id": self.entities["legacy_automation"]}, blocking=True)
-                self.legacy_owned = False
-            self.executor.baselines.clear()
-            self.executor.owned.clear()
-            await self.persist()
-        await self.async_update()
-
     async def async_stop(self):
-        # Unloading never resumes or stops a car. Explicit release is the reversible handover.
+        # Unloading never changes devices or reactivates the previous automation.
         self._stopping = True
         async with self.lock:
             await self.persist()

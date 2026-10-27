@@ -11,14 +11,6 @@ activate:
       selector:
         select:
           options: [auto, storage_first, charge_minimum]
-release:
-  name: Zur bisherigen Automation
-  description: Gibt die Steuerung zurück und stellt unveränderte eigene Einstellungen soweit möglich zurück.
-  fields:
-    entry_id:
-      required: true
-      selector:
-        text:
 evaluate:
   name: Neu berechnen
   description: Berechnet neu. Im aktiven Modus werden bei Bedarf Gerätebefehle gesendet.

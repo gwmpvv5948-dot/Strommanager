@@ -49,14 +49,12 @@ async def async_setup_entry(hass, entry):
                 await controller.async_set_mode(call.data["mode"])
             elif call.service == "activate":
                 await controller.async_activate(call.data.get("mode", "auto"))
-            elif call.service == "release":
-                await controller.async_release()
             elif call.service == "configure":
                 await controller.async_configure(call.data["settings"])
             else:
                 await controller.async_update()
 
-        for name in ("activate", "release", "evaluate", "set_mode", "configure"):
+        for name in ("activate", "evaluate", "set_mode", "configure"):
             fields = {**schema}
             if name == "set_mode":
                 fields[vol.Required("mode")] = vol.In(MODES)
