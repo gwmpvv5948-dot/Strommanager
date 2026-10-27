@@ -29,11 +29,31 @@ export function actualSegments(rows,start,end,unit) {
   }
   flush();return segments;
 }
-export function storagePotential(s,c,d){
-  const soc=number(s.house_soc),energy=number(d.forecast_net_kwh),hours=number(s.hours_left);
-  if(soc===null||soc<0||soc>100||energy===null||hours===null||hours<0||!s.daylight||!(c.capacity_kwh>0)||number(s.house_soc_age)===null||s.house_soc_age>c.meter_max_age_s)return null;
-  const charge=Math.min(Math.max(0,energy),Math.max(0,c.max_charge_w*hours/1000))*c.efficiency;
-  return Math.min(100,Math.max(0,soc)+charge/c.capacity_kwh*100);
+export function storagePotential(s,c,points,now){
+  const soc=number(s.house_soc),hours=number(s.hours_left);
+  const fresh=(age,max)=>number(age)!==null&&age>=0&&age<=max;
+  if(soc===null||soc<0||soc>100||hours===null||hours<=0||!s.daylight||!(c.capacity_kwh>0)
+      ||!fresh(s.house_soc_age,c.meter_max_age_s)||!fresh(s.meter_age,c.meter_max_age_s)
+      ||!fresh(s.forecast_age,c.forecast_max_age_s)||!Number.isFinite(now)||!Array.isArray(points)||!points.length)return null;
+  if([s.pv_w,s.grid_export_w,s.battery_charge_w,s.wallbox_w].some(v=>number(v)===null))return null;
+  // The EV regulation budget subtracts an energy buffer from a conservative total.
+  // A storage charging forecast must instead integrate the remaining PV curve:
+  // that reserved buffer can still charge the battery, and EV charging is excluded.
+  const batt=Math.min(s.battery_charge_w,s.battery_charge_w*.95);
+  const surplus=Math.max(0,s.wallbox_w+s.grid_export_w+batt);
+  const house=Math.max(c.minimum_house_w,s.pv_w*.95-surplus);
+  const end=now+hours*3600000;
+  let charge=0,covered=now;
+  for(let i=0;i<points.length;i++){
+    const p=points[i],start=Math.max(now,p.t),stop=Math.min(end,p.t+1800000,points[i+1]?.t??Infinity);
+    if(stop<=start)continue;
+    if(start>covered+1000||number(p.p)===null||p.p<0)return null;
+    const watts=Math.min(c.max_charge_w,Math.max(0,p.p*1000*c.forecast_factor-house));
+    charge+=watts*(stop-start)/3600000000*c.efficiency;
+    covered=stop;
+  }
+  if(covered<end-1000)return null;
+  return Math.min(100,soc+charge/c.capacity_kwh*100);
 }
 export function batteryProtection(s,c,d,mode){
   const current=number(s.current_discharge_w),fresh=number(s.meter_age)!==null&&s.meter_age<=c.meter_max_age_s;
