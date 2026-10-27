@@ -50,7 +50,8 @@
           "minimum_house_w": "Hauslast mindestens einplanen (W)",
           "cloud_interval_s": "Mindestabstand Tesla-Befehle (Sekunden)",
           "grid_export_positive": "Positive Netzleistung = Einspeisung",
-          "battery_charge_positive": "Positive Batterieleistung = Laden"
+          "battery_charge_positive": "Positive Batterieleistung = Laden",
+          "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)"
         }
       }
     },
@@ -81,7 +82,8 @@
           "minimum_house_w": "Hauslast mindestens einplanen (W)",
           "cloud_interval_s": "Mindestabstand Tesla-Befehle (Sekunden)",
           "grid_export_positive": "Positive Netzleistung = Einspeisung",
-          "battery_charge_positive": "Positive Batterieleistung = Laden"
+          "battery_charge_positive": "Positive Batterieleistung = Laden",
+          "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)"
         }
       }
     },
