@@ -98,3 +98,10 @@ class DurableTracker(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(restored.status()['day'],'2026-10-28')
             self.assertAlmostEqual(restored.status()['actual']['solar'],3.8*5/60)
             self.assertEqual(restored.status()['missing_minutes'],0)
+
+class RecorderSemantics(unittest.TestCase):
+    def test_unchanged_states_are_held_to_a_verified_endpoint(self):
+        rows={key:[(0,value),(3600,value)] for key,value in [('pv',4000),('grid',0),('battery',1000),('wallbox',3)]}
+        self.assertEqual(len(budget.integrate(rows,0,3600)),60)
+        rows['wallbox']=[(0,3),(1200,None),(2400,3),(3600,3)]
+        self.assertEqual(len(budget.integrate(rows,0,3600)),40)
