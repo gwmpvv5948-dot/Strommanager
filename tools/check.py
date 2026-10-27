@@ -15,5 +15,6 @@ assert manifest['domain']=='solar_pilot' and manifest['config_flow'] is True
 strings=json.loads((component/'strings.json').read_text())
 translation=json.loads((component/'translations'/'de.json').read_text())
 assert strings==translation
-subprocess.run(['node','--check',str(component/'frontend'/'panel.js')],check=True)
+for script in (component/'frontend').glob('*.js'):
+    subprocess.run(['node','--check',str(script)],check=True)
 print('Python syntax, JSON, German translations and JavaScript syntax: OK')
