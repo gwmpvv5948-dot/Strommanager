@@ -2,7 +2,7 @@
 
 Eigene Home-Assistant-Integration mit einem Panel in der Seitenleiste für PV, Hausspeicher und Tesla. Interner Integrationsname: `solar_pilot`.
 
-**Entwicklungsstand 0.1.0 — unter Home Assistant 2026.10.4 im Beobachtungsmodus erprobt.** Einrichtung, fünf Sensoren, eigenes Panel mit Livewerten, Neuberechnung sowie Speichern der Einstellungen mit Integrations-Neuladen wurden geprüft. 49 lokale Tests und die GitHub-Prüfung bestehen. Schreibender Gerätebetrieb und Langzeitregelung sind noch nicht live abgenommen. Die vorhandene Ladeautomation bleibt bis zur ausdrücklichen Übernahme aktiv.
+**Entwicklungsstand 0.1.1 — unter Home Assistant 2026.10.4 im Beobachtungsmodus erprobt.** Einrichtung, fünf Sensoren, eigenes Panel mit Livewerten, Neuberechnung sowie Speichern der Einstellungen mit Integrations-Neuladen wurden geprüft. 47 lokale Tests und die GitHub-Prüfung bestehen. Schreibender Gerätebetrieb und Langzeitregelung sind noch nicht live abgenommen. Die vorhandene Ladeautomation bleibt bis zur ausdrücklichen Übernahme aktiv.
 
 ## Was die erste Version enthält
 
@@ -33,11 +33,11 @@ Die Berechnung entfernt Batterieentladung aus dem vermeintlichen PV-Überschuss.
 
 HACS-Veröffentlichung oder automatisches Update sind noch nicht eingerichtet. Keine Anmeldung, Tokens oder privaten Fahrzeugschlüssel in dieses Repository legen.
 
-### Pause und Rückgabe
+### Pausieren und Deinstallation
 
-**Pause** bedeutet: keine weiteren Schreibzugriffe, die zuletzt gesetzten Werte bleiben erhalten. Beobachten nach aktiver Steuerung hat denselben Effekt auf Geräte; es berechnet weiter Vorschläge. **Zur bisherigen Automation** stellt die von Strommanager geänderten Zahlenwerte nur dann zurück, wenn sie noch dem letzten eigenen Stellwert entsprechen, und aktiviert eine zuvor übernommene Automation wieder. Eine zwischenzeitliche manuelle Änderung wird nicht überschrieben. Ladefreigaben werden bei Rückgabe oder Entladen der Integration nicht automatisch umgeschaltet.
+**Pause** und **Beobachten** senden keine Gerätebefehle. Zuletzt gesetzte Gerätewerte bleiben bestehen. Es gibt keine automatische Rückkehr zur bisherigen Automation. Vor Deinstallation die Regelung pausieren und gewünschte Gerätewerte sowie eine gegebenenfalls benötigte Automation manuell einstellen.
 
-Ein aktiver Modus und seine Befehlsabstände werden über Neustarts erhalten. Beim Entladen der Integration werden keine Geräte verändert. Vor Deinstallation deshalb explizit zurückgeben und die Gerätewerte kontrollieren. Nach einem Neustart wird bei aktiver oder nicht prüfbarer alter Automation jede automatische Steuerung blockiert. Weitere, nicht zugeordnete Automationen oder externe Energiemanager kann der Konfliktschutz nicht erkennen.
+Ein aktiver Modus und seine Befehlsabstände werden über Neustarts erhalten. Beim Entladen der Integration werden keine Geräte verändert. Vor Deinstallation deshalb pausieren und die Gerätewerte kontrollieren. Nach einem Neustart wird bei aktiver oder nicht prüfbarer alter Automation jede automatische Steuerung blockiert. Weitere, nicht zugeordnete Automationen oder externe Energiemanager kann der Konfliktschutz nicht erkennen.
 
 ## Entwicklungsumgebung
 
@@ -55,3 +55,7 @@ UI-Demo anschließend unter `http://127.0.0.1:8765/docs/demo.html`. Sie verwende
 Die Laufzeit-Anbindung zielt auf Home Assistant 2026.10; für das eigene Panel werden die offiziellen Frontend-, Panel- und Service-APIs genutzt. Der Config Flow unterstützt die Schema-Bibliothek `probatio` sowie ältere Installationen mit `voluptuous`. Weitere Prüfungen des schreibenden Gerätebetriebs, Langzeittests und `hassfest` stehen noch aus.
 
 Mehr zu Aufbau, Schutzmaßnahmen und Grenzen: [Architektur](docs/ARCHITECTURE.md).
+
+### Neu in 0.1.1
+
+Kurze Erklärungen unter allen Einstellwerten, kompakte Tesla-Kachel mit schematischer Fahrzeugdarstellung, Akkubalken und Wallbox-Leistung. Fahrzeugdaten werden ohne zusätzliche Tesla-Abfragen angezeigt; eine Reichweite wird ohne zugeordneten Reichweitensensor nicht geschätzt. Die Rückgabe-Funktion zur alten Automation ist entfernt.
