@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from bisect import bisect_right
 from datetime import datetime, timedelta, timezone
-from functools import partial
 import math
 
 FIELDS = ("house", "storage", "tesla", "other", "solar", "house_load", "pv_hours")
@@ -45,8 +44,11 @@ def integrate(rows, start, end, grid_positive=True, battery_positive=True):
                 values.append(None)
                 continue
             t, value = rows[key][index]
-            # Never stretch a non-zero power indefinitely across a recorder gap.
-            values.append(value if stamp - t <= 900 or key == "pv" and value == 0 else None)
+            # Recorder stores changes, not every identical report. A following
+            # state (or fresh live endpoint) bounds a held value. Explicit
+            # unknown/unavailable samples still create real gaps.
+            bounded = index + 1 < len(times[key])
+            values.append(value if bounded or stamp - t <= 900 or value == 0 else None)
         if values[0] == 0:
             bins[str(minute)] = [0.0] * len(FIELDS)
             continue
@@ -96,10 +98,11 @@ class DayBudgetTracker:
             day, start, end = local.date().isoformat(), midnight.timestamp(), now.timestamp()
             ids = {"pv": self.entities["pv_power"], "grid": self.entities["grid_power"],
                    "battery": self.entities["battery_power"], "wallbox": self.entities["wallbox_power"]}
-            signature = [ids, self.settings.grid_export_positive, self.settings.battery_charge_positive]
+            signature = [ids, self.settings.grid_export_positive, self.settings.battery_charge_positive, "held-state-v2"]
             previous = self.data if self.data.get("day") == day and self.data.get("signature") == signature else {}
             query_start = max(start, previous.get("until", start) - 600)
             recorder = get_instance(self.hass)
+            live = {key: self.hass.states.get(entity_id) for key, entity_id in ids.items()} if hasattr(self.hass, "states") else {}
             def read_and_integrate():
                 states = history.get_significant_states(self.hass, datetime.fromtimestamp(query_start, timezone.utc), now,
                     list(ids.values()), include_start_time_state=True, significant_changes_only=False,
@@ -112,6 +115,13 @@ class DayBudgetTracker:
                         unit = state.attributes.get("unit_of_measurement")
                         value = value * (1000 if unit == "kW" else 1) if value is not None and unit in ("W", "kW") else None
                         rows[key].append((state.last_updated.timestamp(), value))
+                    current = live.get(key)
+                    report = getattr(current, "last_reported", None) if current else None
+                    if report and 0 <= end - report.timestamp() <= 300:
+                        value = finite(current.state)
+                        unit = current.attributes.get("unit_of_measurement")
+                        value = value * (1000 if unit == "kW" else 1) if value is not None and unit in ("W", "kW") else None
+                        rows[key].append((end, value))
                     rows[key].sort(key=lambda row: row[0])
                 return integrate(rows, query_start, end, self.settings.grid_export_positive, self.settings.battery_charge_positive)
             fresh = await recorder.async_add_executor_job(read_and_integrate)
