@@ -39,7 +39,9 @@
         "data": {
           "reserve_soc": "Abendreserve (%)",
           "capacity_kwh": "Speicherkapazität (kWh)",
-          "car_min_soc": "Tesla-Mindeststand (%)",
+          "car_min_soc": "Tesla-Mindestziel (%)",
+          "car_low_soc": "Tesla-Untergrenze für Netzladung (%)",
+          "storage_release_soc": "Speicherfreigabe für Tesla (%)",
           "phases": "Ladephasen (1 oder 3)",
           "max_amps": "Maximaler Ladestrom (8–48 A)",
           "normal_discharge_w": "Normale Entladeleistung (W)",
@@ -71,7 +73,9 @@
         "data": {
           "reserve_soc": "Abendreserve (%)",
           "capacity_kwh": "Speicherkapazität (kWh)",
-          "car_min_soc": "Tesla-Mindeststand (%)",
+          "car_min_soc": "Tesla-Mindestziel (%)",
+          "car_low_soc": "Tesla-Untergrenze für Netzladung (%)",
+          "storage_release_soc": "Speicherfreigabe für Tesla (%)",
           "phases": "Ladephasen (1 oder 3)",
           "max_amps": "Maximaler Ladestrom (8–48 A)",
           "normal_discharge_w": "Normale Entladeleistung (W)",
