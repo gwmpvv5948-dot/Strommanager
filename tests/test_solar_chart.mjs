@@ -30,3 +30,31 @@ test('missing, stale or incomplete forecasts produce no projection',()=>{
   assert.equal(storagePotential(snapshot,config,[{t:now,p:2}],now),null);
 });
 test('protection badge requires measured charging and actual reduced limit',()=>{const c={normal_discharge_w:2500,meter_max_age_s:300};assert.equal(batteryProtection({wallbox_w:3500,meter_age:10,current_discharge_w:0},c,{},'observe').kind,'active');assert.equal(batteryProtection({wallbox_w:0,meter_age:10,current_discharge_w:0},c,{},'auto'),null);assert.equal(batteryProtection({wallbox_w:3500,meter_age:999,current_discharge_w:0},c,{},'auto'),null);assert.equal(batteryProtection({wallbox_w:3500,meter_age:10,current_discharge_w:2500},c,{discharge_w:0},'auto').kind,'pending');});
+
+import {dateKey,nextDays,pvDays,weatherDays,duration,weatherLabel} from '../custom_components/solar_pilot/frontend/day-forecast.js';
+test('daily forecast calendar survives DST and assigns HA local dates',()=>{
+  assert.deepEqual(nextDays(Date.parse('2026-10-24T23:30:00Z')),['2026-10-25','2026-10-26','2026-10-27','2026-10-28']);
+  assert.equal(dateKey('2026-10-27T23:30:00Z'),'2026-10-28');
+});
+test('PV cards use combined P50 estimate and date rather than entity P10 or day index',()=>{
+  const id='sensor.solcast_pv_forecast_prognose_heute';
+  const entity={state:'3',attributes:{unit_of_measurement:'kWh',estimate:12,estimate10:3,detailedForecast:[{period_start:'2026-10-29T00:00:00+01:00'}]}};
+  const values=pvDays({[id]:entity},id);
+  assert.equal(values['2026-10-29'].kwh,12);assert.equal(values['2026-10-29'].low,3);
+  assert.equal(values['2026-10-27'],undefined);
+  assert.deepEqual(pvDays({[id]:{...entity,state:'unavailable'}},id),{});
+  assert.deepEqual(pvDays({[id]:{...entity,attributes:{...entity.attributes,dataCorrect:false}}},id),{});
+});
+test('sunshine and astronomical daylight remain separate, seconds convert correctly',()=>{
+  const data={daily:{time:['2026-10-27','2026-10-28'],sunshine_duration:[0,null],daylight_duration:[36000,35900],weather_code:[3,61]},daily_units:{sunshine_duration:'s',daylight_duration:'s',weather_code:'wmo code'}};
+  const days=weatherDays(data);
+  assert.equal(days['2026-10-27'].sun,0);assert.equal(days['2026-10-27'].day,36000);
+  assert.equal(days['2026-10-28'].sun,null);assert.equal(duration(36000),'10 h 00 min');
+  assert.equal(duration(null),'—');assert.equal(duration(3599),'1 h 00 min');
+  assert.equal(weatherLabel(61)[0],'Regen');assert.equal(weatherLabel(null)[0],'Wetter fehlt');
+  data.daily_units.sunshine_duration='h';assert.equal(weatherDays(data)['2026-10-27'].sun,null);
+});
+test('impossible sunshine durations are missing, not silently replaced with daylight',()=>{
+  const d={daily:{time:['2026-10-27'],sunshine_duration:[40000],daylight_duration:[36000]},daily_units:{sunshine_duration:'s',daylight_duration:'s'}};
+  assert.equal(weatherDays(d)['2026-10-27'].sun,null);
+});
