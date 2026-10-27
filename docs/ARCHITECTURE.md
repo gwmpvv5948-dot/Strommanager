@@ -32,14 +32,14 @@ Erste Einrichtung immer im Beobachtungsmodus. Aktivierung ist ein separater Admi
 
 Befehle werden serialisiert. Bei fehlgeschlagenem Speicherschutz wird kein Autoladestart gesendet. Fehlgeschlagene Stromänderungen verhindern den folgenden Start. Bei Fehlern steigt die Wiederholpause bis maximal 30 Minuten. Tesla-Befehle haben zusätzlich einen globalen Mindestabstand. Mehrere notwendige Befehle innerhalb einer Regelrunde (zum Beispiel Ladestrom setzen, dann starten) können gemeinsam ausgeführt werden.
 
-Pause oder Entladen startet und stoppt keine Fahrzeuge. Bei expliziter Rückgabe werden Zahlenwerte nur bei weiterhin eigenem Besitz zurückgesetzt. Ein Ladestrom wird dabei nur am erreichbaren heimischen Fahrzeug zurückgesetzt. Speicher-Netzladung wird nie eingeschaltet. Eine zuvor durch Strommanager ausgeschaltete Automation wird nur bei expliziter Rückgabe wieder aktiviert.
+Pause und Entladen ändern keine Geräte und reaktivieren keine Automation. Eine automatische Rückgabe ist seit 0.1.1 entfernt. Gerätewerte bleiben bestehen und müssen bei Deinstallation bei Bedarf manuell geändert werden.
 
 ## Bereits geprüft
 
 - Rechenmodell: Mindeststand, Fahrzeuglimit, Prognosepuffer, Tag/Nacht, 1/3 Phasen und Start-Hysterese.
 - Datenverlust: veraltete Messwerte, fehlende Prognose, unbekannter Sonnenstand, NaN/Infinity.
-- Befehlsplanung: keine Änderungen bei identischen Werten, Backoff, Startblockade nach Schutzfehlern, manuelle Übersteuerung bei Rückgabe.
-- Adapter-Vertragstests mit In-Memory-Zuständen und Services: Beobachtung ohne Schreibzugriff, Konflikte, Übernahme/Rückgabe, Einheiten und Gerätegrenzen.
+- Befehlsplanung: keine Änderungen bei identischen Werten, Backoff, Startblockade nach Schutzfehlern.
+- Adapter-Vertragstests mit In-Memory-Zuständen und Services: Beobachtung ohne Schreibzugriff, Konflikte, Übernahme, Einheiten und Gerätegrenzen.
 - Python- und JavaScript-Syntax sowie JSON/Übersetzungsdateien.
 
 Die Adapter-Vertragstests simulieren Home Assistant. Sie sind **kein Test eines echten HA-Core-Prozesses**.
@@ -51,7 +51,6 @@ Die Adapter-Vertragstests simulieren Home Assistant. Sie sind **kein Test eines 
 - Beobachtungsmodus mit echten Messwerten gegen die bisherige Automation vergleichen.
 - 0-W-Rückmeldung, Tesla-Start/Stopp/Stromänderung und Geräte-Schrittweiten kontrolliert prüfen.
 - Ausfall von Tesla/Huawei/Prognose und Neustarts im Beobachtungsmodus durchspielen.
-- Rückgabe an die bisherige Automation prüfen; erst danach dauerhaft übernehmen.
 
 ## Grenzen der ersten Version
 

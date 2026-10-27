@@ -12,7 +12,6 @@ panel.hass={
  callService:async(_domain,name,data)=>{
    if(name==='activate'){state.mode=data.mode||'auto';state.conflict=false;state.legacy_owned=true;}
    if(name==='set_mode')state.mode=data.mode;
-   if(name==='release'){state.mode='observe';state.conflict=true;state.legacy_owned=false;}
    if(name==='configure')Object.assign(state.settings,data.settings);
    state.updated=new Date().toISOString();
  }
