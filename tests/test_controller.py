@@ -145,6 +145,30 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.calls,[])
         self.assertTrue(self.c._stopping)
 
+    async def test_minimum_latch_is_persisted_and_restored(self):
+        from pilot_test.model import ChargingState
+        self.c.mode="auto"
+        self.c.charging_state=ChargingState(True,True)
+        await self.c.persist()
+        saved=self.c.store.payload
+        self.assertEqual(saved["charging_state"],{"minimum_active":True,"storage_active":True})
+        self.c.store.async_load=AsyncMock(return_value=saved)
+        self.values["car_soc"].state="35"
+        self.values["house_soc"].state="75"
+        await self.c.async_start()
+        self.assertTrue(self.c.charging_state.minimum_active)
+        self.assertTrue(self.c.charging_state.storage_active)
+
+    async def test_battery_command_requires_confirmed_authorized_limit(self):
+        from pilot_test.model import Settings, decide
+        self.c.settings=Settings(reserve_soc=60)
+        self.c.decision=decide(sample(house_soc=90),self.c.settings)
+        self.assertEqual(self.c.decision.discharge_w,2500)
+        await self.c._send(Command("car_current",8,True))
+        self.values["discharge_limit"].state="0"
+        with self.assertRaises(ValidationError):
+            await self.c._send(Command("car_charge",True,True))
+
     async def test_status_is_json_safe(self):
         import json
         await self.c.async_start()

@@ -15,7 +15,7 @@ for name in ("model", "executor"):
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-from pilot_test.model import Settings, Snapshot, decide
+from pilot_test.model import Settings, Snapshot, decide, ChargingState, charging_state
 from pilot_test.executor import Command, Executor, plan
 
 
@@ -32,7 +32,7 @@ class Decisions(unittest.TestCase):
     def setUp(self): self.c=Settings()
     def test_minimum_never_allows_grid_charge(self):
         d=decide(sample(car_soc=45,house_soc=10,pv_w=0,grid_export_w=-500,battery_charge_w=0),self.c)
-        self.assertEqual((d.target_amps,d.discharge_w,d.code),(0,0,"reserve"))
+        self.assertEqual((d.target_amps,d.discharge_w,d.code),(0,0,"surplus_wait"))
     def test_below_minimum_waits_at_night(self):
         self.assertEqual(decide(sample(car_soc=20,daylight=False,hours_left=0),self.c).target_amps,0)
     def test_below_minimum_uses_solar(self):
@@ -115,6 +115,85 @@ class Decisions(unittest.TestCase):
             with self.assertRaises((ValueError,TypeError)): Settings(**v)
 
 
+class ChargingThresholds(unittest.TestCase):
+    def setUp(self):
+        self.c = Settings(reserve_soc=60)
+        self.night = sample(daylight=False, hours_left=0, pv_w=0, grid_export_w=-300,
+                            battery_charge_w=0, house_soc=70, car_soc=19)
+
+    def test_emergency_grid_at_night_and_strict_start(self):
+        d = decide(self.night, self.c)
+        self.assertEqual((d.code, d.target_amps, d.discharge_w), ("minimum_grid",16,0))
+        self.assertEqual(decide(replace(self.night,car_soc=20),self.c).target_amps,0)
+
+    def test_minimum_latch_survives_lower_boundary_then_stops(self):
+        state = charging_state(self.night,self.c,ChargingState())
+        for soc in (20,35,49):
+            s = replace(self.night,car_soc=soc)
+            state = charging_state(s,self.c,state)
+            self.assertTrue(state.minimum_active)
+            self.assertEqual(decide(s,self.c,state=state).target_amps,16)
+        s = replace(self.night,car_soc=50)
+        state = charging_state(s,self.c,state)
+        self.assertFalse(state.minimum_active)
+        self.assertEqual(decide(s,self.c,state=state).target_amps,0)
+
+    def test_vehicle_limit_precedes_minimum(self):
+        self.assertEqual(decide(replace(self.night,car_limit=18),self.c).target_amps,0)
+
+    def test_storage_hysteresis_night(self):
+        state = ChargingState()
+        for soc, active in ((80,False),(81,True),(79,True),(61,True),(60,False),(75,False)):
+            s = replace(self.night,car_soc=55,house_soc=soc)
+            state = charging_state(s,self.c,state)
+            self.assertEqual(state.storage_active,active)
+            d = decide(s,self.c,state=state)
+            self.assertEqual(d.target_amps > 0,active)
+            if active:
+                self.assertEqual((d.code,d.discharge_w),("storage",2500))
+
+    def test_house_load_reduces_storage_budget(self):
+        s=replace(self.night,car_soc=55,house_soc=90,grid_export_w=-1500)
+        self.assertEqual(decide(s,self.c).target_amps,0)
+
+    def test_storage_is_not_used_for_emergency_grid_fill(self):
+        d=decide(replace(self.night,house_soc=90),self.c)
+        self.assertEqual((d.target_amps,d.discharge_w),(16,0))
+
+    def test_stale_data_blocks_grid_and_battery_permissions(self):
+        for changes in ({"meter_age":400},{"house_soc_age":400},{"car_age":2000}):
+            s=replace(self.night,house_soc=90,wallbox_w=1500,charging=True,**changes)
+            d=decide(s,self.c,state=ChargingState(True,True))
+            self.assertEqual((d.target_amps,d.discharge_w),(0,0))
+
+    def test_stale_sample_retains_latch_without_commands(self):
+        state=ChargingState(True,True)
+        s=replace(self.night,car_soc=None,car_age=2000,house_soc=None,house_soc_age=400)
+        self.assertEqual(charging_state(s,self.c,state),state)
+        self.assertEqual(decide(s,self.c,state=state).target_amps,0)
+
+    def test_unplug_clears_minimum(self):
+        self.assertFalse(charging_state(replace(self.night,cable=False),self.c,ChargingState(True)).minimum_active)
+
+    def test_invalid_threshold_order(self):
+        for values in ({"car_low_soc":50},{"car_min_soc":19},{"reserve_soc":81},
+                       {"storage_release_soc":101},{"car_low_soc":-1}):
+            with self.assertRaises(ValueError): Settings(**values)
+
+    def test_above_lower_threshold_does_not_grid_fill(self):
+        self.assertEqual(decide(replace(self.night,car_soc=30),self.c).target_amps,0)
+
+    def test_pv_continues_at_reserve_without_storage(self):
+        s=sample(house_soc=60,car_soc=60,wallbox_w=2000,grid_export_w=2000,battery_charge_w=0)
+        d=decide(s,self.c,state=ChargingState(False,True))
+        self.assertEqual(d.code,"solar")
+        self.assertEqual(d.discharge_w,0)
+
+    def test_minimum_only_mode_stops_at_target_even_with_storage(self):
+        d=decide(replace(self.night,car_soc=50,house_soc=90),self.c,"charge_minimum")
+        self.assertEqual(d.target_amps,0)
+
+
 class Execution(unittest.IsolatedAsyncioTestCase):
     async def test_cloud_cooldown(self):
         sent=[]
@@ -150,6 +229,16 @@ class Execution(unittest.IsolatedAsyncioTestCase):
         await e.run(1000,[Command("discharge_limit",0)],300,{"discharge_limit":2500})
         self.assertEqual(e.restoration({"discharge_limit":0}),[Command("discharge_limit",2500)])
         self.assertEqual(e.restoration({"discharge_limit":1000}),[])
+    async def test_stop_does_not_wait_for_cloud_current_cooldown(self):
+        sent=[]
+        async def send(c): sent.append(c)
+        e=Executor(send)
+        await e.run(1000,[Command("car_charge",True,True)],300,{})
+        await e.run(1010,[Command("car_charge",False,True)],300,{})
+        self.assertEqual(sent[-1],Command("car_charge",False,True))
+        await e.run(1020,[Command("car_charge",False,True)],300,{})
+        self.assertEqual(len(sent),2)
+
     async def test_backoff(self):
         sent=[]
         async def send(c):
