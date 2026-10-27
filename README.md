@@ -2,7 +2,7 @@
 
 Eigene Home-Assistant-Integration mit einem Panel in der Seitenleiste für PV, Hausspeicher und Tesla. Interner Integrationsname: `solar_pilot`.
 
-**Entwicklungsstand 0.1.0 — noch nicht im echten Home-Assistant-Laufzeitsystem installiert oder abgenommen.** Berechnung, Befehlsplanung und HA-Adapter sind lokal getestet; diese Tests ersetzen keine Inbetriebnahme. Die vorhandene Ladeautomation bleibt bis zur ausdrücklichen Übernahme aktiv.
+**Entwicklungsstand 0.1.0 — unter Home Assistant 2026.10.4 im Beobachtungsmodus erprobt.** Einrichtung, fünf Sensoren, eigenes Panel mit Livewerten, Neuberechnung sowie Speichern der Einstellungen mit Integrations-Neuladen wurden geprüft. 49 lokale Tests und die GitHub-Prüfung bestehen. Schreibender Gerätebetrieb und Langzeitregelung sind noch nicht live abgenommen. Die vorhandene Ladeautomation bleibt bis zur ausdrücklichen Übernahme aktiv.
 
 ## Was die erste Version enthält
 
@@ -52,6 +52,6 @@ python3 -m http.server 8765 --bind 127.0.0.1
 
 UI-Demo anschließend unter `http://127.0.0.1:8765/docs/demo.html`. Sie verwendet ausschließlich gekennzeichnete Beispieldaten und hat keine Geräteverbindung. Das ZIP liegt nach dem Paketbau unter `dist/`.
 
-Die Laufzeit-Anbindung zielt auf Home Assistant 2026.10; für das eigene Panel werden die offiziellen Frontend-, Panel- und Service-APIs genutzt. Der Config Flow unterstützt die Schema-Bibliothek `probatio` sowie ältere Installationen mit `voluptuous`. Eine vollständige HA-Laufzeitprüfung und `hassfest` stehen noch aus.
+Die Laufzeit-Anbindung zielt auf Home Assistant 2026.10; für das eigene Panel werden die offiziellen Frontend-, Panel- und Service-APIs genutzt. Der Config Flow unterstützt die Schema-Bibliothek `probatio` sowie ältere Installationen mit `voluptuous`. Weitere Prüfungen des schreibenden Gerätebetriebs, Langzeittests und `hassfest` stehen noch aus.
 
 Mehr zu Aufbau, Schutzmaßnahmen und Grenzen: [Architektur](docs/ARCHITECTURE.md).
