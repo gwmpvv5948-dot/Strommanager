@@ -21,8 +21,8 @@ Die Gerätekommunikation bleibt vollständig bei den bestehenden Integrationen. 
 3. Verfügbaren PV-Anteil aus Netz-, Wallbox- und Batterie-Leistung bestimmen. Batterieentladung zählt nicht als PV.
 4. Speicherbedarf bis zur Abendreserve bestimmen. Konservativen PV-Restertrag um geschätzte Hauslast und Puffer reduzieren.
 5. Wenn das Abendziel knapp erscheint: volles Speicher-Ladebudget reservieren. Sonst das fehlende Ladebudget vorgezogen auf die verbleibende Zeit verteilen.
-6. Tesla ausschließlich mit PV-Überschuss laden, auch unter Mindeststand. PV-Budget in Ampere für 1 oder 3 Phasen umrechnen. Start ab 8 A, Weiterladen ab 6 A. Das Fahrzeuglimit bleibt maßgeblich.
-7. Speicherschutz vor Ladestart setzen. Start/Stromänderungen warten auf Rückmeldung der 0-W-Grenze und ausgeschalteter Speicher-Netzladung.
+6. Unter der Tesla-Untergrenze Mindestladung bis Mindestziel mit Netzstrom erlauben, Speicher dabei schützen. Sonst PV-Überschuss oder gespeicherte Freigabe oberhalb der Speicher-Startgrenze nutzen. Speicherfreigabe endet an der Abendreserve. Beide Freigaben werden über Neustarts gespeichert. Leistung in Ampere für 1 oder 3 Phasen umrechnen; Start ab 8 A, Weiterladen ab 6 A. Das Fahrzeuglimit bleibt maßgeblich.
+7. Speicherschutz vor Ladestart setzen. Start/Stromänderungen warten auf Rückmeldung der je nach Freigabe erlaubten Entladegrenze und ausgeschalteter Speicher-Netzladung.
 
 Die Schwellen und Vorzeichen sind konfigurierbar. Geräteseitige Grenzen und Schrittweiten werden vor Zahlenbefehlen geprüft. Bei fehlenden Messdaten wird die Speicherentladung konservativ gesperrt. Das kann Netzbezug erhöhen; die Oberfläche weist auf die fehlenden Daten hin.
 
@@ -30,7 +30,7 @@ Die Schwellen und Vorzeichen sind konfigurierbar. Geräteseitige Grenzen und Sch
 
 Erste Einrichtung immer im Beobachtungsmodus. Aktivierung ist ein separater Admin-Vorgang, der ausschließlich die ausgewählte bisherige Ladeautomation deaktiviert. Alle weiteren möglicherweise schreibenden Systeme müssen vor Inbetriebnahme geprüft werden. Ein Service-Erfolg ist keine physikalische Erfolgsgarantie; Istwerte und Verlauf müssen kontrolliert werden.
 
-Befehle werden serialisiert. Bei fehlgeschlagenem Speicherschutz wird kein Autoladestart gesendet. Fehlgeschlagene Stromänderungen verhindern den folgenden Start. Bei Fehlern steigt die Wiederholpause bis maximal 30 Minuten. Tesla-Befehle haben zusätzlich einen globalen Mindestabstand. Mehrere notwendige Befehle innerhalb einer Regelrunde (zum Beispiel Ladestrom setzen, dann starten) können gemeinsam ausgeführt werden.
+Befehle werden serialisiert. Bei fehlgeschlagenem Speicherschutz wird kein Autoladestart gesendet. Fehlgeschlagene Stromänderungen verhindern den folgenden Start. Bei Fehlern steigt die Wiederholpause bis maximal 30 Minuten. Tesla-Befehle haben zusätzlich einen globalen Mindestabstand; Stoppbefehle dürfen diesen übergehen, wiederholte Stopps werden separat begrenzt. Mehrere notwendige Befehle innerhalb einer Regelrunde (zum Beispiel Ladestrom setzen, dann starten) können gemeinsam ausgeführt werden.
 
 Pause und Entladen ändern keine Geräte und reaktivieren keine Automation. Eine automatische Rückgabe ist seit 0.1.1 entfernt. Gerätewerte bleiben bestehen und müssen bei Deinstallation bei Bedarf manuell geändert werden.
 
