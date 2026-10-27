@@ -3,7 +3,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 root=Path(__file__).resolve().parents[1]
-out=root/'dist'/'strommanager-0.1.0.zip'
+out=root/'dist'/'strommanager-0.1.1.zip'
 out.parent.mkdir(exist_ok=True)
 files=list((root/'custom_components'/'solar_pilot').rglob('*'))+[root/'README.md',root/'docs'/'ARCHITECTURE.md']
 with ZipFile(out,'w',ZIP_DEFLATED) as archive:
