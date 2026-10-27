@@ -72,7 +72,7 @@ async def async_setup_entry(hass, entry):
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         await async_register_panel(
             hass, frontend_url_path=PANEL_PATH, webcomponent_name="solar-pilot-panel",
-            sidebar_title="Strommanager", sidebar_icon="mdi:solar-power-variant",
+            sidebar_title="Strommanager", sidebar_icon="mdi:flash",
             module_url=f"/solar_pilot_frontend/panel.js?v={VERSION}",
             require_admin=True, config={"entry_id": entry.entry_id},
         )
