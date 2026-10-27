@@ -18,3 +18,15 @@ export function energyBudget(s,c,extra=2.5,now=Date.now()/1000){
   const storage=Math.min(available,storageNeed);available-=storage;
   return {forecast,hours,base:c.minimum_house_w/1000*hours,extra:s.daylight?extra:0,houseNeed,storageNeed,buffer,house,storage,tesla:Math.max(0,available),deficit:Math.max(0,houseNeed+storageNeed-house-storage),night:!s.daylight};
 }
+
+// A daily counter must have a real energy unit and a state from this HA day.
+export function dailyEnergy(entity,start,now=Date.now()){
+  const value=number(entity?.state),updated=Date.parse(entity?.last_updated),unit=entity?.attributes?.unit_of_measurement;
+  if(value===null||value<0||!Number.isFinite(updated)||updated<start||updated>now+60000)return null;
+  return unit==='kWh'?value:unit==='Wh'?value/1000:null;
+}
+export function progressParts(actual,remaining,capacity=null){
+  const a=number(actual),r=number(remaining),known=a!==null&&a>=0,need=r!==null&&r>=0?r:null;
+  const total=number(capacity)>0?capacity:Math.max(known?a:0,0)+(need??0);
+  return {solid:known&&total>0?Math.min(100,a/total*100):0,planned:need!==null&&total>0?Math.min(100-Math.min(100,(known?a:0)/total*100),need/total*100):0,known};
+}
