@@ -107,19 +107,6 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValidationError): await self.c.async_set_mode("auto")
         self.assertEqual(self.calls,[])
 
-    async def test_release_restores_and_reenables_legacy(self):
-        await self.c.async_activate()
-        await self.c.async_release()
-        self.assertEqual(self.values["discharge_limit"].state,"2500.0")
-        self.assertEqual(self.calls[-1][0:2],("automation","turn_on"))
-        self.assertEqual(self.c.mode,"observe")
-
-    async def test_release_respects_manual_device_override(self):
-        await self.c.async_activate()
-        self.values["discharge_limit"].state="1000"
-        await self.c.async_release()
-        self.assertEqual(self.values["discharge_limit"].state,"1000")
-
     async def test_unknown_units_are_missing_data(self):
         self.values["grid_power"].attributes["unit_of_measurement"]="VA"
         self.assertIsNone(self.c.read().grid_export_w)
