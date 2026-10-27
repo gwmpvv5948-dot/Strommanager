@@ -20,6 +20,7 @@ class Settings:
     buffer_kwh: float = .5
     efficiency: float = .9
     margin_w: float = 200
+    budget_extra_kwh: float = 2.5
     minimum_house_w: float = 300
     cloud_interval_s: int = 300
     meter_max_age_s: int = 300
@@ -47,7 +48,7 @@ class Settings:
             "reserve_soc": (0, 100), "capacity_kwh": (.1, 200),
             "car_min_soc": (0, 100), "normal_discharge_w": (0, 30000),
             "max_charge_w": (0, 30000), "forecast_factor": (.1, 1),
-            "buffer_kwh": (0, 30), "efficiency": (.5, 1),
+            "buffer_kwh": (0, 30), "budget_extra_kwh": (0, 30), "efficiency": (.5, 1),
             "margin_w": (0, 3000), "minimum_house_w": (0, 5000),
             "cloud_interval_s": (120, 3600), "meter_max_age_s": (30, 900),
             "car_max_age_s": (60, 3600), "forecast_max_age_s": (300, 86400),

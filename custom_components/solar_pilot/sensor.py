@@ -1,11 +1,18 @@
 """Small diagnostic entities; command history is not recorded as state attributes."""
-from homeassistant.components.sensor import SensorEntity
+from datetime import datetime, timezone
+
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN, VERSION
 
 DEFINITIONS = (
+    ("daily_house", "PV heute Haus", "kWh", "mdi:home-lightning-bolt"),
+    ("daily_storage", "PV heute Speicher", "kWh", "mdi:battery-plus"),
+    ("daily_tesla", "PV heute Tesla", "kWh", "mdi:car-electric"),
+    ("daily_other", "PV heute Einspeisung und Rest", "kWh", "mdi:transmission-tower-export"),
+    ("daily_solar", "PV heute Bilanziert", "kWh", "mdi:solar-power"),
     ("status", "Regelstatus", None, "mdi:state-machine"),
     ("target_amps", "Empfohlener Ladestrom", "A", "mdi:current-ac"),
     ("discharge_w", "Empfohlene Entladegrenze", "W", "mdi:battery-arrow-down"),
@@ -29,6 +36,9 @@ class PilotSensor(SensorEntity):
         self._attr_icon = icon
         self._attr_unique_id = f"{entry.entry_id}_{key}"
         self._attr_native_unit_of_measurement = unit
+        if key.startswith("daily_"):
+            self._attr_device_class = SensorDeviceClass.ENERGY
+            self._attr_state_class = SensorStateClass.TOTAL
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)}, name="Strommanager",
             manufacturer="Strommanager", model="PV-Lademanager", sw_version=VERSION,
@@ -44,6 +54,9 @@ class PilotSensor(SensorEntity):
 
     @property
     def native_value(self):
+        if self.key.startswith("daily_"):
+            status = self.controller.day_budget.status()
+            return round(status["actual"].get(self.key[6:], 0), 4) if status["available"] else None
         d = self.controller.decision
         if d is None:
             return None
@@ -52,7 +65,15 @@ class PilotSensor(SensorEntity):
         return getattr(d, self.key)
 
     @property
+    def last_reset(self):
+        data = self.controller.day_budget.data
+        return datetime.fromtimestamp(data["start"], timezone.utc) if self.key.startswith("daily_") and data.get("day") else None
+
+    @property
     def extra_state_attributes(self):
+        if self.key.startswith("daily_"):
+            status = self.controller.day_budget.status()
+            return {"day": status["day"], "missing_minutes": status["missing_minutes"], "method": status["method"], "error": status["error"]}
         if self.key != "status":
             return None
         d = self.controller.decision

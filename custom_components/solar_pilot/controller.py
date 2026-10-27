@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN, ENTITY_DEFAULTS, MODES
 from .executor import Command, Executor, plan
 from .model import Settings, Snapshot, decide
+from .day_budget import DayBudgetTracker
 
 
 class Controller:
@@ -36,6 +37,7 @@ class Controller:
         self.adapter_error = None
         self._stopping = False
         self._saved_payload = None
+        self.day_budget = DayBudgetTracker(hass, entry, self.entities, self.settings, self.publish)
 
     def state(self, key):
         state = self.hass.states.get(self.entities[key])
@@ -123,10 +125,12 @@ class Controller:
         self.executor.failures = saved.get("failures", {})
         self.entry.async_on_unload(async_track_time_interval(self.hass, self._tick, timedelta(seconds=30)))
         self.entry.async_on_unload(async_track_state_change_event(self.hass, list(self.entities.values()), self._tick))
+        await self.day_budget.async_start()
         if self.hass.is_running:
             await self.async_update()
         else:
             self.entry.async_on_unload(self.hass.bus.async_listen_once("homeassistant_started", self._tick))
+            self.entry.async_on_unload(self.hass.bus.async_listen_once("homeassistant_started", self.day_budget._tick))
 
     @callback
     def _tick(self, _event):
@@ -242,6 +246,7 @@ class Controller:
     async def async_stop(self):
         # Unloading never changes devices or reactivates the previous automation.
         self._stopping = True
+        await self.day_budget.async_stop()
         async with self.lock:
             await self.persist()
 
@@ -265,5 +270,5 @@ class Controller:
             "decision": asdict(self.decision) if self.decision else None,
             "snapshot": snapshot, "settings": asdict(self.settings),
             "entities": self.entities, "history": self.executor.history,
-            "legacy_owned": self.legacy_owned,
+            "legacy_owned": self.legacy_owned, "day_budget": self.day_budget.status(),
         }
