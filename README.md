@@ -15,7 +15,7 @@ Eigene Home-Assistant-Integration mit einem Panel in der Seitenleiste für PV, H
 
 ## Verhalten
 
-Unterhalb des Tesla-Mindeststands ist Netzstrom fürs Auto erlaubt. Der eingestellte Fahrzeug-Ladegrenzwert hat immer Vorrang. Oberhalb des Mindeststands wird PV-orientiert bis zu diesem Fahrzeuglimit geladen. Während Autoladung bleibt die Entladegrenze des Hausspeichers bei 0 W. Tagsüber unter der Abendreserve wird die Entladung ebenfalls gesperrt; das kann Netzbezug für andere Hausverbraucher verursachen. Nachts ohne Autoladung wird die normale Entladeleistung freigegeben.
+Das Auto lädt ausschließlich mit verfügbarem PV-Überschuss, auch unterhalb des Tesla-Mindeststands. Der Mindeststand von 50 % ist ein Ziel ohne zeitliche Garantie. Der eingestellte Fahrzeug-Ladegrenzwert hat immer Vorrang. Oberhalb des Mindeststands wird PV-orientiert bis zu diesem Fahrzeuglimit geladen. Während Autoladung bleibt die Entladegrenze des Hausspeichers bei 0 W. Tagsüber unter der Abendreserve wird die Entladung ebenfalls gesperrt; das kann Netzbezug für andere Hausverbraucher verursachen. Nachts ohne Autoladung wird die normale Entladeleistung freigegeben.
 
 70 % sind **keine Obergrenze**: Strommanager verändert weder die Speicher-Ladeobergrenze noch die normale minimale Entladeschwelle. Ohne ausreichend PV ist das Abendziel nicht garantiert. Der aktuelle Hausverbrauch dient als Schätzung des Restbedarfs; es gibt in dieser Version noch kein gelerntes Lastprofil. Die PV-Prognose wird so verwendet, wie die ausgewählte Entität sie liefert. Bei Solcast kann das beispielsweise `estimate10` sein.
 
