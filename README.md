@@ -59,3 +59,13 @@ Mehr zu Aufbau, Schutzmaßnahmen und Grenzen: [Architektur](docs/ARCHITECTURE.md
 ### Neu in 0.1.1
 
 Kurze Erklärungen unter allen Einstellwerten, kompakte Tesla-Kachel mit schematischer Fahrzeugdarstellung, Akkubalken und Wallbox-Leistung. Fahrzeugdaten werden ohne zusätzliche Tesla-Abfragen angezeigt; eine Reichweite wird ohne zugeordneten Reichweitensensor nicht geschätzt. Die Rückgabe-Funktion zur alten Automation ist entfernt.
+
+### UI-Erweiterung: Prognose und Speicherschutz
+
+Solcast-Tagesdiagramm (P50 und P10) mit PV-Verlauf aus der HA-Historie. Der Verlauf wird ausschließlich beim geöffneten Panel und höchstens alle fünf Minuten aus HA gelesen, ohne zusätzliche Solcast- oder Tesla-Abfragen. Fehlende Kurven oder Historie werden angezeigt. Die Tagesprognose wird aus der zugeordneten Solcast-Restprognose abgeleitet; der WR-Tagesertrag aus der PV-Eingangsleistungsentität. Andere Benennungen zeigen fehlende Daten statt erfundener Werte.
+
+Im Speicherbalken zeigt eine Schraffur das mögliche PV-Ladepotenzial ohne weitere Autoladung: verfügbare Restenergie nach Hausverbrauch, Prognosefaktor, Energiepuffer, Ladeverlusten und maximaler Ladeleistung, begrenzt auf 100 %. Das ist eine Obergrenze unter diesen Annahmen, keine garantierte Regelprognose. Ein Schutz-Hinweis erscheint bei gemessener Wallbox-Leistung über 10 W und tatsächlich reduzierter Entladegrenze; eine noch nicht bestätigte Anforderung wird getrennt gekennzeichnet.
+
+Der Tesla-Ladestrom wird im aktiven Modus aus dem PV-Budget berechnet: maximal 16 A laut Vorgabe, Weiterladen ab 6 A, Start ab 8 A. Tesla-Befehlsrunden haben standardmäßig fünf Minuten Abstand, ein Neustart der Ladung mindestens drei Minuten Pause. Die Cloud-Anbindung verhindert keine kurzen Netzbezüge.
+
+Zusätzlich zu den Python-Tests: `node --test tests/test_solar_chart.mjs` für Zeitumstellung, Zeitreihen, Datenlücken und Speicherpotenzial.
