@@ -1,9 +1,11 @@
 """Build a deterministic installable ZIP without private runtime files."""
 from pathlib import Path
+import json
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 root=Path(__file__).resolve().parents[1]
-out=root/'dist'/'strommanager-0.1.1.zip'
+version=json.loads((root/'custom_components'/'solar_pilot'/'manifest.json').read_text())['version']
+out=root/'dist'/f'strommanager-{version}.zip'
 out.parent.mkdir(exist_ok=True)
 files=list((root/'custom_components'/'solar_pilot').rglob('*'))+[root/'README.md',root/'docs'/'ARCHITECTURE.md']
 with ZipFile(out,'w',ZIP_DEFLATED) as archive:
