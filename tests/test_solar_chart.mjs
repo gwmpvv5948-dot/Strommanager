@@ -58,3 +58,27 @@ test('impossible sunshine durations are missing, not silently replaced with dayl
   const d={daily:{time:['2026-10-27'],sunshine_duration:[40000],daylight_duration:[36000]},daily_units:{sunshine_duration:'s',daylight_duration:'s'}};
   assert.equal(weatherDays(d)['2026-10-27'].sun,null);
 });
+
+import {energyBudget} from '../custom_components/solar_pilot/frontend/energy-budget.js';
+const budgetSnapshot={now:1000,daylight:true,hours_left:4,house_soc:46,house_soc_age:1,forecast_kwh:12,forecast_age:100};
+const budgetConfig={capacity_kwh:5,reserve_soc:70,minimum_house_w:300,forecast_factor:.85,buffer_kwh:.5,efficiency:.9,meter_max_age_s:300,forecast_max_age_s:28800};
+test('budget allocates the whole remaining forecast once, with charging losses and extra house use',()=>{
+  const b=energyBudget(budgetSnapshot,budgetConfig,2.5,1000);
+  assert.ok(Math.abs(b.storage-1.333333333)<1e-8);assert.equal(b.house,3.7);
+  assert.ok(Math.abs(b.tesla-4.666666667)<1e-8);
+  assert.ok(Math.abs(b.storage+b.house+b.buffer+b.tesla-12)<1e-9);assert.equal(b.deficit,0);
+});
+test('low forecasts expose unmet need and never promise negative or nonexistent Tesla energy',()=>{
+  const b=energyBudget({...budgetSnapshot,forecast_kwh:2},budgetConfig,2.5,1000);
+  assert.equal(b.tesla,0);assert.equal(b.storage,0);assert.ok(b.deficit>0);
+  const z=energyBudget({...budgetSnapshot,forecast_kwh:0},budgetConfig,2.5,1000);
+  assert.equal(z.buffer+z.house+z.storage+z.tesla,0);
+});
+test('budget accepts a reached reserve, rejects missing/stale data and does not use tomorrow at night',()=>{
+  assert.equal(energyBudget({...budgetSnapshot,house_soc:90},budgetConfig,2.5,1000).storageNeed,0);
+  assert.equal(energyBudget({...budgetSnapshot,forecast_kwh:null},budgetConfig,2.5,1000),null);
+  assert.equal(energyBudget(budgetSnapshot,budgetConfig,2.5,1400),null);
+  assert.equal(energyBudget({...budgetSnapshot,hours_left:null},budgetConfig,2.5,1000),null);
+  const n=energyBudget({...budgetSnapshot,daylight:false,hours_left:20},budgetConfig,2.5,1000);
+  assert.equal(n.forecast,0);assert.equal(n.houseNeed,0);assert.equal(n.tesla,0);
+});
