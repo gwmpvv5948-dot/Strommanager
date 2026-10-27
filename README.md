@@ -69,3 +69,9 @@ Im Speicherbalken zeigt eine Schraffur das mögliche PV-Ladepotenzial ohne weite
 Der Tesla-Ladestrom wird im aktiven Modus aus dem PV-Budget berechnet: maximal 16 A laut Vorgabe, Weiterladen ab 6 A, Start ab 8 A. Tesla-Befehlsrunden haben standardmäßig fünf Minuten Abstand, ein Neustart der Ladung mindestens drei Minuten Pause. Die Cloud-Anbindung verhindert keine kurzen Netzbezüge.
 
 Zusätzlich zu den Python-Tests: `node --test tests/test_solar_chart.mjs` für Zeitumstellung, Zeitreihen, Datenlücken und Speicherpotenzial.
+
+### Vier-Tage-Ausblick
+
+Die Übersicht zeigt Heute, Morgen und die nächsten zwei Wochentage mit Solcast-P50-Tagesertrag und vorsichtiger P10-Schätzung. Die kombinierten `estimate`-Attribute werden verwendet, weil der Sensorzustand je nach Solcast-Einstellung P10 enthalten kann. Die Zuordnung erfolgt nach Datum der Detailprognose in der HA-Zeitzone; fehlende oder nicht verfügbare Tagesdaten werden nicht durch andere Tage ersetzt.
+
+Wetter, Temperatur, Niederschlag, erwartete Sonnenstunden und astronomische Tageslänge stammen aus [Open-Meteo](https://open-meteo.com/en/docs). Sonnenstunden sind die wetterabhängige modellierte Sonnenscheindauer, Tageslänge die Dauer des Tageslichts. Alle Werte sind Tagessummen, auch heute. Die Wetterabfrage verwendet ausschließlich öffentliche Stadtkoordinaten von Dresden (51,05 / 13,74), keine genaue HA- oder Fahrzeugposition. Sie erfolgt nur im geöffneten Übersichtsbereich, höchstens stündlich, ohne API-Schlüssel oder Tesla-Abfragen. Der letzte Wetterstand wird lokal im Browser gespeichert, bei Fehlern mit Hinweis bis sechs Stunden angezeigt und frühestens nach 15 Minuten erneut abgefragt. Wetterdaten dienen nur der Anzeige, nicht der Geräteentscheidung. Die Stadtzuordnung ist in dieser Version Dresden; sie ist noch nicht konfigurierbar.
