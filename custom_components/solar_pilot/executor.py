@@ -60,9 +60,10 @@ class Executor:
         safety_ok = True
         for cmd in commands:
             safety_channel = cmd.channel in ("grid_charge", "discharge_limit")
-            interval = min(1800, 120 * 2 ** min(self.failures.get(cmd.channel, 0), 4)) if self.failures.get(cmd.channel) else (cloud_interval if cmd.cloud else 20)
+            stopping = cmd.channel == "car_charge" and cmd.value is False
+            interval = min(1800, 120 * 2 ** min(self.failures.get(cmd.channel, 0), 4)) if self.failures.get(cmd.channel) else (120 if stopping else cloud_interval if cmd.cloud else 20)
             ready = now - self.attempts.get(cmd.channel, float("-inf")) >= interval
-            if not ready or (cmd.cloud and not cloud_allowed):
+            if not ready or (cmd.cloud and not cloud_allowed and not stopping):
                 if safety_channel:
                     safety_ok = False
                 continue

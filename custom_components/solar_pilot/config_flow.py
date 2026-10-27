@@ -16,7 +16,7 @@ from .model import Settings
 ENERGY = tuple(k for k in ENTITY_DEFAULTS if not k.startswith("car_"))
 CAR = tuple(k for k in ENTITY_DEFAULTS if k.startswith("car_"))
 SETTINGS_FIELDS = (
-    "reserve_soc", "capacity_kwh", "car_min_soc", "phases", "max_amps",
+    "reserve_soc", "capacity_kwh", "car_min_soc", "car_low_soc", "storage_release_soc", "phases", "max_amps",
     "normal_discharge_w", "max_charge_w", "forecast_factor", "buffer_kwh",
     "margin_w", "minimum_house_w", "budget_extra_kwh", "cloud_interval_s", "grid_export_positive",
     "battery_charge_positive",

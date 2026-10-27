@@ -14,7 +14,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, ENTITY_DEFAULTS, MODES
 from .executor import Command, Executor, plan
-from .model import Settings, Snapshot, decide
+from .model import Settings, Snapshot, decide, ChargingState, charging_state
 from .day_budget import DayBudgetTracker
 
 
@@ -24,6 +24,7 @@ class Controller:
         config = {**entry.data, **entry.options}
         self.entities = config["entities"]
         self.settings = Settings(**config.get("settings", {}))
+        self.charging_state = ChargingState()
         self.mode = "observe"
         self.executor = Executor(self._send)
         self.store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
@@ -116,6 +117,8 @@ class Controller:
         self.mode = saved.get("mode", "observe")
         if self.mode not in MODES:
             self.mode = "observe"
+        flags = saved.get("charging_state", {})
+        self.charging_state = ChargingState(flags.get("minimum_active") is True, flags.get("storage_active") is True)
         self.legacy_owned = saved.get("legacy_owned", False)
         self.executor.baselines = saved.get("baselines", {})
         self.executor.owned = saved.get("owned", {})
@@ -142,7 +145,9 @@ class Controller:
             return
         async with self.lock:
             self.snapshot = self.read()
-            self.decision = decide(self.snapshot, self.settings, self.mode)
+            if self.mode not in ("observe", "paused"):
+                self.charging_state = charging_state(self.snapshot, self.settings, self.charging_state)
+            self.decision = decide(self.snapshot, self.settings, self.mode, self.charging_state)
             self.conflict = self.boolean("legacy_automation") is not False
             self.adapter_error = None
             if self.mode not in ("observe", "paused") and not self.conflict:
@@ -160,6 +165,11 @@ class Controller:
     def current_settings(self):
         return {"discharge_limit": self.number("discharge_limit"), "car_current": self.number("car_current")}
 
+    def _protection_confirmed(self):
+        current = self.number("discharge_limit")
+        return (self.decision is not None and current is not None
+                and abs(current - self.decision.discharge_w) < 1)
+
     async def _send(self, command):
         key = command.channel
         state = self.state(key)
@@ -167,8 +177,8 @@ class Controller:
             raise ServiceValidationError(f"{key}: Entität nicht verfügbar")
         entity = self.entities[key]
         if key in ("discharge_limit", "car_current"):
-            if key == "car_current" and (self.number("discharge_limit") != 0 or self.boolean("grid_charge") is not False):
-                raise ServiceValidationError("Warte auf Rückmeldung: Speicherentladung 0 W und Netzladung aus")
+            if key == "car_current" and (not self._protection_confirmed() or self.boolean("grid_charge") is not False):
+                raise ServiceValidationError("Warte auf Rückmeldung der freigegebenen Entladegrenze und Netzladung aus")
             unit = state.attributes.get("unit_of_measurement")
             expected = ("W", "kW") if key == "discharge_limit" else ("A",)
             if unit not in expected:
@@ -182,13 +192,14 @@ class Controller:
                 raise ServiceValidationError(f"{key}: Sollwert passt nicht zur Schrittweite")
             await self.hass.services.async_call("number", "set_value", {"entity_id": entity, "value": value}, blocking=True)
         else:
-            if key == "car_charge" and command.value and (self.number("discharge_limit") != 0 or self.boolean("grid_charge") is not False):
+            if key == "car_charge" and command.value and (not self._protection_confirmed() or self.boolean("grid_charge") is not False):
                 raise ServiceValidationError("Ladestart wartet auf bestätigten Speicherschutz")
             await self.hass.services.async_call("switch", "turn_on" if command.value else "turn_off", {"entity_id": entity}, blocking=True)
 
     async def persist(self):
         payload = {
             "mode": self.mode, "legacy_owned": self.legacy_owned,
+            "charging_state": asdict(self.charging_state),
             "baselines": self.executor.baselines, "owned": self.executor.owned,
             "cloud_last": self.executor.cloud_last if math.isfinite(self.executor.cloud_last) else 0,
             "attempts": dict(self.executor.attempts), "failures": dict(self.executor.failures),
@@ -270,5 +281,6 @@ class Controller:
             "decision": asdict(self.decision) if self.decision else None,
             "snapshot": snapshot, "settings": asdict(self.settings),
             "entities": self.entities, "history": self.executor.history,
+            "charging_state": asdict(self.charging_state),
             "legacy_owned": self.legacy_owned, "day_budget": self.day_budget.status(),
         }
