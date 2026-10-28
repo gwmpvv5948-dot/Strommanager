@@ -66,14 +66,14 @@ class ConsumptionDB:
             row = db.execute("SELECT value FROM metadata WHERE key=?", (key,)).fetchone()
         return row[0] if row else None
 
-    def forecast(self, now, temperature, temperatures=None):
+    def forecast(self, now, temperature, temperatures=None, *, record=True, training_until=None):
         now = int(now)
         local = datetime.fromtimestamp(now, self.zone)
         start = local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
         end = (local.date() + timedelta(days=1))
         end = datetime.combine(end, datetime.min.time(), self.zone).timestamp()
         with self.connect() as db:
-            rows = db.execute("SELECT stamp,kwh,temperature FROM hours WHERE stamp<? AND stamp>=? ORDER BY stamp", (now//3600*3600, now-730*86400)).fetchall()
+            rows = db.execute("SELECT stamp,kwh,temperature FROM hours WHERE stamp<? AND stamp>=? ORDER BY stamp", (min(now, training_until if training_until is not None else now)//3600*3600, now-730*86400)).fetchall()
             stats = db.execute("SELECT COUNT(*),COUNT(DISTINCT stamp/86400),MIN(stamp),MAX(stamp) FROM hours").fetchone()
             errors = db.execute("SELECT error,actual-baseline FROM predictions WHERE actual IS NOT NULL ORDER BY stamp DESC LIMIT 336").fetchall()
             partial = None
@@ -120,7 +120,7 @@ class ConsumptionDB:
             points.append({"stamp":hour,"kwh":estimate,"low":max(0,estimate-spread) if estimate is not None else None,
                            "high":estimate+spread if estimate is not None else None,"remaining_fraction":fraction,
                            "samples":round(effective,1),"temperature":temp,"simplified":simplified})
-            if hour > now and estimate is not None and baseline is not None:
+            if record and hour > now and estimate is not None and baseline is not None:
                 with self.connect() as db:
                     db.execute("INSERT OR IGNORE INTO predictions(stamp,issued,predicted,baseline) VALUES (?,?,?,?)",(hour,now,estimate,baseline))
             hour += 3600
@@ -139,6 +139,17 @@ class ConsumptionDB:
                 "temperature_mode":("Stündliche HA-Wetterprognose; fehlende Stunden mit aktueller Temperatur" if temperatures else "Aktuelle Temperatur fortgeschrieben" if temperature is not None else "Temperatur fehlt · nur Zeit- und Wochentagsprofil") + f" · {sum(p['simplified'] for p in points)} Stunden mit einfachem Uhrzeitprofil wegen weniger passender Vergleichswerte",
                 "simplified_hours":sum(p["simplified"] for p in points),
                 "mode":"Beobachtung · ohne Einfluss auf Ladesteuerung","updated":now}
+
+    def daily_house_forecasts(self, now, temperature, temperatures=None):
+        """Read-only day totals for display; never issue evaluation predictions."""
+        local = datetime.fromtimestamp(now, self.zone)
+        days = {}
+        for offset in range(4):
+            day = local.date() + timedelta(days=offset)
+            start = datetime.combine(day, datetime.min.time(), self.zone).timestamp()
+            result = self.forecast(start, temperature, temperatures, record=False, training_until=now)
+            days[day.isoformat()] = {"kwh": result["remaining_kwh"], "available": result["available"]}
+        return {"days": days, "updated": now}
 
     def history_days(self, now, limit=45):
         """Daily, out-of-sample forecast comparisons for the panel.

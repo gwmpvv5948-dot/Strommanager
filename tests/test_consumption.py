@@ -20,6 +20,18 @@ class Forecast(unittest.TestCase):
         start=self.now//86400*86400-days*86400
         return [(t,.4,10.,1.,'influx') for t in range(start,self.now//3600*3600,3600)]
 
+    def test_day_color_forecasts_are_read_only_complete_and_exclude_ev(self):
+        self.db.put(self.seed())
+        with self.db.connect() as db:
+            before = db.execute('SELECT COUNT(*) FROM predictions').fetchone()[0]
+        result = self.db.daily_house_forecasts(self.now, 10)
+        self.assertEqual(len(result['days']), 4)
+        for day in result['days'].values():
+            self.assertTrue(day['available'])
+            self.assertAlmostEqual(day['kwh'], 9.6)
+        with self.db.connect() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM predictions').fetchone()[0], before)
+
     def test_chart_payload_keeps_partial_energy_separate_from_closed_hours(self):
         self.db.put(self.seed())
         hour=self.now//3600*3600
