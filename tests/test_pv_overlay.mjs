@@ -36,3 +36,21 @@ test('DST 25-hour day keeps distinct forecast hours and explicit missing measure
  assert.equal(p.actual.length,0);assert.equal(p.forecast[0].length,25);
  assert.equal(new Set(p.forecast[0].map(p=>p.stamp)).size,25);
 });
+
+test('garage and shed are summed with main PV at the same timestamps',()=>{
+ const now=start+3600,extras=[{history:history(start,now,200),unit:'W'},{history:history(start,now,.05),unit:'kW'}];
+ const p=pvOverlay(history(start,now,1000),'W',forecast(start,start+86400,2),start,start+86400,now,extras);
+ assert.ok(Math.abs(p.actual[0][0].kwh-1.25)<1e-9);
+ assert.equal(p.forecast[0][0].kwh,2); // No invented auxiliary forecast.
+});
+test('an unknown auxiliary source is not silently counted as zero',()=>{
+ const now=start+3600;
+ const p=pvOverlay(history(start,now,1000),'W',[],start,start+86400,now,[{history:[],unit:'W'}]);
+ assert.equal(p.actual.length,0);
+});
+test('individually adequate but non-overlapping coverage is not a complete total',()=>{
+ const now=start+3600,main=[...history(start,start+3060,1000),{last_updated:new Date((start+3060)*1000).toISOString(),state:'unavailable'}];
+ const garage=history(start+540,now,200);
+ const p=pvOverlay(main,'W',[],start,start+86400,now,[{history:garage,unit:'W'}]);
+ assert.equal(p.actual.length,0);
+});
