@@ -51,6 +51,8 @@ class PilotSensor(SensorEntity):
         )
 
     async def async_added_to_hass(self):
+        self.controller.output_entities[self.key] = self.entity_id
+        self.async_on_remove(lambda: self.controller.output_entities.pop(self.key, None))
         self.async_on_remove(self.controller.subscribe(self._changed))
 
     @callback

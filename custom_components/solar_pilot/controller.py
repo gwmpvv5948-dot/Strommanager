@@ -12,7 +12,7 @@ from homeassistant.helpers.event import async_track_state_change_event, async_tr
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, ENTITY_DEFAULTS, MODES
+from .const import DOMAIN, ENTITY_DEFAULTS, ENTITY_LABELS, MODES
 from .executor import Command, Executor, plan
 from .model import Settings, Snapshot, decide, ChargingState, charging_state
 from .day_budget import DayBudgetTracker
@@ -31,6 +31,7 @@ class Controller:
         self.store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
         self.lock = asyncio.Lock()
         self.listeners = set()
+        self.output_entities = {}
         self.decision = None
         self.snapshot = None
         self.updated = None
@@ -294,7 +295,10 @@ class Controller:
             "error": self.adapter_error or self.executor.error,
             "decision": asdict(self.decision) if self.decision else None,
             "snapshot": snapshot, "settings": asdict(self.settings),
-            "entities": self.entities, "history": self.executor.history,
+            "entities": self.entities, "entity_labels": ENTITY_LABELS, "history": self.executor.history,
+            "source_entities": {"learning": dict(self.consumption.sources),
+                "historical_temperature": self.consumption.history_temperature_entities(),
+                "outputs": dict(self.output_entities)},
             "charging_state": asdict(self.charging_state),
             "legacy_owned": self.legacy_owned, "day_budget": self.day_budget.status(),
             "consumption_forecast": {**self.consumption.result, "importing": self.consumption.importing, "error": self.consumption.error},

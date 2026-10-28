@@ -8,6 +8,8 @@ from pathlib import Path
 
 from .consumption import ConsumptionDB, number
 
+HISTORICAL_TEMPERATURE = "sensor.wohnzimmer_outdoor_temperatur"
+
 DEFAULT_SOURCES = {
     "inverter": "sensor.inverter_wirkleistung",
     "garage": "sensor.garage_pv_sonoff_energy_power",
@@ -63,6 +65,9 @@ class ConsumptionTracker:
         self.weather_checked = 0
         self.weather_temperatures = {}
         self.stopped = False
+
+    def history_temperature_entities(self):
+        return list(dict.fromkeys((HISTORICAL_TEMPERATURE, self.sources["temperature"])))
 
     async def start(self):
         path = self.hass.config.path(".storage", f"solar_pilot.consumption.{self.entry.entry_id}.sqlite")
@@ -221,7 +226,8 @@ class ConsumptionTracker:
                         series[key] = {int(t):number(v) for t,v in s["values"] if number(v) is not None}
                 temperatures = {}
                 # The old outdoor channel covers winter, Dresden covers current data.
-                for entity in ("wohnzimmer_outdoor_temperatur",self.sources["temperature"].split(".",1)[1]):
+                for entity_id in self.history_temperature_entities():
+                    entity = entity_id.split(".",1)[1]
                     if not re.fullmatch(r"[a-z0-9_]+",entity):
                         continue
                     result = await query(f'SELECT MEAN("value") FROM "°C" WHERE "entity_id"=\'{entity}\' AND time >= {start}s AND time < {until}s GROUP BY time(1h) fill(none)')
