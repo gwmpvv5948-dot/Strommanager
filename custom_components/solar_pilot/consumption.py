@@ -76,6 +76,9 @@ class ConsumptionDB:
             rows = db.execute("SELECT stamp,kwh,temperature FROM hours WHERE stamp<? AND stamp>=? ORDER BY stamp", (now//3600*3600, now-730*86400)).fetchall()
             stats = db.execute("SELECT COUNT(*),COUNT(DISTINCT stamp/86400),MIN(stamp),MAX(stamp) FROM hours").fetchone()
             errors = db.execute("SELECT error,actual-baseline FROM predictions WHERE actual IS NOT NULL ORDER BY stamp DESC LIMIT 336").fetchall()
+            partial = None
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='accumulation'").fetchone():
+                partial = db.execute("SELECT wh,seconds FROM accumulation WHERE stamp=?",(now//3600*3600,)).fetchone()
         # Latest rolling out-of-sample residual corrects systematic bias slowly.
         bias = 0.
         for error, _ in reversed(errors):
@@ -126,6 +129,9 @@ class ConsumptionDB:
         remaining = sum(p["kwh"]*p["remaining_fraction"] for p in points) if complete else None
         return {"available":complete,"remaining_kwh":remaining,"observed_kwh":sum(k for _,k in observed),
                 "observed_hours":len(observed),"expected_elapsed_hours":int((now-start)//3600),
+                "day_start":int(start),"day_end":int(end),
+                "observed":[{"stamp":stamp,"kwh":k} for stamp,k in observed],
+                "current_observation":{"stamp":now//3600*3600,"kwh":partial[0]/1000,"seconds":partial[1]} if partial else None,
                 "hours":points,"training_hours":stats[0],"training_days":stats[1],"first":stats[2],"last":stats[3],
                 "evaluated_hours":len(errors),"mae_kwh":sum(abs(e) for e,_ in errors)/len(errors) if errors else None,
                 "baseline_mae_kwh":sum(abs(e) for _,e in errors)/len(errors) if errors else None,
