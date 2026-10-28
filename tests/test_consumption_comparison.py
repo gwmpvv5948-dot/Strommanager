@@ -13,6 +13,10 @@ class ComparisonTests(unittest.TestCase):
         self.assertTrue(r['available']); self.assertEqual(r['learned_kwh'],3)
         self.assertEqual(r['safe_kwh'],4)
         self.assertEqual(before,decide(s,Settings()))
+    def test_real_epoch(self):
+        now=1793268000
+        r=consumption_comparison(sample(now=now,hours_left=1),Settings(),{'updated':now,'hours':[{'stamp':now,'kwh':1,'high':2}]})
+        self.assertTrue(r['available'])
     def test_stale_missing_and_night(self):
         s=sample(now=1800,hours_left=1)
         for f in ({},{'updated':0},{'updated':1800,'hours':[]},{'updated':1800,'hours':[{'stamp':3600,'kwh':1,'high':2}]}):

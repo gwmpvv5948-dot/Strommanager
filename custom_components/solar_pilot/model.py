@@ -258,7 +258,7 @@ def consumption_comparison(s: Snapshot, c: Settings, forecast: dict) -> dict:
         house_w = max(house_w, s.pv_w * .95 - surplus)
     result["legacy_kwh"] = house_w * hours / 1000
     updated = forecast.get("updated")
-    if not valid(updated) or not 0 <= s.now - updated <= 900:
+    if not valid(updated, 0, 1e12) or not 0 <= s.now - updated <= 900:
         return result
     end, cursor, learned, upper = s.now + hours * 3600, s.now, 0., 0.
     points = forecast.get("hours", [])
