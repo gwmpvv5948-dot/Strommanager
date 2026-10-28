@@ -237,3 +237,52 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
                   else "Pausiert: keine Befehle; letzter Gerätezustand bleibt bestehen")
     return Decision(code, reason, target, discharge, eligible and s.online,
                     round(reserve), round(car_w), forecast_net, needed, tuple(problems))
+
+
+def consumption_comparison(s: Snapshot, c: Settings, forecast: dict) -> dict:
+    """Read-only comparison for the same remaining daylight window as decide().
+
+    No midnight total or EV energy enters this calculation. Commands continue
+    to use decide(); activation requires a separate, reviewed change.
+    """
+    result = {"mode": "parallel", "available": False, "reason": "Keine frische vollständige Prognose", "legacy_kwh": None,
+              "learned_kwh": None, "safe_kwh": None, "delta_kwh": None}
+    if not s.daylight or not valid(s.hours_left, 0, 24) or s.hours_left <= 0:
+        result["reason"] = "Kein verbleibendes PV-Zeitfenster"
+        return result
+    hours = max(.25, s.hours_left)
+    house_w = c.minimum_house_w
+    if (all(valid(v) for v in (s.pv_w, s.grid_export_w, s.battery_charge_w, s.wallbox_w))
+            and 0 <= s.meter_age <= c.meter_max_age_s):
+        surplus = max(0, s.wallbox_w + s.grid_export_w + min(s.battery_charge_w, s.battery_charge_w * .95))
+        house_w = max(house_w, s.pv_w * .95 - surplus)
+    result["legacy_kwh"] = house_w * hours / 1000
+    updated = forecast.get("updated")
+    if not valid(updated) or not 0 <= s.now - updated <= 900:
+        return result
+    end, cursor, learned, upper = s.now + hours * 3600, s.now, 0., 0.
+    points = forecast.get("hours", [])
+    if not isinstance(points, list) or any(not isinstance(p, dict) or not valid(p.get("stamp"), 0, 1e12) for p in points):
+        return result
+    for point in sorted(points, key=lambda p: p["stamp"]):
+        start = point["stamp"]
+        if start + 3600 <= cursor or start >= end:
+            continue
+        if start > cursor or start < cursor - 3600:
+            return result
+        value, high = point.get("kwh"), point.get("high")
+        if not valid(value, 0, 30) or not valid(high, value, 60):
+            return result
+        stop = min(end, start + 3600)
+        fraction = (stop - cursor) / 3600
+        learned += value * fraction
+        upper += max(high, value * 1.15) * fraction
+        cursor = stop
+        if cursor >= end:
+            break
+    if cursor < end:
+        return result
+    safe = max(upper, c.minimum_house_w * hours / 1000)
+    result.update(available=True, reason="Nur Vergleich · bisherige Regelung bleibt aktiv",
+                  learned_kwh=learned, safe_kwh=safe, delta_kwh=safe-result["legacy_kwh"])
+    return result

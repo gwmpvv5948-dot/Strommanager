@@ -14,7 +14,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, ENTITY_DEFAULTS, ENTITY_LABELS, MODES
 from .executor import Command, Executor, plan
-from .model import Settings, Snapshot, decide, ChargingState, charging_state
+from .model import Settings, Snapshot, decide, ChargingState, charging_state, consumption_comparison
 from .day_budget import DayBudgetTracker
 from .consumption_tracker import ConsumptionTracker
 
@@ -301,5 +301,6 @@ class Controller:
                 "outputs": dict(self.output_entities)},
             "charging_state": asdict(self.charging_state),
             "legacy_owned": self.legacy_owned, "day_budget": self.day_budget.status(),
+            "consumption_comparison": consumption_comparison(self.snapshot, self.settings, self.consumption.result) if self.snapshot else {},
             "consumption_forecast": {**self.consumption.result, "importing": self.consumption.importing, "error": self.consumption.error},
         }
