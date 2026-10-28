@@ -41,7 +41,6 @@ class PilotSensor(SensorEntity):
         self._attr_native_unit_of_measurement = unit
         if key in ("consumption_remaining", "consumption_error"):
             self._attr_device_class = SensorDeviceClass.ENERGY
-            self._attr_state_class = SensorStateClass.MEASUREMENT
         if key.startswith("daily_"):
             self._attr_device_class = SensorDeviceClass.ENERGY
             self._attr_state_class = SensorStateClass.TOTAL
