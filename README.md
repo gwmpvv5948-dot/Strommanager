@@ -126,3 +126,11 @@ Die Oberfläche aktualisiert weiterhin alle zehn Sekunden. Geöffnete Details we
 ### Neu in 0.1.10: Y-Achse der Verbrauchsprognose
 
 Das Diagramm der lernenden Hausverbrauchsprognose zeigt eine beschriftete Y-Achse für den prognostizierten Verbrauch je Stunde in kWh. Die Skala beginnt bei null, passt sich an die erwarteten Werte einschließlich Streuung an und verwendet horizontale Hilfslinien. Uhrzeiten und Prognoseberechnung bleiben bestehen.
+
+### Neu in 0.1.11: umschaltbare Verbrauchsbalken
+
+Die lernende Hausverbrauchskachel bietet **Tagesverlauf** und **Tagesbilanz**. Die Auswahl wird lokal im Browser je Integration gespeichert; initial ist die Tagesbilanz gewählt. Beide Ansichten verwenden dieselben Bilanzdaten ohne Tesla. Volle grüne Flächen zeigen bereits bilanzierte Messwerte, goldene Schraffur die verbleibende Prognose.
+
+Der Tagesverlauf enthält alle realen UTC-Stunden des lokalen Tages (auch 23/25 Stunden bei Zeitumstellung), eine kWh-Achse, Stundenmarken, einen Datenstand und Detailwerte je Balken. Fehlende vergangene Stunden bleiben Lücken mit Fragezeichen. Die laufende Stunde enthält nur die bereits erfasste Energie aus dem persistenten Stundenakkumulator plus die Prognose für den verbleibenden Stundenanteil; eine volle Stundenprognose wird nicht zusätzlich gezählt.
+
+Die Tagesbilanz teilt einen gemeinsamen Balken zwischen bislang bilanzierter Energie und verbleibender Prognose auf. Nur bei vollständigen abgeschlossenen Stunden, mindestens 85 % bisheriger Abdeckung der laufenden Stunde und vollständiger Restprognose heißt die Summe „Tag insgesamt erwartet“. Andernfalls heißt sie **„Erfasst + Restprognose“** und trägt einen Lückenhinweis: Sie ist dann ausdrücklich kein vollständiger Tagesverbrauch. Der fehlerbehaftete historische Tageszähler und ein Tageswert einschließlich Tesla werden dafür nicht vermischt. Lernumfang und Fehler bleiben unter dem Diagramm sichtbar. Die Ladesteuerung bleibt unverändert.
