@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {consumptionBars,consumptionAxis,historicalConsumptionBars} from '../custom_components/solar_pilot/frontend/consumption-chart.js';
+import {consumptionBars,consumptionAxis,historicalConsumptionBars,dailyConsumption} from '../custom_components/solar_pilot/frontend/consumption-chart.js';
+test('total daily meter includes EV as supplied, converts units and rejects old or unknown readings',()=>{
+ const now=Date.parse('2026-10-28T20:00Z'),state={state:'12.4',attributes:{unit_of_measurement:'kWh'},last_updated:'2026-10-28T19:59Z'};
+ assert.equal(dailyConsumption(state,now),12.4);
+ assert.equal(dailyConsumption({...state,state:'12400',attributes:{unit_of_measurement:'Wh'}},now),12.4);
+ assert.equal(dailyConsumption({...state,state:'unavailable'},now),null);
+ assert.equal(dailyConsumption({...state,last_updated:'2026-10-27T19:59Z'},now),null);
+ assert.equal(dailyConsumption({...state,state:'0'},now),0);
+});
+
 const start=Date.parse('2026-10-28T00:00Z')/1000;
 function data(){return {day_start:start,day_end:start+86400,updated:start+5400,
  observed:[{stamp:start,kwh:.4}],current_observation:{stamp:start+3600,kwh:.2,seconds:1800},

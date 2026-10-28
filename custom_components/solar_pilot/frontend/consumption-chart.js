@@ -1,6 +1,14 @@
 // One accounting model for both views. Unknown intervals are never zero-filled.
 const numeric=value=>value==null||value===''?null:Number.isFinite(Number(value))?Number(value):null;
 const energy=value=>{const n=numeric(value);return n!==null&&n>=0?n:null;};
+// The cumulative meter includes EV charging; do not add hourly house readings to it.
+export function dailyConsumption(state, now=Date.now(), zone='Europe/Berlin'){
+  const value=energy(state?.state),unit=state?.attributes?.unit_of_measurement;
+  const updated=Date.parse(state?.last_updated||'');
+  const day=t=>new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(t);
+  if(value===null||!['Wh','kWh'].includes(unit)||!Number.isFinite(updated)||updated>now+60000||day(updated)!==day(now))return null;
+  return unit==='Wh'?value/1000:value;
+}
 export function consumptionBars(f){
   const start=numeric(f?.day_start),end=numeric(f?.day_end),now=numeric(f?.updated);
   if(start===null||end===null||now===null||end<=start||end-start>26*3600||now<start||now>=end)return null;
