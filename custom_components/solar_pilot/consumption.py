@@ -101,6 +101,12 @@ class ConsumptionDB:
                 weighted.append((weight,kwh))
             total = sum(w for w,k in weighted)
             effective = total**2/sum(w*w for w,k in weighted) if total else 0
+            simplified = effective < 5 and len(peers) >= 5
+            if simplified:
+                # Sparse night/weather matches fall back to an explicit hourly
+                # prior, never to zero or to fabricated weather observations.
+                weighted = [(1.,kwh) for stamp,kwh,t,d in peers]
+                total = effective = len(peers)
             estimate = sum(w*k for w,k in weighted)/total if effective>=5 else None
             if baseline is None and peers:
                 baseline = sum(k for _,k,_,_ in peers)/len(peers)
@@ -110,7 +116,7 @@ class ConsumptionDB:
             fraction = min(1, max(0, (hour+3600-now)/3600))
             points.append({"stamp":hour,"kwh":estimate,"low":max(0,estimate-spread) if estimate is not None else None,
                            "high":estimate+spread if estimate is not None else None,"remaining_fraction":fraction,
-                           "samples":round(effective,1),"temperature":temp})
+                           "samples":round(effective,1),"temperature":temp,"simplified":simplified})
             if hour > now and estimate is not None and baseline is not None:
                 with self.connect() as db:
                     db.execute("INSERT OR IGNORE INTO predictions(stamp,issued,predicted,baseline) VALUES (?,?,?,?)",(hour,now,estimate,baseline))
@@ -124,5 +130,6 @@ class ConsumptionDB:
                 "evaluated_hours":len(errors),"mae_kwh":sum(abs(e) for e,_ in errors)/len(errors) if errors else None,
                 "baseline_mae_kwh":sum(abs(e) for _,e in errors)/len(errors) if errors else None,
                 "bias_kwh":bias,"weather_forecast":bool(temperatures),
-                "temperature_mode":"Stündliche HA-Wetterprognose; fehlende Stunden mit aktueller Temperatur" if temperatures else "Aktuelle Temperatur fortgeschrieben" if temperature is not None else "Temperatur fehlt · nur Zeit- und Wochentagsprofil",
+                "temperature_mode":("Stündliche HA-Wetterprognose; fehlende Stunden mit aktueller Temperatur" if temperatures else "Aktuelle Temperatur fortgeschrieben" if temperature is not None else "Temperatur fehlt · nur Zeit- und Wochentagsprofil") + f" · {sum(p['simplified'] for p in points)} Stunden mit einfachem Uhrzeitprofil wegen weniger passender Vergleichswerte",
+                "simplified_hours":sum(p["simplified"] for p in points),
                 "mode":"Beobachtung · ohne Einfluss auf Ladesteuerung","updated":now}
