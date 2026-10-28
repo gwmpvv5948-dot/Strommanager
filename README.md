@@ -122,3 +122,7 @@ Unter Diagnose → Verwendete Entitäten stehen zusätzlich die tatsächlich kon
 ### Neu in 0.1.9: stabile Ansicht bei Live-Aktualisierungen
 
 Die Oberfläche aktualisiert weiterhin alle zehn Sekunden. Geöffnete Details werden bereits außerhalb der sichtbaren Seite wiederhergestellt, bevor der neue Inhalt eingesetzt wird. Der vorhandene Scrollcontainer bleibt erhalten; auch ein von HA verwendeter äußerer Container bzw. der Dokument-Scroller wird berücksichtigt. Ein sichtbarer Inhaltsanker gleicht Höhenänderungen oberhalb der betrachteten Stelle aus; vertikale Position, horizontale Diagrammpositionen und der Tastaturfokus werden ohne automatisches Scrollen wiederhergestellt. Beim bewussten Tabwechsel beginnt die Ansicht weiterhin oben. Das verhindert insbesondere Sprünge in der langen aufgeklappten Quellenübersicht.
+
+### Neu in 0.1.10: Y-Achse der Verbrauchsprognose
+
+Das Diagramm der lernenden Hausverbrauchsprognose zeigt eine beschriftete Y-Achse für den prognostizierten Verbrauch je Stunde in kWh. Die Skala beginnt bei null, passt sich an die erwarteten Werte einschließlich Streuung an und verwendet horizontale Hilfslinien. Uhrzeiten und Prognoseberechnung bleiben bestehen.
