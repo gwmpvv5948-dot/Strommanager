@@ -139,3 +139,46 @@ class ConsumptionDB:
                 "temperature_mode":("Stündliche HA-Wetterprognose; fehlende Stunden mit aktueller Temperatur" if temperatures else "Aktuelle Temperatur fortgeschrieben" if temperature is not None else "Temperatur fehlt · nur Zeit- und Wochentagsprofil") + f" · {sum(p['simplified'] for p in points)} Stunden mit einfachem Uhrzeitprofil wegen weniger passender Vergleichswerte",
                 "simplified_hours":sum(p["simplified"] for p in points),
                 "mode":"Beobachtung · ohne Einfluss auf Ladesteuerung","updated":now}
+
+    def history_days(self, now, limit=45):
+        """Daily, out-of-sample forecast comparisons for the panel.
+
+        A day is included only if a forecast was recorded before its hour began.
+        Imported consumption alone must never be presented as a retrospective
+        forecast.  The first forecast stored for an hour remains the stable
+        comparison point even if the model was recalculated later.
+        """
+        current_day = datetime.fromtimestamp(now, self.zone).date()
+        with self.connect() as db:
+            rows = db.execute("""SELECT stamp,issued,predicted,actual,error
+                FROM predictions WHERE stamp < ? AND issued < stamp
+                ORDER BY stamp DESC LIMIT ?""", (int(now)//3600*3600, limit*26)).fetchall()
+        grouped = {}
+        for stamp, issued, predicted, actual, error in rows:
+            local = datetime.fromtimestamp(stamp, self.zone)
+            if local.date() >= current_day:
+                continue
+            key = local.date().isoformat()
+            grouped.setdefault(key, {"date":key, "day_start":None, "day_end":None,
+                                     "hours":[], "first_issued":issued})
+            day = grouped[key]
+            day["first_issued"] = min(day["first_issued"], issued)
+            day["hours"].append({"stamp":stamp, "predicted":predicted,
+                                 "actual":actual, "error":error})
+        result = []
+        for day in grouped.values():
+            hours = sorted(day["hours"], key=lambda item:item["stamp"])
+            if not hours:
+                continue
+            day["hours"] = hours
+            local_start = datetime.fromisoformat(day["date"]).replace(tzinfo=self.zone)
+            day["day_start"] = int(local_start.timestamp())
+            day["day_end"] = int((local_start + timedelta(days=1)).timestamp())
+            evaluated = [row for row in hours if row["actual"] is not None]
+            day["forecast_hours"] = len(hours)
+            day["evaluated_hours"] = len(evaluated)
+            day["predicted_kwh"] = sum(row["predicted"] for row in evaluated) if evaluated else None
+            day["actual_kwh"] = sum(row["actual"] for row in evaluated) if evaluated else None
+            day["error_kwh"] = sum(row["error"] for row in evaluated) if evaluated else None
+            result.append(day)
+        return sorted(result, key=lambda item:item["date"], reverse=True)[:limit]

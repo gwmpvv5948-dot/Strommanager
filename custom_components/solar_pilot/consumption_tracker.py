@@ -141,6 +141,7 @@ class ConsumptionTracker:
                     # Unsupported/missing weather forecast falls back to a named assumption.
                     self.weather_temperatures = {}
             self.result = await self.hass.async_add_executor_job(self.db.forecast,now,temp,self.weather_temperatures)
+            self.result["history_days"] = await self.hass.async_add_executor_job(self.db.history_days,now)
             status = await self.hass.async_add_executor_job(self.db.meta,"import_status")
             self.result.update({"importing":self.importing,"import_status":status,"error":self.error})
 
