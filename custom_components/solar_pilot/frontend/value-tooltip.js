@@ -27,4 +27,5 @@ export function bindValueTooltip(plot,previous,remember){
     if(hit&&(previous.keyboard||previous.clientX>=r.left&&previous.clientX<=r.right&&previous.clientY>=r.top&&previous.clientY<=r.bottom))show(hit,previous.clientX,previous.clientY,previous.keyboard);
     else remember(null);
   }
+  return ()=>{plot.onpointermove=null;plot.onpointerleave=null;plot.onfocusin=null;plot.onfocusout=null;plot.onkeydown=null;};
 }
