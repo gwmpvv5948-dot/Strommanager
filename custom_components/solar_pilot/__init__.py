@@ -49,12 +49,15 @@ async def async_setup_entry(hass, entry):
                 await controller.async_set_mode(call.data["mode"])
             elif call.service == "activate":
                 await controller.async_activate(call.data.get("mode", "auto"))
+            elif call.service == "import_consumption_history":
+                entry = controller.entry
+                entry.async_create_background_task(hass, controller.consumption.import_history(), "Strommanager consumption import")
             elif call.service == "configure":
                 await controller.async_configure(call.data["settings"])
             else:
                 await controller.async_update()
 
-        for name in ("activate", "evaluate", "set_mode", "configure"):
+        for name in ("activate", "evaluate", "set_mode", "configure", "import_consumption_history"):
             fields = {**schema}
             if name == "set_mode":
                 fields[vol.Required("mode")] = vol.In(MODES)

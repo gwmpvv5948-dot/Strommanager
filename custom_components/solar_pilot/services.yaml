@@ -42,3 +42,12 @@ configure:
       required: true
       selector:
         object:
+
+import_consumption_history:
+  name: Verbrauchshistorie weiter importieren
+  description: Setzt den lesenden InfluxDB-v1-Import fort. Ändert keine Geräte oder Quelldaten.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:

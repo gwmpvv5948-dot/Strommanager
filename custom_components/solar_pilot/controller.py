@@ -16,6 +16,7 @@ from .const import DOMAIN, ENTITY_DEFAULTS, MODES
 from .executor import Command, Executor, plan
 from .model import Settings, Snapshot, decide, ChargingState, charging_state
 from .day_budget import DayBudgetTracker
+from .consumption_tracker import ConsumptionTracker
 
 
 class Controller:
@@ -38,6 +39,7 @@ class Controller:
         self.adapter_error = None
         self._stopping = False
         self._saved_payload = None
+        self.consumption = ConsumptionTracker(hass, entry, self.entities, self.settings)
         self.day_budget = DayBudgetTracker(hass, entry, self.entities, self.settings, self.publish)
 
     def state(self, key):
@@ -129,6 +131,15 @@ class Controller:
         self.entry.async_on_unload(async_track_time_interval(self.hass, self._tick, timedelta(seconds=30)))
         self.entry.async_on_unload(async_track_state_change_event(self.hass, list(self.entities.values()), self._tick))
         await self.day_budget.async_start()
+        if hasattr(self.hass, "config"):
+            await self.consumption.start()
+            @callback
+            def import_consumption(_event=None):
+                self.entry.async_create_background_task(self.hass, self.consumption.import_history(), "Strommanager consumption import")
+            if self.hass.is_running:
+                import_consumption()
+            else:
+                self.entry.async_on_unload(self.hass.bus.async_listen_once("homeassistant_started", import_consumption))
         if self.hass.is_running:
             await self.async_update()
         else:
@@ -145,6 +156,10 @@ class Controller:
             return
         async with self.lock:
             self.snapshot = self.read()
+            try:
+                await self.consumption.sample(self.snapshot.now)
+            except Exception as exc:
+                self.consumption.error = f"Verbrauchslernen nicht aktualisiert ({type(exc).__name__})"
             if self.mode not in ("observe", "paused"):
                 self.charging_state = charging_state(self.snapshot, self.settings, self.charging_state)
             self.decision = decide(self.snapshot, self.settings, self.mode, self.charging_state)
@@ -257,6 +272,7 @@ class Controller:
     async def async_stop(self):
         # Unloading never changes devices or reactivates the previous automation.
         self._stopping = True
+        self.consumption.stopped = True
         await self.day_budget.async_stop()
         async with self.lock:
             await self.persist()
@@ -283,4 +299,5 @@ class Controller:
             "entities": self.entities, "history": self.executor.history,
             "charging_state": asdict(self.charging_state),
             "legacy_owned": self.legacy_owned, "day_budget": self.day_budget.status(),
+            "consumption_forecast": {**self.consumption.result, "importing": self.consumption.importing, "error": self.consumption.error},
         }

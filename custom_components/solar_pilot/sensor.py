@@ -8,6 +8,9 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from .const import DOMAIN, VERSION
 
 DEFINITIONS = (
+    ("consumption_remaining", "Hausverbrauch Restprognose", "kWh", "mdi:home-analytics"),
+    ("consumption_training", "Verbrauchsprognose Lernstunden", "h", "mdi:school"),
+    ("consumption_error", "Verbrauchsprognose mittlerer Fehler", "kWh", "mdi:chart-bell-curve"),
     ("daily_house", "PV heute Haus", "kWh", "mdi:home-lightning-bolt"),
     ("daily_storage", "PV heute Speicher", "kWh", "mdi:battery-plus"),
     ("daily_tesla", "PV heute Tesla", "kWh", "mdi:car-electric"),
@@ -36,6 +39,9 @@ class PilotSensor(SensorEntity):
         self._attr_icon = icon
         self._attr_unique_id = f"{entry.entry_id}_{key}"
         self._attr_native_unit_of_measurement = unit
+        if key in ("consumption_remaining", "consumption_error"):
+            self._attr_device_class = SensorDeviceClass.ENERGY
+            self._attr_state_class = SensorStateClass.MEASUREMENT
         if key.startswith("daily_"):
             self._attr_device_class = SensorDeviceClass.ENERGY
             self._attr_state_class = SensorStateClass.TOTAL
@@ -54,6 +60,11 @@ class PilotSensor(SensorEntity):
 
     @property
     def native_value(self):
+        if self.key.startswith("consumption_"):
+            data = self.controller.consumption.result
+            key = {"consumption_remaining":"remaining_kwh", "consumption_training":"training_hours", "consumption_error":"mae_kwh"}[self.key]
+            value = data.get(key)
+            return round(value,3) if value is not None else None
         if self.key.startswith("daily_"):
             status = self.controller.day_budget.status()
             return round(status["actual"].get(self.key[6:], 0), 4) if status["available"] else None
@@ -71,6 +82,10 @@ class PilotSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self):
+        if self.key.startswith("consumption_"):
+            data = self.controller.consumption.result
+            return {"mode":"observe", "training_days":data.get("training_days"), "evaluated_hours":data.get("evaluated_hours"),
+                    "importing":self.controller.consumption.importing, "error":self.controller.consumption.error}
         if self.key.startswith("daily_"):
             status = self.controller.day_budget.status()
             return {"day": status["day"], "missing_minutes": status["missing_minutes"], "method": status["method"], "error": status["error"]}
