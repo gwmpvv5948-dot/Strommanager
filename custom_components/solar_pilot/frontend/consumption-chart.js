@@ -25,8 +25,8 @@ export function consumptionBars(f){
   return {start,end,now,bins,measured,remaining:completeForecast?remaining:null,total,missing,currentCoverage,
     complete:missing===0&&currentCoverage>=.85&&completeForecast};
 }
-export function consumptionAxis(bins){
-  const peak=Math.max(.1,...bins.map(p=>(p.actual||0)+Math.max(p.future||0,p.high||0)));
+export function consumptionAxis(bins,extra=[]){
+  const peak=Math.max(.1,...bins.map(p=>(p.actual||0)+Math.max(p.future||0,p.high||0)),...extra.filter(v=>Number.isFinite(v)&&v>=0));
   const base=10**Math.floor(Math.log10(peak/4)),ratio=peak/4/base;
   const step=(ratio<=1?1:ratio<=2?2:ratio<=5?5:10)*base;
   const max=Math.ceil(peak/step)*step;
