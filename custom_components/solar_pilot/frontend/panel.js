@@ -228,7 +228,20 @@ export class SolarPilotPanel extends HTMLElement {
     if(!this.shadowRoot)return;
     const t=this.status;
     const oldShell=this.shadowRoot.querySelector(".shell");
-    const scrollTop=resetScroll?0:oldShell?.scrollTop||0;
+    const doc=this.ownerDocument;
+    let scrollContainer=oldShell;
+    while(scrollContainer){
+      const overflow=doc.defaultView.getComputedStyle(scrollContainer).overflowY;
+      if(scrollContainer.scrollHeight>scrollContainer.clientHeight+1&&/auto|scroll/.test(overflow))break;
+      scrollContainer=scrollContainer.parentElement||scrollContainer.getRootNode()?.host;
+    }
+    scrollContainer=scrollContainer||doc.scrollingElement;
+    const scrollTop=resetScroll?0:scrollContainer.scrollTop;
+    const anchorKey=el=>el.matches('.split')?`${el.closest('.source-group')?.querySelector('h3')?.textContent}|${el.querySelector('code')?.textContent}`:`${el.tagName}|${el.textContent.trim()}`;
+    const candidates=root=>[...root.querySelectorAll('h2,h3,summary,.mapping .split')];
+    const viewportTop=scrollContainer===doc.scrollingElement?0:scrollContainer.getBoundingClientRect().top;
+    const anchor=!resetScroll&&oldShell&&candidates(oldShell).find(el=>{const r=el.getBoundingClientRect();return r.height>0&&r.top>=viewportTop&&r.top<viewportTop+scrollContainer.clientHeight;});
+    const anchorState=anchor?{key:anchorKey(anchor),top:anchor.getBoundingClientRect().top}:null;
     const detailKey=el=>`${el.className}|${el.querySelector('summary')?.textContent.trim()}`;
     const detailsOpen=new Map([...this.shadowRoot.querySelectorAll("details")].map(el=>[detailKey(el),el.open]));
     const horizontal=[...this.shadowRoot.querySelectorAll('.chart-scroll,.days-table-scroll')].map(el=>el.scrollLeft);
@@ -236,7 +249,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${t.conflict&&!["observe","paused"].includes(t.mode)?'<div class="alert error" role="alert">Bisherige Automation ist aktiv oder nicht prüfbar. Strommanager sendet keine Befehle.</div>':""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings():this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.8</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${t.conflict&&!["observe","paused"].includes(t.mode)?'<div class="alert error" role="alert">Bisherige Automation ist aktiv oder nicht prüfbar. Strommanager sendet keine Befehle.</div>':""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings():this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.9</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
@@ -249,7 +262,11 @@ export class SolarPilotPanel extends HTMLElement {
     if(focused){
       [...this.shadowRoot.querySelectorAll('button,summary,input,select,a')].find(el=>focusKey(el)===focused)?.focus({preventScroll:true});
     }
-    this.shadowRoot.querySelector('.shell').scrollTop=scrollTop;
+    scrollContainer.scrollTop=scrollTop;
+    if(anchorState){
+      const restored=candidates(this.shadowRoot).find(el=>anchorKey(el)===anchorState.key);
+      if(restored)scrollContainer.scrollTop+=restored.getBoundingClientRect().top-anchorState.top;
+    }
     if(!resetScroll)this.shadowRoot.querySelectorAll('.chart-scroll,.days-table-scroll').forEach((el,i)=>{el.scrollLeft=horizontal[i]||0;});
     this.shadowRoot.querySelectorAll("[data-tab]").forEach(el=>el.onclick=()=>{this.tab=el.dataset.tab;this.render(true);});
     this.shadowRoot.querySelector("#sidebar")?.addEventListener("click",()=>this.dispatchEvent(new Event("hass-toggle-menu",{bubbles:true,composed:true})));
