@@ -66,6 +66,14 @@ class Forecast(unittest.TestCase):
             self.assertEqual(db.execute('SELECT COUNT(*) FROM hours').fetchone()[0],1)
             self.assertIsNone(db.execute('SELECT temperature FROM hours').fetchone()[0])
 
+    def test_sparse_weather_matches_use_explicit_hourly_prior(self):
+        rows=self.seed(6)
+        self.db.put([(t,k,-20 if i%2 else 40,c,s) for i,(t,k,temp,c,s) in enumerate(rows)])
+        result=self.db.forecast(self.now,9)
+        self.assertTrue(result['available'])
+        self.assertGreater(result['simplified_hours'],0)
+        self.assertTrue(all(p['samples']>=5 for p in result['hours']))
+
     def test_temperature_changes_estimate(self):
         rows=self.seed(180)
         self.db.put([(t,.2 if i%2 else 1.,20 if i%2 else 0,c,s) for i,(t,k,temp,c,s) in enumerate(rows)])
