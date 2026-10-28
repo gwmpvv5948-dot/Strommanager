@@ -120,3 +120,44 @@ class HistoricalQuality(unittest.TestCase):
             tracker._record(7200,1000,10)
             with db.connect() as sql:
                 self.assertEqual(sql.execute('SELECT COUNT(*) FROM hours WHERE stamp=3600').fetchone()[0],0)
+
+class LiveWeather(unittest.IsolatedAsyncioTestCase):
+    async def test_unavailable_temperature_uses_existing_weather_forecast(self):
+        import asyncio,sys
+        from types import SimpleNamespace
+        tracker_mod=sys.modules.get('forecast_quality.consumption_tracker')
+        if tracker_mod is None:
+            HistoricalQuality.setUpClass()
+            # Import by spec isn't registered by that fixture; use the class.
+        Tracker=HistoricalQuality.Tracker
+        now=datetime.now(timezone.utc); stamp=int(now.timestamp())
+        def state(value,attrs):
+            return SimpleNamespace(state=value,attributes=attrs,last_reported=now,last_updated=now)
+        values={
+            'sensor.inverter_wirkleistung':state('1000',{'unit_of_measurement':'W'}),
+            'sensor.garage_pv_sonoff_energy_power':state('0',{'unit_of_measurement':'W'}),
+            'sensor.schuppen_pv_sonoff_energy_power':state('0',{'unit_of_measurement':'W'}),
+            'sensor.dresden_temperatur':state('unavailable',{'unit_of_measurement':'°C'}),
+            'weather.dresden_stadt':state('cloudy',{'temperature':9.1,'temperature_unit':'°C'}),
+            'grid':state('-100',{'unit_of_measurement':'W'}),
+            'wallbox':state('0',{'unit_of_measurement':'W'}),
+            'grid_charge':state('off',{}),
+        }
+        async def executor(func,*args):return await asyncio.to_thread(func,*args)
+        calls=[]
+        async def service(*args,**kwargs):
+            calls.append((args,kwargs))
+            return {'weather.dresden_stadt':{'forecast':[{'datetime':now.isoformat(),'temperature':10.}]}}
+        hass=SimpleNamespace(states=SimpleNamespace(get=values.get),async_add_executor_job=executor,
+                             services=SimpleNamespace(async_call=service))
+        with tempfile.TemporaryDirectory() as folder:
+            tracker=Tracker(hass,SimpleNamespace(options={}),{'grid_power':'grid','wallbox_power':'wallbox','grid_charge':'grid_charge'},SimpleNamespace(grid_export_positive=True))
+            tracker.db=ConsumptionDB(Path(folder)/'live.sqlite')
+            await tracker.sample(stamp)
+            self.assertIsNone(tracker.error)
+            self.assertTrue(tracker.result['weather_forecast'])
+            import json
+            self.assertEqual(json.loads(tracker.db.meta('live_point'))[2],9.1)
+            self.assertEqual(calls[0][0][:2],('weather','get_forecasts'))
+            await tracker.sample(stamp+31)
+            self.assertEqual(len(calls),1) # No provider query every 30-second sample.
