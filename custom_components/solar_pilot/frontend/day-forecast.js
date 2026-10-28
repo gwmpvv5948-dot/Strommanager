@@ -10,10 +10,14 @@ export function nextDays(now,timezone='Europe/Berlin',count=4) {
   const key=dateKey(now,timezone);
   return Array.from({length:count},(_,i)=>new Date(Date.parse(`${key}T12:00:00Z`)+i*86400000).toISOString().slice(0,10));
 }
+export function pvDayIds(todayId) {
+  const german=todayId?.endsWith('prognose_heute'),english=todayId?.endsWith('forecast_today');
+  return german?['prognose_heute','prognose_morgen','prognose_tag_3','prognose_tag_4'].map(x=>todayId.replace(/prognose_heute$/,x)):english?['forecast_today','forecast_tomorrow','forecast_day_3','forecast_day_4'].map(x=>todayId.replace(/forecast_today$/,x)):[todayId];
+}
+
 // Only the combined daily Solcast estimate is used; entity state may be P10.
 export function pvDays(states,todayId,timezone='Europe/Berlin') {
-  const german=todayId?.endsWith('prognose_heute'),english=todayId?.endsWith('forecast_today');
-  const ids=german?['prognose_heute','prognose_morgen','prognose_tag_3','prognose_tag_4'].map(x=>todayId.replace(/prognose_heute$/,x)):english?['forecast_today','forecast_tomorrow','forecast_day_3','forecast_day_4'].map(x=>todayId.replace(/forecast_today$/,x)):[todayId];
+  const ids=pvDayIds(todayId);
   const result={};
   for(const id of ids){
     const entity=states[id],a=entity?.attributes;
