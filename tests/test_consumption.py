@@ -20,6 +20,19 @@ class Forecast(unittest.TestCase):
         start=self.now//86400*86400-days*86400
         return [(t,.4,10.,1.,'influx') for t in range(start,self.now//3600*3600,3600)]
 
+    def test_chart_payload_keeps_partial_energy_separate_from_closed_hours(self):
+        self.db.put(self.seed())
+        hour=self.now//3600*3600
+        with self.db.connect() as db:
+            db.execute("CREATE TABLE accumulation(stamp INTEGER PRIMARY KEY,wh REAL,seconds REAL,temp_sum REAL,temp_seconds REAL)")
+            db.execute("INSERT INTO accumulation VALUES (?,?,?,?,?)",(hour,150,900,9000,900))
+        result=self.db.forecast(self.now,10)
+        self.assertEqual(result['current_observation'],{'stamp':hour,'kwh':.15,'seconds':900})
+        self.assertEqual(len(result['observed']),result['observed_hours'])
+        self.assertTrue(all(p['stamp']<hour for p in result['observed']))
+        self.assertAlmostEqual(sum(p['kwh'] for p in result['observed']),result['observed_kwh'])
+        self.assertEqual(result['day_end']-result['day_start'],86400)
+
     def test_missing_hours_not_zero_filled(self):
         self.db.put([(self.now//3600*3600-3600,.5,10,.5,'influx')])
         result=self.db.forecast(self.now,10)
