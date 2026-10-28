@@ -13,6 +13,7 @@ DEFAULT_SOURCES = {
     "garage": "sensor.garage_pv_sonoff_energy_power",
     "shed": "sensor.schuppen_pv_sonoff_energy_power",
     "temperature": "sensor.dresden_temperatur",
+    "weather": "weather.dresden_stadt",
 }
 
 
@@ -48,15 +49,19 @@ def historical_hours(series, temperatures, start, end, grid_positive=True):
 
 
 class ConsumptionTracker:
-    def __init__(self, hass, entry, entities, settings):
+    def __init__(self, hass, entry, entities, settings, changed=None):
         self.hass, self.entry, self.entities, self.settings = hass, entry, entities, settings
         self.sources = {**DEFAULT_SOURCES, **entry.options.get("consumption_sources", {})}
+        self.changed = changed
+        self.sampling = False
         self.db = None
         self.result = {}
         self.importing = False
         self.error = None
         self.last_refresh = 0
         self.last_sample = 0
+        self.weather_checked = 0
+        self.weather_temperatures = {}
         self.stopped = False
 
     async def start(self):
@@ -81,6 +86,19 @@ class ConsumptionTracker:
         return value if age<=300 or value==0 and age<=21600 else None
 
     async def sample(self, now):
+        if self.sampling or self.stopped:
+            return
+        self.sampling = True
+        try:
+            await self._sample(now)
+        except Exception as exc:
+            self.error = f"Verbrauchslernen nicht aktualisiert ({type(exc).__name__})"
+        finally:
+            self.sampling = False
+            if self.changed and not self.stopped:
+                self.changed()
+
+    async def _sample(self, now):
         if not self.db or self.stopped or now-self.last_sample<30:
             return
         self.last_sample = now
@@ -88,6 +106,11 @@ class ConsumptionTracker:
         grid = self._value(self.entities["grid_power"])
         wallbox = self._value(self.entities["wallbox_power"])
         temp = self._value(self.sources["temperature"],True)
+        if temp is None:
+            weather = self.hass.states.get(self.sources["weather"])
+            if weather and weather.state not in ("unknown","unavailable") and weather.attributes.get("temperature_unit")=="°C":
+                candidate = number(weather.attributes.get("temperature"))
+                temp = candidate if candidate is not None and -35<=candidate<=45 else None
         charge = self.hass.states.get(self.entities["grid_charge"])
         valid = all(v is not None for v in (*values,grid,wallbox)) and charge and charge.state=="off"
         house = sum(values)-grid*(1 if self.settings.grid_export_positive else -1)-wallbox if valid else None
@@ -96,7 +119,23 @@ class ConsumptionTracker:
         await self.hass.async_add_executor_job(self._record, int(now), max(0,house) if house is not None else None,temp)
         if now-self.last_refresh>=300:
             self.last_refresh = now
-            self.result = await self.hass.async_add_executor_job(self.db.forecast,now,temp)
+            if now-self.weather_checked>=3600:
+                self.weather_checked = now
+                self.weather_temperatures = {}
+                try:
+                    response = await asyncio.wait_for(self.hass.services.async_call("weather","get_forecasts",
+                        {"entity_id":self.sources["weather"],"type":"hourly"},blocking=True,return_response=True),timeout=10)
+                    weather = self.hass.states.get(self.sources["weather"])
+                    if weather and weather.attributes.get("temperature_unit")=="°C":
+                        for point in (response or {}).get(self.sources["weather"],{}).get("forecast",[]):
+                            stamp = datetime.fromisoformat(point["datetime"].replace("Z","+00:00"))
+                            value = number(point.get("temperature"))
+                            if stamp.tzinfo and value is not None and -35<=value<=45:
+                                self.weather_temperatures[int(stamp.timestamp())//3600*3600] = value
+                except Exception:
+                    # Unsupported/missing weather forecast falls back to a named assumption.
+                    self.weather_temperatures = {}
+            self.result = await self.hass.async_add_executor_job(self.db.forecast,now,temp,self.weather_temperatures)
             status = await self.hass.async_add_executor_job(self.db.meta,"import_status")
             self.result.update({"importing":self.importing,"import_status":status,"error":self.error})
 
@@ -152,7 +191,7 @@ class ConsumptionTracker:
                 if data.get("error") or any(r.get("error") for r in data.get("results",[])):
                     raise ValueError("Influx-Leseabfrage abgelehnt")
                 return [s for r in data.get("results",[]) for s in r.get("series",[])]
-            mapping = {k:v.split(".",1)[1] for k,v in self.sources.items() if k!="temperature"}
+            mapping = {k:v.split(".",1)[1] for k,v in self.sources.items() if k not in ("temperature","weather")}
             mapping.update(grid=self.entities["grid_power"].split(".",1)[1],wallbox=self.entities["wallbox_power"].split(".",1)[1])
             # IDs are not inserted as raw regex or arbitrary SQL.
             import re

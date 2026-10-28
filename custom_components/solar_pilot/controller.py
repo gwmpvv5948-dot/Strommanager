@@ -39,7 +39,7 @@ class Controller:
         self.adapter_error = None
         self._stopping = False
         self._saved_payload = None
-        self.consumption = ConsumptionTracker(hass, entry, self.entities, self.settings)
+        self.consumption = ConsumptionTracker(hass, entry, self.entities, self.settings, self.publish)
         self.day_budget = DayBudgetTracker(hass, entry, self.entities, self.settings, self.publish)
 
     def state(self, key):
@@ -156,10 +156,8 @@ class Controller:
             return
         async with self.lock:
             self.snapshot = self.read()
-            try:
-                await self.consumption.sample(self.snapshot.now)
-            except Exception as exc:
-                self.consumption.error = f"Verbrauchslernen nicht aktualisiert ({type(exc).__name__})"
+            if self.consumption.db and not self.consumption.sampling and self.snapshot.now-self.consumption.last_sample>=30:
+                self.entry.async_create_background_task(self.hass, self.consumption.sample(self.snapshot.now), "Strommanager consumption learning")
             if self.mode not in ("observe", "paused"):
                 self.charging_state = charging_state(self.snapshot, self.settings, self.charging_state)
             self.decision = decide(self.snapshot, self.settings, self.mode, self.charging_state)

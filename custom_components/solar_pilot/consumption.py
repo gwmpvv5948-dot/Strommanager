@@ -123,5 +123,6 @@ class ConsumptionDB:
                 "hours":points,"training_hours":stats[0],"training_days":stats[1],"first":stats[2],"last":stats[3],
                 "evaluated_hours":len(errors),"mae_kwh":sum(abs(e) for e,_ in errors)/len(errors) if errors else None,
                 "baseline_mae_kwh":sum(abs(e) for _,e in errors)/len(errors) if errors else None,
-                "bias_kwh":bias,"temperature_mode":"Wetterprognose / aktuelle Temperatur" if temperatures else "Aktuelle Temperatur fortgeschrieben",
+                "bias_kwh":bias,"weather_forecast":bool(temperatures),
+                "temperature_mode":"Stündliche HA-Wetterprognose; fehlende Stunden mit aktueller Temperatur" if temperatures else "Aktuelle Temperatur fortgeschrieben" if temperature is not None else "Temperatur fehlt · nur Zeit- und Wochentagsprofil",
                 "mode":"Beobachtung · ohne Einfluss auf Ladesteuerung","updated":now}
