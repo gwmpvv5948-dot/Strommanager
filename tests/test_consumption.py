@@ -66,6 +66,21 @@ class Forecast(unittest.TestCase):
         self.assertAlmostEqual(result['mae_kwh'],.4)
         self.assertGreater(result['bias_kwh'],0)
 
+    def test_history_days_only_compares_forecasts_saved_before_each_hour(self):
+        self.db.put(self.seed())
+        self.db.forecast(self.now,10)
+        future=self.now//3600*3600+3600
+        self.db.put([(future,.8,10,1,'live')])
+        # On the following local day it becomes a browsable completed day.
+        days=self.db.history_days(future+26*3600)
+        self.assertEqual(len(days),1)
+        day=days[0]
+        self.assertEqual(day['evaluated_hours'],1)
+        self.assertAlmostEqual(day['actual_kwh'],.8)
+        self.assertAlmostEqual(day['predicted_kwh'],.4)
+        self.assertAlmostEqual(day['error_kwh'],.4)
+        self.assertEqual(day['hours'][0]['stamp'],future)
+
     def test_dst_days_keep_utc_hours_distinct(self):
         now=int(datetime(2026,10,24,22,tzinfo=timezone.utc).timestamp())
         result=self.db.forecast(now,10)
