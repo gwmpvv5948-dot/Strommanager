@@ -25,6 +25,24 @@ export function consumptionBars(f){
   return {start,end,now,bins,measured,remaining:completeForecast?remaining:null,total,missing,currentCoverage,
     complete:missing===0&&currentCoverage>=.85&&completeForecast};
 }
+
+// Historical comparisons deliberately keep forecast and actual separate. They
+// describe the same hour, so treating them as cumulative energy would be wrong.
+export function historicalConsumptionBars(day){
+  const start=numeric(day?.day_start),end=numeric(day?.day_end);
+  if(start===null||end===null||end<=start||end-start>26*3600)return null;
+  const records=new Map((day?.hours||[]).filter(row=>numeric(row?.stamp)!==null).map(row=>[Number(row.stamp),row]));
+  let actualTotal=0,predictedTotal=0,evaluated=0,missing=0;
+  const bins=[];
+  for(let stamp=start;stamp<end;stamp+=3600){
+    const row=records.get(stamp),actual=energy(row?.actual),predicted=energy(row?.predicted);
+    if(actual===null)missing++;else {actualTotal+=actual;evaluated++;}
+    if(actual!==null&&predicted!==null)predictedTotal+=predicted;
+    bins.push({stamp,actual,predicted,missing:actual===null||predicted===null,error:row?.error??null});
+  }
+  return {start,end,bins,actualTotal:evaluated?actualTotal:null,predictedTotal:evaluated?predictedTotal:null,
+    evaluated,missing,forecastHours:Number(day?.forecast_hours)||0,error:day?.error_kwh??null};
+}
 export function consumptionAxis(bins,extra=[]){
   const peak=Math.max(.1,...bins.map(p=>(p.actual||0)+Math.max(p.future||0,p.high||0)),...extra.filter(v=>Number.isFinite(v)&&v>=0));
   const base=10**Math.floor(Math.log10(peak/4)),ratio=peak/4/base;
