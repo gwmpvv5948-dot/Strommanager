@@ -118,3 +118,7 @@ Automatisch angelegte Sensoren: `Hausverbrauch Restprognose`, `Verbrauchsprognos
 ### Neu in 0.1.7: vollständige Quellenübersicht
 
 Unter Diagnose → Verwendete Entitäten stehen zusätzlich die tatsächlich konfigurierten Quellen der lernenden Verbrauchsprognose, die für die PV-Anzeige automatisch abgeleiteten Tagesentitäten, die historischen Temperaturreihen aus InfluxDB und die registrierten eigenen Strommanager-Sensoren. Live-Quellen zeigen ihren aktuellen Zustand; historische Reihen sind als InfluxDB-Historie gekennzeichnet, auch wenn ihre HA-Entität inzwischen fehlt. Der direkt abgefragte Open-Meteo-Wetterausblick ist ausdrücklich als Quelle ohne HA-Entität erklärt. Die Anzeige verändert keine Gerätezuordnungen.
+
+### Neu in 0.1.8: stabile Ansicht bei Live-Aktualisierungen
+
+Die Oberfläche aktualisiert weiterhin alle zehn Sekunden. Geöffnete Details werden bereits außerhalb der sichtbaren Seite wiederhergestellt, bevor der neue Inhalt eingesetzt wird. Der vorhandene Scrollcontainer bleibt erhalten; vertikale Position, horizontale Diagrammpositionen und der Tastaturfokus werden ohne automatisches Scrollen wiederhergestellt. Beim bewussten Tabwechsel beginnt die Ansicht weiterhin oben. Das verhindert insbesondere Sprünge in der langen aufgeklappten Quellenübersicht.
