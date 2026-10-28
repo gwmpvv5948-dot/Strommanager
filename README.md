@@ -151,7 +151,7 @@ Die Addition erfolgt auf zeitgleichen gültigen Intervallen aller drei Anlagen, 
 
 Die gestrichelte Zukunftskurve bleibt ausdrücklich **Solcast P50 der Hauptanlage**. Für Garage und Schuppen sind bisher keine eigenen Prognosen hinterlegt; es werden keine zusätzlichen Zukunftserträge erfunden. Legende und Datenquellenhinweis benennen diesen Unterschied. Das separate ursprüngliche PV-Diagramm, die Tagesbilanz und die Ladesteuerung werden nicht geändert.
 
-### Neu in 0.1.14: Werte beim Überfahren und Fokussieren der Balken
+### Neu in 0.1.15: Werte beim Überfahren und Fokussieren der Balken
 
 Im Tagesverlauf zeigt ein direkt eingeblendeter Tooltip das Stundenintervall, bilanzierten Hausverbrauch, gegebenenfalls verbleibende Stundenprognose und Vergleichsstreuung sowie die verfügbaren PV-Stundenmittel. Messlücken sind ausdrücklich benannt. Die beiden Summenabschnitte der Tagesbilanz haben ebenfalls Wertanzeigen. Die Informationen erscheinen mit Mauszeiger oder Tastaturfokus; Escape schließt sie. Ein geöffneter Tooltip wird bei automatischen Aktualisierungen derselben Ansicht mit aktualisierten Werten wiederhergestellt.
 
