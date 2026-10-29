@@ -6,13 +6,13 @@ export function dateKey(value, timezone='Europe/Berlin') {
   const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date).map(x=>[x.type,x.value]));
   return `${p.year}-${p.month}-${p.day}`;
 }
-export function nextDays(now,timezone='Europe/Berlin',count=4) {
+export function nextDays(now,timezone='Europe/Berlin',count=7) {
   const key=dateKey(now,timezone);
   return Array.from({length:count},(_,i)=>new Date(Date.parse(`${key}T12:00:00Z`)+i*86400000).toISOString().slice(0,10));
 }
 export function pvDayIds(todayId) {
   const german=todayId?.endsWith('prognose_heute'),english=todayId?.endsWith('forecast_today');
-  return german?['prognose_heute','prognose_morgen','prognose_tag_3','prognose_tag_4'].map(x=>todayId.replace(/prognose_heute$/,x)):english?['forecast_today','forecast_tomorrow','forecast_day_3','forecast_day_4'].map(x=>todayId.replace(/forecast_today$/,x)):[todayId];
+  return german?['prognose_heute','prognose_morgen','prognose_tag_3','prognose_tag_4','prognose_tag_5','prognose_tag_6','prognose_tag_7'].map(x=>todayId.replace(/prognose_heute$/,x)):english?['forecast_today','forecast_tomorrow','forecast_day_3','forecast_day_4','forecast_day_5','forecast_day_6','forecast_day_7'].map(x=>todayId.replace(/forecast_today$/,x)):[todayId];
 }
 
 // Only the combined daily Solcast estimate is used; entity state may be P10.

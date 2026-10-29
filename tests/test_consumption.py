@@ -25,7 +25,7 @@ class Forecast(unittest.TestCase):
         with self.db.connect() as db:
             before = db.execute('SELECT COUNT(*) FROM predictions').fetchone()[0]
         result = self.db.daily_house_forecasts(self.now, 10)
-        self.assertEqual(len(result['days']), 4)
+        self.assertEqual(len(result['days']), 7)
         for day in result['days'].values():
             self.assertTrue(day['available'])
             self.assertAlmostEqual(day['kwh'], 9.6)

@@ -144,7 +144,7 @@ class ConsumptionDB:
         """Read-only day totals for display; never issue evaluation predictions."""
         local = datetime.fromtimestamp(now, self.zone)
         days = {}
-        for offset in range(4):
+        for offset in range(7):
             day = local.date() + timedelta(days=offset)
             start = datetime.combine(day, datetime.min.time(), self.zone).timestamp()
             result = self.forecast(start, temperature, temperatures, record=False, training_until=now)

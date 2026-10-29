@@ -33,7 +33,7 @@ test('protection badge requires measured charging and actual reduced limit',()=>
 
 import {dateKey,nextDays,pvDays,weatherDays,duration,weatherLabel} from '../custom_components/solar_pilot/frontend/day-forecast.js';
 test('daily forecast calendar survives DST and assigns HA local dates',()=>{
-  assert.deepEqual(nextDays(Date.parse('2026-10-24T23:30:00Z')),['2026-10-25','2026-10-26','2026-10-27','2026-10-28']);
+  assert.deepEqual(nextDays(Date.parse('2026-10-24T23:30:00Z')),['2026-10-25','2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31']);
   assert.equal(dateKey('2026-10-27T23:30:00Z'),'2026-10-28');
 });
 test('PV cards use combined P50 estimate and date rather than entity P10 or day index',()=>{
@@ -46,7 +46,7 @@ test('PV cards use combined P50 estimate and date rather than entity P10 or day 
   assert.deepEqual(pvDays({[id]:{...entity,attributes:{...entity.attributes,dataCorrect:false}}},id),{});
 });
 test('sunshine and astronomical daylight remain separate, seconds convert correctly',()=>{
-  const data={daily:{time:['2026-10-27','2026-10-28'],sunshine_duration:[0,null],daylight_duration:[36000,35900],weather_code:[3,61]},daily_units:{sunshine_duration:'s',daylight_duration:'s',weather_code:'wmo code'}};
+  const data={daily:{time:['2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31'],sunshine_duration:[0,null],daylight_duration:[36000,35900],weather_code:[3,61]},daily_units:{sunshine_duration:'s',daylight_duration:'s',weather_code:'wmo code'}};
   const days=weatherDays(data);
   assert.equal(days['2026-10-27'].sun,0);assert.equal(days['2026-10-27'].day,36000);
   assert.equal(days['2026-10-28'].sun,null);assert.equal(duration(36000),'10 h 00 min');
