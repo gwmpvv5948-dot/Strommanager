@@ -18,9 +18,9 @@ export function monthlyReferences(rows, now=Date.now(), zone='Europe/Berlin'){
     return {kwh:measured?p95:PROVISIONAL_MONTHS[i],source:measured?'p95':'provisional',days:n};
   });
 }
-export function referenceScale(keys,pv,references){
+export function referenceScale(keys,pv,references,actual=null){
   // All four columns retain one kWh scale, even at a month boundary.
-  const maximum=Math.max(1,...keys.map(k=>references[Number(k.slice(5,7))-1]?.kwh||0),...keys.flatMap(k=>[pv[k]?.kwh||0,pv[k]?.low||0]));
+  const maximum=Math.max(1,number(actual)??0,...keys.map(k=>references[Number(k.slice(5,7))-1]?.kwh||0),...keys.flatMap(k=>[pv[k]?.kwh||0,pv[k]?.low||0]));
   const step=maximum<=20?5:maximum<=50?10:20;
   return Math.ceil(maximum/step)*step;
 }

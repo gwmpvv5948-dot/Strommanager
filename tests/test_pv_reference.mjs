@@ -19,3 +19,8 @@ test('common kWh scale spans month boundaries and forecasts over 100 percent',()
 test('colors follow house and reserve rather than seasonal percent; missing data remains neutral',()=>{
  assert.equal(yieldAssessment(5,8,3).kind,'poor');assert.equal(yieldAssessment(8,8,3).kind,'fair');assert.equal(yieldAssessment(11,8,3).kind,'good');assert.equal(yieldAssessment(15,null,3).kind,'unknown');
 });
+
+test('actual yield above forecasts extends the common scale, zero and missing stay valid',()=>{
+ const keys=['2026-10-29'],pv={'2026-10-29':{kwh:16,low:9}},refs=monthlyReferences([],now);
+ assert.ok(referenceScale(keys,pv,refs,43)>=43);assert.equal(referenceScale(keys,pv,refs,0),20);assert.equal(referenceScale(keys,pv,refs,null),20);
+});
