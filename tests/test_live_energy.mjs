@@ -39,3 +39,6 @@ test('last known Tesla SoC is displayed explicitly as stale, not invented as zer
  status.source_reports={car:now/1000};v=liveEnergy(status,states,now);assert.equal(v.carSocStale,false);
  states.car.state='unavailable';assert.equal(liveEnergy(status,states,now).carSoc,null);
 });
+
+assert.equal(liveEnergy({last_car_soc:38},{}).carSoc,38);
+assert.equal(liveEnergy({last_car_soc:38},{}).carSocStale,true);

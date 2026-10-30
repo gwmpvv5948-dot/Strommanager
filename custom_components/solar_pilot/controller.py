@@ -40,6 +40,7 @@ class Controller:
         self.adapter_error = None
         self._stopping = False
         self._saved_payload = None
+        self.last_car_soc = None
         self.consumption = ConsumptionTracker(hass, entry, self.entities, self.settings, self.publish)
         self.day_budget = DayBudgetTracker(hass, entry, self.entities, self.settings, self.publish)
 
@@ -117,6 +118,7 @@ class Controller:
 
     async def async_start(self):
         saved = await self.store.async_load() or {}
+        self.last_car_soc = saved.get("last_car_soc")
         self.mode = saved.get("mode", "observe")
         if self.mode not in MODES:
             self.mode = "observe"
@@ -139,13 +141,44 @@ class Controller:
                 self.entry.async_create_background_task(self.hass, self.consumption.import_history(), "Strommanager consumption import")
             if self.hass.is_running:
                 import_consumption()
+                self.entry.async_create_background_task(self.hass, self.restore_car_soc(), "Strommanager last Tesla SoC")
             else:
                 self.entry.async_on_unload(self.hass.bus.async_listen_once("homeassistant_started", import_consumption))
+                self.entry.async_on_unload(self.hass.bus.async_listen_once("homeassistant_started", self.restore_car_soc))
         if self.hass.is_running:
             await self.async_update()
         else:
             self.entry.async_on_unload(self.hass.bus.async_listen_once("homeassistant_started", self._tick))
             self.entry.async_on_unload(self.hass.bus.async_listen_once("homeassistant_started", self.day_budget._tick))
+
+    async def restore_car_soc(self, _event=None):
+        """Recover display-only last known SoC; never feed it into decisions."""
+        if self.last_car_soc is not None:
+            return
+        try:
+            from homeassistant.components.recorder import get_instance, history
+            now = dt_util.utcnow()
+            entity_id = self.entities["car_soc"]
+            def read_history():
+                rows = history.get_significant_states(self.hass, now - timedelta(days=10), now,
+                    [entity_id], include_start_time_state=True, significant_changes_only=False,
+                    minimal_response=False, no_attributes=False)
+                for state in reversed(rows.get(entity_id, [])):
+                    try:
+                        value = float(state.state)
+                    except (ValueError, TypeError):
+                        continue
+                    if math.isfinite(value) and 0 <= value <= 100 and state.attributes.get("unit_of_measurement") == "%":
+                        return value
+                return None
+            value = await get_instance(self.hass).async_add_executor_job(read_history)
+            if self.last_car_soc is None and value is not None:
+                self.last_car_soc = value
+                await self.persist()
+                self.publish()
+        except Exception:
+            # Recorder is optional; future live values will populate the cache.
+            return
 
     @callback
     def _tick(self, _event):
@@ -157,6 +190,9 @@ class Controller:
             return
         async with self.lock:
             self.snapshot = self.read()
+            if self.snapshot.car_soc is not None:
+                self.last_car_soc = self.snapshot.car_soc
+            await self.persist()
             if self.consumption.db and not self.consumption.sampling and self.snapshot.now-self.consumption.last_sample>=30:
                 self.entry.async_create_background_task(self.hass, self.consumption.sample(self.snapshot.now), "Strommanager consumption learning")
             if self.mode not in ("observe", "paused"):
@@ -213,6 +249,7 @@ class Controller:
     async def persist(self):
         payload = {
             "mode": self.mode, "legacy_owned": self.legacy_owned,
+            "last_car_soc": self.last_car_soc,
             "charging_state": asdict(self.charging_state),
             "baselines": self.executor.baselines, "owned": self.executor.owned,
             "cloud_last": self.executor.cloud_last if math.isfinite(self.executor.cloud_last) else 0,
@@ -300,6 +337,7 @@ class Controller:
                 source_reports[entity_id] = stamp.timestamp()
         return {
             "source_reports": source_reports,
+            "last_car_soc": self.last_car_soc,
             "entry_id": self.entry.entry_id, "mode": self.mode,
             "updated": self.updated, "conflict": self.conflict,
             "error": self.adapter_error or self.executor.error,

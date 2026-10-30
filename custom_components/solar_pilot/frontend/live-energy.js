@@ -25,5 +25,6 @@ export function liveEnergy(status,states,now=Date.now()){
   const carStamp=num(status?.source_reports?.[ids.car_soc]);
   const carTime=carStamp!==null?carStamp*1000:Date.parse(car?.last_reported||car?.last_updated||'');
   const carSocStale=carSoc===null||car?.attributes?.restored||!Number.isFinite(carTime)||now-carTime>(num(c.car_max_age_s)??1800)*1000;
-  return {pv,grid,battery,house,soc,ev:nonnegative(ev)?ev:null,carSoc,carSocStale:!!carSocStale};
+  const saved=num(status?.last_car_soc),lastSoc=saved!==null&&saved>=0&&saved<=100?saved:null;
+  return {pv,grid,battery,house,soc,ev:nonnegative(ev)?ev:null,carSoc:carSoc??lastSoc,carSocStale:!!carSocStale};
 }
