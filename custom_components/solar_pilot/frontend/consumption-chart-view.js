@@ -389,8 +389,10 @@ export function consumptionHistoryChart(panel, day, zone) {
   const b = historicalConsumptionBars(day);
   if (!b)
     return '<p class="note">Für diesen Tag fehlen gespeicherte Prognosewerte.</p>';
+  const pv = panel.historicalPVOverlay?.(day)?.actual || [];
   const { max, step, ticks } = consumptionAxis(
       b.bins.map((row) => ({ actual: row.actual, future: row.predicted })),
+      pv.flat().map((p) => p.kwh),
     ),
     n = b.bins.length;
   const x = (i) => 64 + (i * 848) / n,
@@ -489,6 +491,36 @@ export function consumptionHistoryChart(panel, day, zone) {
       `;
     })
     .join("");
+  const pvLine = pv
+    .map(
+      (segment) => html`
+        <g class="history-pv-actual">
+          <path
+            d="${segment
+              .map(
+                (p, i) =>
+                  `${i ? "L" : "M"}${64 + ((p.t - b.start) / (b.end - b.start)) * 848},${y(p.kwh)}`,
+              )
+              .join(" ")}"
+            fill="none"
+            stroke="#d6b04f"
+            stroke-width="2.6"
+          />
+          ${segment.length === 1
+            ? html`
+                <circle
+                  cx="${64 +
+                  ((segment[0].t - b.start) / (b.end - b.start)) * 848}"
+                  cy="${y(segment[0].kwh)}"
+                  r="3"
+                  fill="#d6b04f"
+                />
+              `
+            : ""}
+        </g>
+      `,
+    )
+    .join("");
   const indices = Array.from(
     { length: Math.floor(n / 3) + 1 },
     (_, i) => i * 3,
@@ -500,7 +532,7 @@ export function consumptionHistoryChart(panel, day, zone) {
         class="solar-chart consumption-bars history-bars"
         viewBox="0 0 960 245"
         role="img"
-        aria-label="Vergleich der damals gespeicherten Hausverbrauchsprognose und des späteren Istverbrauchs. Gold schraffiert: Prognose. Grün: Istverbrauch."
+        aria-label="Vergleich der damals gespeicherten Hausverbrauchsprognose und des späteren Istverbrauchs. Gold schraffiert: Prognose. Grün: Istverbrauch. Gelbe Linie: gemessene PV-Gesamtleistung als Stundenmittel in kW."
       >
         <defs>
           <pattern
@@ -524,7 +556,7 @@ export function consumptionHistoryChart(panel, day, zone) {
         <text x="64" y="17">kWh je Stunde</text>
         ${grid}
         <line x1="64" x2="64" y1="32" y2="190" stroke="var(--muted)" />
-        ${bars}${indices
+        ${bars}${pvLine}${indices
           .map(
             (i) => html`
               <text

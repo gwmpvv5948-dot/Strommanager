@@ -12,3 +12,11 @@ for(const name of ['consumptionBarChart','consumptionTotalBar','consumptionHisto
   assert.equal(clean(views[name](panel,name.includes('History')?day:b,'Europe/Berlin')),clean(expected));
  }finally{Date.now=originalNow;}
 });
+
+test('historical PV uses selected day coordinates, expands scale and keeps separate segments',()=>{
+ const {day}=fixture,start=day.day_start;
+ const result=views.consumptionHistoryChart({historicalPVOverlay:()=>({actual:[[{t:start+1800,kwh:4},{t:start+5400,kwh:3}],[{t:start+12600,kwh:2}]]})},day,'Europe/Berlin');
+ assert.equal((result.match(/class="history-pv-actual"/g)||[]).length,2);
+ assert.match(result,/stroke="#d6b04f"/);assert.match(clean(result),/>4<\/text>/);
+ assert.match(result,/<circle/);
+});
