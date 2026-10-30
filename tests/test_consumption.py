@@ -135,6 +135,36 @@ class HistoricalQuality(unittest.TestCase):
         cls.convert=staticmethod(tracker.historical_hours)
         cls.Tracker=tracker.ConsumptionTracker
 
+    def test_switch_fallback_balances_battery_without_double_counting(self):
+        from types import SimpleNamespace as NS
+        states = {}
+        tracker = self.Tracker(NS(states=NS(get=states.get)), NS(options={}),
+            {"grid_charge":"switch", "pv_power":"pv", "battery_power":"battery"},
+            NS(grid_export_positive=True, battery_charge_positive=True))
+        readings = {"pv":0, "battery":1000}
+        tracker._value = lambda key, **kwargs: readings.get(key)
+        states["switch"] = NS(state="off", attributes={})
+        self.assertEqual(tracker._house_power([500,0,0], -200, 100), 600)
+        states["switch"].state = "on"
+        self.assertIsNone(tracker._house_power([500,0,0], -200, 100))
+        for switch in (None, "unknown", "unavailable"):
+            states.clear()
+            if switch: states["switch"] = NS(state=switch, attributes={})
+            # 1300 W grid import, 1000 W battery charging, 100 W Tesla => 200 W house.
+            self.assertEqual(tracker._house_power([9999,0,0], -1300, 100), 200)
+        readings["battery"] = -300
+        self.assertEqual(tracker._house_power([9999,0,0], 0, 100), 200)
+        readings.update(pv=1000, battery=300)
+        self.assertEqual(tracker._house_power([9999,100,50], 200, 100), 500)
+        tracker.settings.battery_charge_positive = False
+        readings["battery"] = -300
+        self.assertEqual(tracker._house_power([9999,100,50], 200, 100), 500)
+        tracker.settings.grid_export_positive = False
+        self.assertEqual(tracker._house_power([9999,100,50], -200, 100), 500)
+        readings["battery"] = None
+        self.assertIsNone(tracker._house_power([9999,100,50], -200, 100))
+        self.assertIsNone(tracker._house_power([9999,None,50], -200, 100))
+
     def test_large_gaps_not_held_and_ac_balance_excludes_ev(self):
         series={k:{t:v for t in range(0,3600,300)} for k,v in [('inverter',1000),('garage',100),('shed',100),('grid',-200),('wallbox',400)]}
         rows=self.convert(series,{0:10},0,7200)

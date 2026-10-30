@@ -73,7 +73,7 @@ class ConsumptionTracker:
         path = self.hass.config.path(".storage", f"solar_pilot.consumption.{self.entry.entry_id}.sqlite")
         self.db = await self.hass.async_add_executor_job(ConsumptionDB, path, self.hass.config.time_zone)
 
-    def _value(self, entity, temperature=False):
+    def _value(self, entity, temperature=False, *, zero_max_age=21600):
         state = self.hass.states.get(entity)
         if not state or state.state in ("unknown","unavailable") or state.attributes.get("restored"):
             return None
@@ -88,7 +88,28 @@ class ConsumptionTracker:
         value *= 1000 if unit=="kW" else 1
         stamp = getattr(state,"last_reported",state.last_updated).timestamp()
         age = datetime.now(timezone.utc).timestamp()-stamp
-        return value if age<=300 or value==0 and age<=21600 else None
+        return value if age<=300 or value==0 and age<=zero_max_age else None
+
+    def _house_power(self, values, grid, wallbox):
+        """Keep the AC balance normally; use battery-aware balance only if switch is unknown."""
+        charge = self.hass.states.get(self.entities.get("grid_charge", ""))
+        mode = charge.state if charge and not charge.attributes.get("restored") else None
+        if mode == "on":
+            return None  # Preserve the existing exclusion of explicit grid charging.
+        if grid is None or wallbox is None:
+            return None
+        export = grid * (1 if self.settings.grid_export_positive else -1)
+        if mode == "off":
+            return sum(values) - export - wallbox if all(v is not None for v in values) else None
+        # PV input excludes battery output. Subtract charging, add discharging;
+        # never add these flows to inverter AC output (that would double count).
+        pv = self._value(self.entities.get("pv_power", ""), zero_max_age=300)
+        battery = self._value(self.entities.get("battery_power", ""), zero_max_age=300)
+        if pv is None or pv < 0 or battery is None or any(v is None or v < 0 for v in values[1:]):
+            return None
+        charging = battery * (1 if self.settings.battery_charge_positive else -1)
+        # Match the existing PV allocation's 5% inverter-loss allowance.
+        return pv * .95 + sum(values[1:]) - charging - export - wallbox
 
     async def sample(self, now):
         if self.sampling or self.stopped:
@@ -116,9 +137,7 @@ class ConsumptionTracker:
             if weather and weather.state not in ("unknown","unavailable") and weather.attributes.get("temperature_unit")=="°C":
                 candidate = number(weather.attributes.get("temperature"))
                 temp = candidate if candidate is not None and -35<=candidate<=45 else None
-        charge = self.hass.states.get(self.entities["grid_charge"])
-        valid = all(v is not None for v in (*values,grid,wallbox)) and charge and charge.state=="off"
-        house = sum(values)-grid*(1 if self.settings.grid_export_positive else -1)-wallbox if valid else None
+        house = self._house_power(values, grid, wallbox)
         if house is not None and (house < -100 or house>30000):
             house = None
         await self.hass.async_add_executor_job(self._record, int(now), max(0,house) if house is not None else None,temp)
