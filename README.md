@@ -167,3 +167,23 @@ Im Tagesverlauf zeigt ein direkt eingeblendeter Tooltip das Stundenintervall, bi
 Ertragssäulen zeigen P10 kräftig und den Bereich bis P50 schraffiert; P50 ist keine Obergrenze. 100 % entspricht dem 95. Perzentil je Kalendermonat aus bis zu zwei Jahren HA-Tagesstatistik des zugeordneten WR-Tagesertrags (mindestens 20 verschiedene abgeschlossene Tage). Die vier Säulen teilen eine kWh-Skala; Monatsreferenzen bleiben auch an Monatsgrenzen getrennt. Über 100 % wird nicht abgeschnitten. Fehlende Historie verwendet ausdrücklich vorläufige Monatswerte, keine Anlagen-Maxima: 8/12/20/28/34/36/36/32/26/20/12/8 kWh von Januar bis Dezember. Die Statistik wird im geöffneten Panel höchstens täglich geladen.
 
 Farben vergleichen P50 mit der gelernten Haus-Tagesprognose ohne Tesla und der benötigten Speicherladung inklusive Verlusten. Heute zählt die aktuell fehlende Reserve, bei Folgetagen vorsichtig die volle Zielreserve aus leerem Speicher. Werte und Status stehen an jeder Säule. Ohne frische vollständige Hausprognose oder verlässlichen Speicherbedarf bleibt die Bewertung neutral. Tagesenergien sagen nichts über zeitgleiche Deckung aus. Die neuen Anzeigen verändern weder Betriebsmodus noch Gerätebefehle; der Verbrauchsvergleich bleibt parallel.
+
+## Entitäten im Panel zuordnen
+
+Unter **Strommanager → Einstellungen → Verwendete Entitäten** können die
+Regelungsquellen, zusätzlichen Quellen der Verbrauchsprognose, Tagesverbrauch,
+Dach-Ertrag, WR-Tagesertrag, Akku-Entladeuntergrenze und alle sieben
+Solcast-Tagesquellen geändert werden. Eingabefelder bieten vorhandene HA-Entitäten
+zur Auswahl an. **Entitäten speichern** prüft geänderte IDs, Domains und Einheiten,
+speichert die Zuordnung dauerhaft und lädt die Integration neu.
+
+Vor Änderungen steuerbarer Geräte muss der Betriebsmodus Beobachten oder Pausiert
+sein. Das Speichern verändert den Modus nicht und sendet keine Gerätebefehle.
+Unveränderte, aktuell nicht verfügbare Quellen verhindern das Speichern anderer
+Zuordnungen nicht. Bisherige Einstellungen werden ohne Migration weiterverwendet.
+
+Historische Temperaturreihen für den InfluxDB-Import können als kommaseparierte
+Sensor-IDs angegeben werden, auch wenn sie heute nicht mehr in HA existieren.
+Bereits gelernte Daten werden durch eine Zuordnungsänderung nicht rückwirkend
+umgeschrieben. Eigene Strommanager-Sensoren sind schreibgeschützte Ergebnisse.
+Der direkte Open-Meteo-Ausblick hat keine zuordenbare HA-Entität.

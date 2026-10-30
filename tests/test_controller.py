@@ -84,6 +84,34 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
             async_on_unload=Mock(),async_create_background_task=Mock())
         self.c=Controller(self.hass,self.entry)
 
+    async def test_source_mapping_persists_options_without_commands(self):
+        self.entry.options={"settings":{"reserve_soc":60},"custom":"keep"}
+        self.states["sensor.custom_pv"]=state(123,"W")
+        await self.c.async_configure_sources({"entities":{"pv_power":"sensor.custom_pv"},"historical_temperature":["sensor.old_temperature"]})
+        options=self.hass.config_entries.async_update_entry.call_args.kwargs["options"]
+        self.assertEqual(options["entities"]["pv_power"],"sensor.custom_pv")
+        self.assertEqual(options["settings"],{"reserve_soc":60})
+        self.assertEqual(options["custom"],"keep")
+        self.assertEqual(options["historical_temperature"],["sensor.old_temperature"])
+        self.assertEqual(self.calls,[])
+
+    async def test_source_mapping_rejects_invalid_unit_and_unknown_id(self):
+        self.states["sensor.wrong_unit"]=state(100,"kWh")
+        for value in ("sensor.wrong_unit","sensor.missing","switch.bad"):
+            with self.assertRaises(ValidationError):
+                await self.c.async_configure_sources({"entities":{"pv_power":value}})
+        self.hass.config_entries.async_update_entry.assert_not_called()
+
+    async def test_source_mapping_blocks_actuator_change_while_active(self):
+        self.states["number.new_limit"]=state(0,"W")
+        self.c.mode="auto"
+        with self.assertRaises(ValidationError):
+            await self.c.async_configure_sources({"entities":{"discharge_limit":"number.new_limit"}})
+        self.c.mode="paused"
+        await self.c.async_configure_sources({"entities":{"discharge_limit":"number.new_limit"}})
+        self.assertEqual(self.c.mode,"paused")
+        self.assertEqual(self.calls,[])
+
     async def test_observe_never_writes_even_with_legacy_on(self):
         await self.c.async_start()
         self.assertEqual(self.c.mode,"observe")

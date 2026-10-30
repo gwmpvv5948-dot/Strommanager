@@ -16,8 +16,8 @@ export function pvDayIds(todayId) {
 }
 
 // Only the combined daily Solcast estimate is used; entity state may be P10.
-export function pvDays(states,todayId,timezone='Europe/Berlin') {
-  const ids=pvDayIds(todayId);
+export function pvDays(states,todayId,timezone='Europe/Berlin',configuredIds=null) {
+  const ids=configuredIds||pvDayIds(todayId);
   const result={};
   for(const id of ids){
     const entity=states[id],a=entity?.attributes;

@@ -107,7 +107,7 @@ class Options(config_entries.OptionsFlow):
         if user_input is not None:
             try:
                 settings = Settings(**{**current, **user_input})
-                return self.async_create_entry(title="", data={"settings": settings.__dict__})
+                return self.async_create_entry(title="", data={**self.config_entry.options,"settings": settings.__dict__})
             except (ValueError, TypeError):
                 errors["base"] = "invalid_settings"
         return self.async_show_form(step_id="init", data_schema=settings_schema(user_input or current), errors=errors)

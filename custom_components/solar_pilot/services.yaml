@@ -51,3 +51,16 @@ import_consumption_history:
       required: true
       selector:
         text:
+
+configure_sources:
+  name: Entitäten zuordnen
+  description: Speichert Regelungs-, Prognose- und Anzeigequellen. Lädt die Integration neu.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    sources:
+      required: true
+      selector:
+        object:

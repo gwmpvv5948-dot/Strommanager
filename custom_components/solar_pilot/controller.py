@@ -12,6 +12,7 @@ from homeassistant.helpers.event import async_track_state_change_event, async_tr
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .source_config import display_sources, validate_mapping, LEARNING_DEFAULTS, LEARNING_LABELS, DISPLAY_LABELS, ENTITY_ID
 from .const import DOMAIN, ENTITY_DEFAULTS, ENTITY_LABELS, MODES
 from .executor import Command, Executor, plan
 from .model import Settings, Snapshot, decide, ChargingState, charging_state, consumption_comparison
@@ -271,6 +272,37 @@ class Controller:
             **self.entry.options, "settings": asdict(settings),
         })
 
+    async def async_configure_sources(self, sources):
+        allowed={"entities","learning","display","historical_temperature"}
+        if set(sources)-allowed:
+            raise ServiceValidationError("Unbekannte Quellengruppe")
+        current_display=display_sources(self.entities,self.entry.options.get("display_sources"))
+        try:
+            for group,current,defaults in (("entities",self.entities,ENTITY_DEFAULTS),("learning",self.consumption.sources,LEARNING_DEFAULTS),("display",current_display,current_display)):
+                values=sources.get(group,{})
+                if not isinstance(values,dict):raise ValueError("Zuordnungen müssen Objekte sein")
+                validate_mapping(self.hass,values,current,defaults)
+            historical=sources.get("historical_temperature",self.consumption.history_temperature_entities())
+            if not isinstance(historical,list) or not all(isinstance(v,str) and ENTITY_ID.fullmatch(v) and v.startswith("sensor.") for v in historical):
+                raise ValueError("Temperaturhistorie: Sensor-Entity-IDs erforderlich")
+        except ValueError as exc:
+            raise ServiceValidationError(str(exc)) from exc
+        entities={**self.entities,**sources.get("entities",{})}
+        if len(set(entities.values()))!=len(entities):
+            raise ServiceValidationError("Regelungsentitäten dürfen nicht doppelt zugeordnet werden")
+        actuators=("discharge_limit","wallbox_enabled","car_limit","car_current","car_charge","legacy_automation")
+        if any(entities.get(k)!=self.entities.get(k) for k in actuators) and self.mode not in ("observe","paused"):
+            raise ServiceValidationError("Vor Änderungen steuerbarer Geräte die Regelung pausieren")
+        options={**self.entry.options,"entities":entities,
+            "consumption_sources":{**self.consumption.sources,**sources.get("learning",{})},
+            "display_sources":{**self.entry.options.get("display_sources",{}),**sources.get("display",{})},
+            "historical_temperature":list(dict.fromkeys(historical))}
+        if entities.get("car_soc")!=self.entities.get("car_soc"):
+            self.last_car_soc=None
+            await self.persist()
+        if options!=self.entry.options:
+            self.hass.config_entries.async_update_entry(self.entry,options=options)
+
     async def async_set_mode(self, mode):
         if mode not in MODES:
             raise ServiceValidationError("Unbekannter Betriebsmodus")
@@ -344,7 +376,8 @@ class Controller:
             "decision": asdict(self.decision) if self.decision else None,
             "snapshot": snapshot, "settings": asdict(self.settings),
             "entities": self.entities, "entity_labels": ENTITY_LABELS, "history": self.executor.history,
-            "source_entities": {"learning": dict(self.consumption.sources),
+            "source_entities": {"display": display_sources(self.entities,self.entry.options.get("display_sources")),
+                "display_labels": DISPLAY_LABELS, "learning_labels": LEARNING_LABELS, "learning": dict(self.consumption.sources),
                 "historical_temperature": self.consumption.history_temperature_entities(),
                 "outputs": dict(self.output_entities)},
             "charging_state": asdict(self.charging_state),

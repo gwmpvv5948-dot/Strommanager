@@ -18,7 +18,7 @@ export function consumptionBarChart(panel, b, zone) {
   const source = panel.solarSources(),
     forecast = [
       ...new Map(
-        pvDayIds(source.forecastId)
+        (source.forecastIds||pvDayIds(source.forecastId))
           .flatMap((id) => {
             const state = panel._hass?.states?.[id];
             return state &&
@@ -46,7 +46,7 @@ export function consumptionBarChart(panel, b, zone) {
   const liveNow = Date.now() / 1000,
     sun = panel._hass?.states?.[panel.status?.entities?.sun || "sun.sun"],
     floorState =
-      panel._hass?.states?.["number.batterien_entlade_ende_ladestand"];
+      panel._hass?.states?.[panel.status?.source_entities?.display?.battery_min_soc||"number.batterien_entlade_ende_ladestand"];
   const sunset =
     sun?.state === "below_horizon"
       ? liveNow
@@ -357,7 +357,7 @@ export function consumptionTotalBar(panel, b) {
           role="img"
           data-consumption-info-key="total:actual"
           data-consumption-info="${esc(
-            `${b.includesTesla ? "Haus + Tesla" : "Haus ohne Tesla"}\nBisher verbraucht: ${fmt(b.measured, "kWh", 2)}${b.includesTesla ? "\nQuelle: sensor.real_tagesverbrauch" : b.complete ? "" : "\nMesslücken vorhanden · keine vollständige Tagesbilanz"}`,
+            `${b.includesTesla ? "Haus + Tesla" : "Haus ohne Tesla"}\nBisher verbraucht: ${fmt(b.measured, "kWh", 2)}${b.includesTesla ? "\nQuelle: zugeordneter Gesamtverbrauch" : b.complete ? "" : "\nMesslücken vorhanden · keine vollständige Tagesbilanz"}`,
           )}"
         >
           ${actual >= 18 ? fmt(b.measured, "kWh", 1) : ""}

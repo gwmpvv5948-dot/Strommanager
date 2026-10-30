@@ -67,7 +67,7 @@ class ConsumptionTracker:
         self.stopped = False
 
     def history_temperature_entities(self):
-        return list(dict.fromkeys((HISTORICAL_TEMPERATURE, self.sources["temperature"])))
+        return list(dict.fromkeys(self.entry.options.get("historical_temperature",[HISTORICAL_TEMPERATURE, self.sources["temperature"]])))
 
     async def start(self):
         path = self.hass.config.path(".storage", f"solar_pilot.consumption.{self.entry.entry_id}.sqlite")
