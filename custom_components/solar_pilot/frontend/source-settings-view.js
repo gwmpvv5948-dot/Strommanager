@@ -14,6 +14,7 @@ export function sourceSettings(panel) {
     <label>
       ${esc(label || key)}
       <input
+            type="text"
         data-source-group="${group}"
         data-source-key="${key}"
         list="source-entity-ids"
@@ -60,6 +61,7 @@ export function sourceSettings(panel) {
           <label>
             Historische Temperatur-Entitäten, durch Komma getrennt
             <input
+            type="text"
               name="historical_temperature"
               value="${esc(
                 draft.historical_temperature ??

@@ -297,6 +297,14 @@ class Controller:
             "consumption_sources":{**self.consumption.sources,**sources.get("learning",{})},
             "display_sources":{**self.entry.options.get("display_sources",{}),**sources.get("display",{})},
             "historical_temperature":list(dict.fromkeys(historical))}
+        changed_targets=[key for key in actuators if entities.get(key)!=self.entities.get(key)]
+        for key in changed_targets:
+            self.executor.baselines.pop(key,None)
+            self.executor.owned.pop(key,None)
+            self.executor.attempts.pop(key,None)
+            self.executor.failures.pop(key,None)
+        if changed_targets:
+            await self.persist()
         if entities.get("car_soc")!=self.entities.get("car_soc"):
             self.last_car_soc=None
             await self.persist()

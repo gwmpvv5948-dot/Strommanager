@@ -546,7 +546,8 @@ label small {
   color: var(--muted);
   margin-top: 5px;
 }
-input[type="number"] {
+input[type="number"],
+#source-settings input[type="text"] {
   display: block;
   width: 100%;
   padding: 10px 12px;
@@ -1737,6 +1738,7 @@ details summary {
     color: #163526;
   }
   input[type="number"],
+  #source-settings input[type="text"],
   .node {
     background: #293e30;
     color: var(--ink);
@@ -1933,3 +1935,6 @@ details summary {
     --yield-tone: #e3be74;
   }
 }
+
+#source-settings .source-group { margin: 20px 0; }
+#source-settings .source-group summary { margin-bottom: 14px; }

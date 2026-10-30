@@ -108,8 +108,12 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValidationError):
             await self.c.async_configure_sources({"entities":{"discharge_limit":"number.new_limit"}})
         self.c.mode="paused"
+        self.c.executor.baselines["discharge_limit"]=2500
+        self.c.executor.owned["discharge_limit"]=0
         await self.c.async_configure_sources({"entities":{"discharge_limit":"number.new_limit"}})
         self.assertEqual(self.c.mode,"paused")
+        self.assertNotIn("discharge_limit",self.c.executor.baselines)
+        self.assertNotIn("discharge_limit",self.c.executor.owned)
         self.assertEqual(self.calls,[])
 
     async def test_observe_never_writes_even_with_legacy_on(self):
