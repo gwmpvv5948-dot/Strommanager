@@ -1,6 +1,6 @@
 """Integration constants; entity names are editable during setup."""
 DOMAIN = "solar_pilot"
-VERSION = "0.1.45"
+VERSION = "0.1.46"
 PANEL_PATH = "solar-pilot"
 MODES = ("observe", "auto", "storage_first", "charge_minimum", "paused")
 ENTITY_DEFAULTS = {
@@ -22,7 +22,6 @@ ENTITY_DEFAULTS = {
     "forecast": "sensor.solcast_pv_forecast_prognose_verbleibende_leistung_heute",
     "forecast_updated": "sensor.solcast_pv_forecast_zeitpunkt_letzter_api_abruf",
     "sun": "sun.sun",
-    "legacy_automation": "automation.wallbox_akkuentladung_begrenzen_und_freigeben",
 }
 ENTITY_LABELS = {
     "house_soc": "Hausspeicher · Ladestand",
@@ -43,5 +42,4 @@ ENTITY_LABELS = {
     "forecast": "PV-Restprognose heute",
     "forecast_updated": "Letzter Prognoseabruf",
     "sun": "Sonnenstand",
-    "legacy_automation": "Bisherige Ladeautomation (für Übernahme)",
 }

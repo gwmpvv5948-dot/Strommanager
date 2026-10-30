@@ -1,6 +1,6 @@
 activate:
-  name: Automatik übernehmen
-  description: Deaktiviert die zugeordnete Ladeautomation und übernimmt die Gerätesteuerung.
+  name: Steuerung aktivieren
+  description: Aktiviert die Strommanager-Gerätesteuerung nach Prüfung der steuerbaren Entitäten.
   fields:
     entry_id:
       required: true

@@ -24,7 +24,7 @@ class Controller:
     def __init__(self, hass, entry):
         self.hass, self.entry = hass, entry
         config = {**entry.data, **entry.options}
-        self.entities = config["entities"]
+        self.entities = {k:v for k,v in config["entities"].items() if k != "legacy_automation"}
         self.settings = Settings(**config.get("settings", {}))
         self.charging_state = ChargingState()
         self.mode = "observe"
@@ -36,8 +36,6 @@ class Controller:
         self.decision = None
         self.snapshot = None
         self.updated = None
-        self.conflict = False
-        self.legacy_owned = False
         self.adapter_error = None
         self._stopping = False
         self._saved_payload = None
@@ -125,7 +123,6 @@ class Controller:
             self.mode = "observe"
         flags = saved.get("charging_state", {})
         self.charging_state = ChargingState(flags.get("minimum_active") is True, flags.get("storage_active") is True)
-        self.legacy_owned = saved.get("legacy_owned", False)
         self.executor.baselines = saved.get("baselines", {})
         self.executor.owned = saved.get("owned", {})
         # Preserve cloud and error cooldowns through integration reloads/restarts.
@@ -199,9 +196,8 @@ class Controller:
             if self.mode not in ("observe", "paused"):
                 self.charging_state = charging_state(self.snapshot, self.settings, self.charging_state)
             self.decision = decide(self.snapshot, self.settings, self.mode, self.charging_state)
-            self.conflict = self.boolean("legacy_automation") is not False
             self.adapter_error = None
-            if self.mode not in ("observe", "paused") and not self.conflict:
+            if self.mode not in ("observe", "paused"):
                 try:
                     await self.executor.run(
                         self.snapshot.now, plan(self.snapshot, self.decision, self.settings),
@@ -249,7 +245,7 @@ class Controller:
 
     async def persist(self):
         payload = {
-            "mode": self.mode, "legacy_owned": self.legacy_owned,
+            "mode": self.mode,
             "last_car_soc": self.last_car_soc,
             "charging_state": asdict(self.charging_state),
             "baselines": self.executor.baselines, "owned": self.executor.owned,
@@ -290,7 +286,7 @@ class Controller:
         entities={**self.entities,**sources.get("entities",{})}
         if len(set(entities.values()))!=len(entities):
             raise ServiceValidationError("Regelungsentitäten dürfen nicht doppelt zugeordnet werden")
-        actuators=("discharge_limit","wallbox_enabled","car_limit","car_current","car_charge","legacy_automation")
+        actuators=("discharge_limit","wallbox_enabled","car_limit","car_current","car_charge")
         if any(entities.get(k)!=self.entities.get(k) for k in actuators) and self.mode not in ("observe","paused"):
             raise ServiceValidationError("Vor Änderungen steuerbarer Geräte die Regelung pausieren")
         options={**self.entry.options,"entities":entities,
@@ -315,38 +311,30 @@ class Controller:
         if mode not in MODES:
             raise ServiceValidationError("Unbekannter Betriebsmodus")
         if mode not in ("observe", "paused") and self.mode in ("observe", "paused"):
-            raise ServiceValidationError("Aktive Steuerung zuerst mit 'Übernehmen' freigeben")
+            raise ServiceValidationError("Aktive Steuerung zuerst mit 'Aktivieren' freigeben")
         async with self.lock:
             self.mode = mode
             await self.persist()
         await self.async_update()
 
     async def async_activate(self, mode="auto"):
-        """Explicit, admin-authorized takeover; no automatic takeover at setup."""
+        """Explicit activation; no automatic activation at setup."""
         async with self.lock:
             if mode not in ("auto", "storage_first", "charge_minimum"):
-                raise ServiceValidationError("Ungültiger Modus für Übernahme")
+                raise ServiceValidationError("Ungültiger Modus für Aktivierung")
             s = self.read()
             if (s.current_discharge_w is None or s.grid_charge_enabled is None
                     or s.car_current is None):
                 raise ServiceValidationError("Steuerbare Entitäten oder Einheiten prüfen")
-            if self.boolean("legacy_automation") is None:
-                raise ServiceValidationError("Bisherige Automation ist nicht verfügbar; Konfliktschutz kann nicht geprüft werden")
             actuator = self.state("discharge_limit")
             if actuator.attributes.get("min", 1) > 0:
                 raise ServiceValidationError("Entladebegrenzung auf 0 W wird vom Gerät nicht unterstützt")
-            if self.boolean("legacy_automation") is True:
-                await self.hass.services.async_call("automation", "turn_off", {
-                    "entity_id": self.entities["legacy_automation"], "stop_actions": True}, blocking=True)
-                if self.boolean("legacy_automation") is not False:
-                    raise ServiceValidationError("Bisherige Automation konnte nicht deaktiviert werden")
-                self.legacy_owned = True
             self.mode = mode
             await self.persist()
         await self.async_update()
 
     async def async_stop(self):
-        # Unloading never changes devices or reactivates the previous automation.
+        # Unloading never changes devices.
         self._stopping = True
         self.consumption.stopped = True
         await self.day_budget.async_stop()
@@ -379,7 +367,7 @@ class Controller:
             "source_reports": source_reports,
             "last_car_soc": self.last_car_soc,
             "entry_id": self.entry.entry_id, "mode": self.mode,
-            "updated": self.updated, "conflict": self.conflict,
+            "updated": self.updated,
             "error": self.adapter_error or self.executor.error,
             "decision": asdict(self.decision) if self.decision else None,
             "snapshot": snapshot, "settings": asdict(self.settings),
@@ -389,7 +377,7 @@ class Controller:
                 "historical_temperature": self.consumption.history_temperature_entities(),
                 "outputs": dict(self.output_entities)},
             "charging_state": asdict(self.charging_state),
-            "legacy_owned": self.legacy_owned, "day_budget": self.day_budget.status(),
+            "day_budget": self.day_budget.status(),
             "consumption_comparison": consumption_comparison(self.snapshot, self.settings, self.consumption.result) if self.snapshot else {},
             "consumption_forecast": {**self.consumption.result, "importing": self.consumption.importing, "error": self.consumption.error},
         }

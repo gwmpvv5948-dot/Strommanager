@@ -70,7 +70,6 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         values["sun"]=state("above_horizon",next_setting=(NOW+timedelta(hours=4)).isoformat())
         values["forecast"]=state(4,"kWh")
         values["forecast_updated"]=state((NOW-timedelta(hours=1)).isoformat())
-        values["legacy_automation"]=state("on")
         self.values=values
         self.states={ENTITY_DEFAULTS[k]:v for k,v in values.items()}
         self.calls=[]
@@ -116,24 +115,18 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("discharge_limit",self.c.executor.owned)
         self.assertEqual(self.calls,[])
 
-    async def test_observe_never_writes_even_with_legacy_on(self):
+    async def test_observe_never_writes(self):
         await self.c.async_start()
         self.assertEqual(self.c.mode,"observe")
         self.assertEqual(self.calls,[])
         self.assertEqual(self.c.decision.target_amps,0)
 
-    async def test_active_conflict_blocks_all_writes(self):
-        self.c.mode="auto"
-        await self.c.async_update()
-        self.assertTrue(self.c.conflict)
-        self.assertEqual(self.calls,[])
-
-    async def test_takeover_disables_legacy_before_device_command(self):
+    async def test_activation_never_calls_automations(self):
         await self.c.async_activate()
-        self.assertEqual(self.calls[0][0:2],("automation","turn_off"))
-        self.assertTrue(self.c.legacy_owned)
         self.assertEqual(self.c.mode,"auto")
-        self.assertEqual(self.values["discharge_limit"].state,"0.0")
+        self.assertFalse(any(domain=="automation" for domain,_,_ in self.calls))
+        self.assertNotIn("legacy_automation",self.c.entities)
+        self.assertNotIn("conflict",self.c.status())
 
     async def test_cannot_enable_auto_without_takeover(self):
         with self.assertRaises(ValidationError): await self.c.async_set_mode("auto")

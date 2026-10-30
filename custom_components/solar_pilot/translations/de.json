@@ -16,8 +16,7 @@
           "wallbox_enabled": "Wallbox eingeschaltet",
           "forecast": "PV-Restprognose heute",
           "forecast_updated": "Letzter Prognoseabruf",
-          "sun": "Sonnenstand",
-          "legacy_automation": "Bisherige Ladeautomation (für Übernahme)"
+          "sun": "Sonnenstand"
         }
       },
       "vehicle": {

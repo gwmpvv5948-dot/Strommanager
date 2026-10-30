@@ -83,8 +83,8 @@ Warten, bis HA und die verwendeten Sensoren wieder verfügbar sind.
 3. Das Panel **Strommanager** in der Seitenleiste öffnen.
 4. Die Erstinstallation startet im **Beobachtungsmodus**. Werte, Einheiten,
    Vorzeichen der Netz- und Batterieleistung sowie Ladephasen prüfen.
-5. Erst anschließend bei gewünschter aktiver Steuerung **Automatik übernehmen** wählen.
-   Dabei wird die zugeordnete bisherige Ladeautomation deaktiviert.
+5. Erst anschließend bei gewünschter aktiver Steuerung **Steuerung aktivieren** wählen.
+   Andere HA-Automationen werden durch Strommanager nicht verändert.
 
 ## Bestehende Installation aktualisieren
 
