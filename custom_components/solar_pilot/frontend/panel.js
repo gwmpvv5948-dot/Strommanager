@@ -1,6 +1,6 @@
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.41';
-import {esc,fmt} from './view-format.js?v=0.1.41';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.41';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.42';
+import {esc,fmt} from './view-format.js?v=0.1.42';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.42';
 import {liveEnergy} from './live-energy.js?v=0.1.40';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
@@ -45,7 +45,15 @@ export class SolarPilotPanel extends HTMLElement {
   set hass(value){this._hass=value;if(!this.status && !this._loading)this.refresh();}
   set panel(value){this._panel=value;try{const saved=localStorage.getItem(`solar_pilot.consumption_view.${value.config.entry_id}`);if(["hours","total"].includes(saved))this.consumptionView=saved;}catch{}if(this._hass&&!this.status)this.refresh();}
   set narrow(value){this._narrow=value;}
-  connectedCallback(){this.render();this._timer=setInterval(()=>this.refresh(),10000);}
+  connectedCallback(){
+    // HA can assign properties before asynchronous module dependencies finish.
+    // Replay pre-upgrade values through the component setters.
+    for(const key of ['hass','panel','narrow']){
+      if(Object.prototype.hasOwnProperty.call(this,key)){
+        const value=this[key];delete this[key];this[key]=value;
+      }
+    }
+    this.render();this._timer=setInterval(()=>this.refresh(),10000);}
   disconnectedCallback(){clearInterval(this._timer);}
   async refresh(){
     if(!this._hass||!this._panel||this._loading)return;
@@ -299,7 +307,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${t.conflict&&!["observe","paused"].includes(t.mode)?'<div class="alert error" role="alert">Bisherige Automation ist aktiv oder nicht prüfbar. Strommanager sendet keine Befehle.</div>':""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings():this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.41</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${t.conflict&&!["observe","paused"].includes(t.mode)?'<div class="alert error" role="alert">Bisherige Automation ist aktiv oder nicht prüfbar. Strommanager sendet keine Befehle.</div>':""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings():this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.42</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
