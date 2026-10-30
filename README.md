@@ -27,6 +27,10 @@ Die Berechnung entfernt Batterieentladung aus dem vermeintlichen PV-Überschuss.
 
 ## Installation zur Erprobung
 
+Die [Schritt-für-Schritt-Installationsanleitung](INSTALLATION.md) beschreibt die
+Direktinstallation über das HA-Terminal, Updates mit Sicherung sowie die
+Wiederherstellung des vorherigen Integrationsordners.
+
 1. Home-Assistant-Backup erstellen.
 2. Den Ordner `custom_components/solar_pilot` nach `/config/custom_components/solar_pilot` kopieren. Bestehende andere Integrationen nicht überschreiben.
 3. Home Assistant neu starten.
