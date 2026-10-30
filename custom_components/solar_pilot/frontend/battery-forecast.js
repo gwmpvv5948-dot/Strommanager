@@ -19,7 +19,7 @@ export function batteryForecast(b,s,c,{now,sunset,minSoc,pv=[]}={}){
   const supplied=Math.min(deficit,c.normal_discharge_w/1000,available/h),covered=deficit-supplied<1e-8;
   if(power>load)energy=Math.min(c.capacity_kwh,energy+Math.min(power-load,c.max_charge_w/1000)*h*c.efficiency);
   else energy=Math.max(Math.min(energy,minimum),energy-supplied*h/c.efficiency);
-  if(!before){
+  if(deficit>1e-8){
    let coveredStop=covered?stop:t;
    if(!covered&&deficit>0&&c.normal_discharge_w/1000>=deficit&&available>0)coveredStop=Math.min(stop,t+available/deficit*3600);
    if(coveredStop>t){const previous=bands.at(-1);if(previous&&Math.abs(previous.end-t)<.001)previous.end=coveredStop;else bands.push({start:t,end:coveredStop});}

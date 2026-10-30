@@ -24,3 +24,12 @@ test('unknown minimum, stale SoC, house gaps and PV gaps never become zero',()=>
 test('power limit can cause grid demand before the battery is empty; no commands',()=>{
  const r=batteryForecast(b,s,{...c,normal_discharge_w:500},opts);assert.ok(r.available);assert.equal(r.exhaustedAt,0);assert.equal(r.bands.length,0);assert.ok(r.points.at(-1).soc>7);assert.equal(s.house_soc,100);
 });
+
+test('coverage starts at PV shortfall before sunset, excludes surplus and zero demand',()=>{
+ const r=batteryForecast(b,s,c,{...opts,sunset:7200,pv:[{t:0,p:2},{t:1800000,p:2},{t:3600000,p:.5},{t:5400000,p:.5}]});
+ assert.ok(r.available);assert.equal(r.bands[0].start,3600);
+ const empty=batteryForecast(b,{...s,house_soc:7},c,{...opts,sunset:7200,pv:[{t:0,p:.5},{t:1800000,p:.5},{t:3600000,p:.5},{t:5400000,p:.5}]});
+ assert.equal(empty.exhaustedAt,0);
+ const zero=batteryForecast({...b,bins:b.bins.map(p=>({...p,future:0}))},s,c,opts);
+ assert.equal(zero.bands.length,0);assert.equal(zero.exhaustedAt,null);
+});
