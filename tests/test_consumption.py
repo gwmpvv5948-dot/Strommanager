@@ -16,6 +16,16 @@ class Forecast(unittest.TestCase):
         self.db=ConsumptionDB(Path(self.tmp.name)/'forecast.sqlite')
         self.now=int(datetime(2026,10,28,10,30,tzinfo=timezone.utc).timestamp())
 
+    def test_rolling_horizon_crosses_midnight_without_changing_day_total(self):
+        self.now=int(datetime(2026,10,28,22,30,tzinfo=timezone.utc).timestamp())
+        with self.db.connect() as conn:
+            conn.executemany("INSERT INTO hours(stamp,kwh,temperature,coverage,source) VALUES (?,?,?,?,?)",self.seed())
+        result=self.db.forecast(self.now,10.)
+        self.assertGreaterEqual(result["window_hours"][-1]["stamp"]+3600,self.now+12*3600)
+        self.assertTrue(all(p["stamp"]<result["day_end"] for p in result["hours"]))
+        self.assertAlmostEqual(result["remaining_kwh"],sum(p["kwh"]*p["remaining_fraction"] for p in result["hours"]))
+        self.assertLessEqual(result["window_observed"][0]["stamp"],self.now-12*3600)
+
     def seed(self,days=60):
         start=self.now//86400*86400-days*86400
         return [(t,.4,10.,1.,'influx') for t in range(start,self.now//3600*3600,3600)]

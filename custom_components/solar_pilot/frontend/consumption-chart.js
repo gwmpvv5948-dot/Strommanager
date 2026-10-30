@@ -58,3 +58,12 @@ export function consumptionAxis(bins,extra=[]){
   const max=Math.ceil(peak/step)*step;
   return {max,step,ticks:Array.from({length:Math.round(max/step)+1},(_,i)=>i*step)};
 }
+
+// A real-time window; daily totals continue to use consumptionBars unchanged.
+export function rollingConsumptionBars(f,now=Date.now()/1000){
+  if(!Number.isFinite(now)||!Number.isFinite(f?.updated)||now-f.updated>900||now<f.updated)return null;
+  const viewStart=now-12*3600,viewEnd=now+12*3600;
+  const result=consumptionBars({...f,day_start:Math.floor(viewStart/3600)*3600,day_end:Math.ceil(viewEnd/3600)*3600,
+    observed:f.window_observed??f.observed,hours:f.window_hours??f.hours});
+  return result?{...result,start:viewStart,end:viewEnd,now:f.updated,rolling:true}:null;
+}

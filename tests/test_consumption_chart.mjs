@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {consumptionBars,consumptionAxis,historicalConsumptionBars,dailyConsumption} from '../custom_components/solar_pilot/frontend/consumption-chart.js';
+import {rollingConsumptionBars,consumptionBars,consumptionAxis,historicalConsumptionBars,dailyConsumption} from '../custom_components/solar_pilot/frontend/consumption-chart.js';
 test('total daily meter includes EV as supplied, converts units and rejects old or unknown readings',()=>{
  const now=Date.parse('2026-10-28T20:00Z'),state={state:'12.4',attributes:{unit_of_measurement:'kWh'},last_updated:'2026-10-28T19:59Z'};
  assert.equal(dailyConsumption(state,now),12.4);
@@ -42,4 +42,19 @@ test('historical comparisons do not add actual and forecast together',()=>{
  const day={day_start:start,day_end:start+86400,forecast_hours:2,error_kwh:.2,hours:[
   {stamp:start,predicted:.4,actual:.6,error:.2},{stamp:start+3600,predicted:.3,actual:null,error:null}]};
  const b=historicalConsumptionBars(day);assert.equal(b.evaluated,1);assert.equal(b.actualTotal,.6);assert.equal(b.predictedTotal,.4);assert.equal(b.missing,23);
+});
+
+test('rolling window stays centered across midnight and preserves unknown future hours',()=>{
+ for(const iso of ['2026-10-30T01:30:00Z','2026-10-30T21:30:00Z']){
+  const now=Date.parse(iso)/1000,current=Math.floor(now/3600)*3600;
+  const f={updated:now,window_observed:Array.from({length:13},(_,i)=>({stamp:current-(i+1)*3600,kwh:.4})),
+   window_hours:Array.from({length:14},(_,i)=>({stamp:current+i*3600,kwh:i===3?null:.5,low:.3,high:.7})),
+   current_observation:{stamp:current,kwh:.2,seconds:1800}};
+  const b=rollingConsumptionBars(f,now);
+  assert.equal(b.start,now-43200);assert.equal(b.end,now+43200);
+  assert.equal((now-b.start)/(b.end-b.start),.5);
+  assert.equal(b.bins.find(p=>p.stamp===current-3600).actual,.4);
+  assert.equal(b.bins.find(p=>p.stamp===current+3*3600).future,null);
+  assert.equal(b.bins.find(p=>p.stamp===current+11*3600).future,.5);
+ }
 });

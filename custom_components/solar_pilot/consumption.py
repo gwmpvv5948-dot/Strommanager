@@ -87,7 +87,7 @@ class ConsumptionDB:
         samples = [(stamp, kwh, temp, datetime.fromtimestamp(stamp, self.zone)) for stamp,kwh,temp in rows]
         points = []
         hour = now//3600*3600
-        while hour < end:
+        while hour < max(end, now + 12*3600):
             dt = datetime.fromtimestamp(hour, self.zone)
             temp = number((temperatures or {}).get(hour, temperature))
             peers = [(stamp,kwh,t,d) for stamp,kwh,t,d in samples if d.hour == dt.hour and stamp < hour]
@@ -120,11 +120,13 @@ class ConsumptionDB:
             points.append({"stamp":hour,"kwh":estimate,"low":max(0,estimate-spread) if estimate is not None else None,
                            "high":estimate+spread if estimate is not None else None,"remaining_fraction":fraction,
                            "samples":round(effective,1),"temperature":temp,"simplified":simplified})
-            if record and hour > now and estimate is not None and baseline is not None:
+            if record and hour < end and hour > now and estimate is not None and baseline is not None:
                 with self.connect() as db:
                     db.execute("INSERT OR IGNORE INTO predictions(stamp,issued,predicted,baseline) VALUES (?,?,?,?)",(hour,now,estimate,baseline))
             hour += 3600
         observed = [(stamp,k) for stamp,k,t in rows if stamp>=start]
+        window_points = points
+        points = [p for p in points if p["stamp"] < end]
         complete = bool(points) and all(p["kwh"] is not None for p in points)
         remaining = sum(p["kwh"]*p["remaining_fraction"] for p in points) if complete else None
         return {"available":complete,"remaining_kwh":remaining,"observed_kwh":sum(k for _,k in observed),
@@ -132,6 +134,8 @@ class ConsumptionDB:
                 "day_start":int(start),"day_end":int(end),
                 "observed":[{"stamp":stamp,"kwh":k} for stamp,k in observed],
                 "current_observation":{"stamp":now//3600*3600,"kwh":partial[0]/1000,"seconds":partial[1]} if partial else None,
+                "window_hours":window_points,
+                "window_observed":[{"stamp":stamp,"kwh":k} for stamp,k,t in rows if stamp >= (now-12*3600)//3600*3600],
                 "hours":points,"training_hours":stats[0],"training_days":stats[1],"first":stats[2],"last":stats[3],
                 "evaluated_hours":len(errors),"mae_kwh":sum(abs(e) for e,_ in errors)/len(errors) if errors else None,
                 "baseline_mae_kwh":sum(abs(e) for _,e in errors)/len(errors) if errors else None,
