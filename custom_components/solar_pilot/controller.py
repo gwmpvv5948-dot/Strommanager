@@ -289,7 +289,17 @@ class Controller:
         snapshot = asdict(self.snapshot) if self.snapshot else None
         if snapshot:
             snapshot = {k: (v if not isinstance(v, float) or math.isfinite(v) else None) for k, v in snapshot.items()}
+        # The frontend state stream omits unchanged sensor reports. Publish real
+        # HA report timestamps for display freshness, independently of last_updated.
+        report_ids = set(self.entities.values()) | set(self.consumption.sources.values())
+        source_reports = {}
+        for entity_id in report_ids:
+            state = self.hass.states.get(entity_id)
+            stamp = getattr(state, "last_reported", None) if state else None
+            if stamp:
+                source_reports[entity_id] = stamp.timestamp()
         return {
+            "source_reports": source_reports,
             "entry_id": self.entry.entry_id, "mode": self.mode,
             "updated": self.updated, "conflict": self.conflict,
             "error": self.adapter_error or self.executor.error,
