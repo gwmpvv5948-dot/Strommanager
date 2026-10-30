@@ -1,0 +1,246 @@
+{
+  "now": 1793361600,
+  "settings": {
+    "capacity_kwh": 5,
+    "efficiency": 0.9,
+    "normal_discharge_w": 2500,
+    "max_charge_w": 2500,
+    "forecast_factor": 1,
+    "meter_max_age_s": 300,
+    "forecast_max_age_s": 28800
+  },
+  "b": {
+    "start": 1793318400,
+    "end": 1793404800,
+    "now": 1793361600,
+    "bins": [
+      {
+        "stamp": 1793318400,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793322000,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793325600,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793329200,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793332800,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793336400,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793340000,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793343600,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793347200,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793350800,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793354400,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793358000,
+        "actual": 0.4,
+        "future": null,
+        "low": null,
+        "high": null,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793361600,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": true
+      },
+      {
+        "stamp": 1793365200,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793368800,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793372400,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793376000,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793379600,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793383200,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793386800,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793390400,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793394000,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793397600,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      },
+      {
+        "stamp": 1793401200,
+        "actual": null,
+        "future": 0.5,
+        "low": 0.3,
+        "high": 0.7,
+        "missing": false,
+        "current": false
+      }
+    ]
+  },
+  "day": {
+    "day_start": 1793314800,
+    "day_end": 1793401200,
+    "hours": [
+      {
+        "stamp": 1793314800,
+        "actual": 0.4,
+        "predicted": 0.5
+      }
+    ]
+  }
+}
