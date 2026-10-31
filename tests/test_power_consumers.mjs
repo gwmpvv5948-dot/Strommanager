@@ -78,3 +78,23 @@ test("network equipment is a consumer, not grid power", () => {
     1,
   );
 });
+
+test("rejects control recommendations, whole-house meters and cycle averages found in live HA", () => {
+  const states = {
+    "sensor.output": sensor("2500", "Reservebudget"),
+    "sensor.strommanager_budget": sensor("2500", "Ladebudget Abendreserve"),
+    "sensor.recommendation": sensor("400", "Empfohlene Entladegrenze"),
+    "sensor.sum_aux": sensor("80", "Sum Aux"),
+    "sensor.house": sensor("400", "Verbrauch momentan"),
+    "sensor.main": sensor("157", "Electricity Beispiel Gesamtleistung"),
+    "sensor.main_l1": sensor("40", "Electricity Beispiel Leistung L1"),
+    "sensor.thermostat": sensor("100", "VTherm Mittlere Zyklusleistung"),
+    "sensor.stove": sensor("40", "Herd Phase A Leistung"),
+  };
+  assert.deepEqual(
+    powerConsumers(states, {
+      source_entities: { outputs: { budget: "sensor.output" } },
+    }).map((v) => v.id),
+    ["sensor.stove"],
+  );
+});

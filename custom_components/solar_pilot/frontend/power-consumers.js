@@ -1,11 +1,11 @@
 // Display-only discovery across all HA states, independent of control mappings.
-import { esc, fmt } from "./view-format.js?v=0.1.48";
+import { esc, fmt } from "./view-format.js?v=0.1.49";
 
 // W alone is not sufficient: forecasts, power limits and generation are not loads.
 const nonLoad =
-  /(?:^|[\s_.-])(?:pv|solar|solcast|inverter|wechselrichter|battery|batteries|batterie\w*|batterien|akku\w*|grid|netz|netzbezug|netzleistung|netzladung|einspeis\w*|export|import|power_meter|stromz[aä]hler|erzeug\w*|produktion|forecast|prognose|nennleistung|rated|maximum|maximale\w*|limit|peak|spitze)(?:$|[\s_.-])/i;
+  /(?:^|[\s_.-])(?:pv|solar|solcast|inverter|wechselrichter|battery|batteries|batterie\w*|batterien|akku\w*|grid|netz|netzbezug|netzleistung|netzladung|einspeis\w*|export|import|power_meter|stromz[aä]hler|erzeug\w*|produktion|forecast|prognose|strommanager|ladebudget|entladegrenze|zyklusleistung|nennleistung|rated|maximum|maximale\w*|limit|peak|spitze)(?:$|[\s_.-])/i;
 const aggregate =
-  /(?:^|[\s_.-])(?:all_standby|sum_power|sum_leistung|house_load|hausverbrauch|house_consumption)(?:$|[\s_.-])/i;
+  /(?:^|[\s_.-])(?:all_standby|sum|summe|gesamtleistung|verbrauch[\s_.-]+momentan|house_load|hausverbrauch|house_consumption)(?:$|[\s_.-])/i;
 
 export function powerConsumers(states, status = {}) {
   const ids = status?.entities || {},
@@ -18,6 +18,7 @@ export function powerConsumers(states, status = {}) {
     learn.inverter,
     learn.garage,
     learn.shed,
+    ...Object.values(status?.source_entities?.outputs || {}),
   ]);
   const consumers = [];
   for (const [id, state] of Object.entries(states || {})) {
@@ -39,7 +40,9 @@ export function powerConsumers(states, status = {}) {
     // The configured wallbox is a known load even if its name contains "solar".
     if (
       id !== ids.wallbox_power &&
-      (nonLoad.test(text) || aggregate.test(text))
+      (nonLoad.test(text) ||
+        aggregate.test(text) ||
+        /electricity[\s\S]*leistung[\s_.-]+l[123](?:$|[\s_.-])/i.test(text))
     )
       continue;
     consumers.push({ id, name, watts });
