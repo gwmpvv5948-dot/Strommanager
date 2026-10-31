@@ -1,6 +1,6 @@
 """Integration constants; entity names are editable during setup."""
 DOMAIN = "solar_pilot"
-VERSION = "0.1.47"
+VERSION = "0.1.48"
 PANEL_PATH = "solar-pilot"
 MODES = ("observe", "auto", "storage_first", "charge_minimum", "paused")
 ENTITY_DEFAULTS = {

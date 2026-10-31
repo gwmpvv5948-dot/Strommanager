@@ -1,16 +1,17 @@
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.47';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.47';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.48';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.48';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.48';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.47';
-import {esc,fmt} from './view-format.js?v=0.1.47';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.47';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.48';
+import {esc,fmt} from './view-format.js?v=0.1.48';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.48';
 import {liveEnergy} from './live-energy.js?v=0.1.40';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
 import {dayAllocation,remainingPV} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.47";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.48";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
 const FIELD_INFO = {
   budget_extra_kwh:["Zusätzlicher Hausbedarf pro PV-Tag", "kWh · nur Budgetanzeige", 0, 30, .1],
@@ -45,7 +46,11 @@ const FIELD_HELP = {
 
 export class SolarPilotPanel extends HTMLElement {
   constructor(){super();this.attachShadow({mode:"open"});this.tab="overview";this.consumptionView="total";this.consumptionHistoryDate=null;this.status=null;this.busy=false;this.message="";this.draft=null;this._error="";this.solarHistory=[];this.pvExtraHistory={};this.historyLoaded=0;this.historyError="";}
-  set hass(value){this._hass=value;if(!this.status && !this._loading)this.refresh();}
+  set hass(value){this._hass=value;if(!this.status && !this._loading)this.refresh();
+    if(!this._consumerFrame&&this.isConnected&&this.shadowRoot?.querySelector('.consumer-content')){
+      this._consumerFrame=requestAnimationFrame(()=>{this._consumerFrame=null;this.updateConsumers();});
+    }
+  }
   set panel(value){this._panel=value;try{const saved=localStorage.getItem(`solar_pilot.consumption_view.${value.config.entry_id}`);if(["hours","total"].includes(saved))this.consumptionView=saved;}catch{}if(this._hass&&!this.status)this.refresh();}
   set narrow(value){this._narrow=value;}
   connectedCallback(){
@@ -57,7 +62,7 @@ export class SolarPilotPanel extends HTMLElement {
       }
     }
     this.render();this._timer=setInterval(()=>this.refresh(),10000);}
-  disconnectedCallback(){clearInterval(this._timer);}
+  disconnectedCallback(){clearInterval(this._timer);if(this._consumerFrame)cancelAnimationFrame(this._consumerFrame);this._consumerFrame=null;}
   async refresh(){
     if(!this._hass||!this._panel||this._loading)return;
     this._loading=true;
@@ -85,6 +90,19 @@ export class SolarPilotPanel extends HTMLElement {
     const batteryLabel=v.battery==null?'Akkuleistung unbekannt':v.battery>10?'Akku lädt':v.battery< -10?'Akku entlädt':'Akku ruht';
     return `<section class="card full live-energy-card" aria-label="Aktuelle Energieübersicht"><div class="card-title"><h2>Energie jetzt</h2></div><div class="live-energy-body"><div class="live-flow">${station('white-balance-sunny',v.pv,'PV gesamt','solar')}<ha-icon class="live-arrow" icon="mdi:${v.pv>10?'arrow-right':'minus'}" aria-hidden="true"></ha-icon>${station('home-lightning-bolt-outline',v.house,'Haus')}<ha-icon class="live-arrow" icon="mdi:${gridArrow}" aria-hidden="true"></ha-icon>${station('transmission-tower',v.grid,gridLabel,'grid-icon')}</div><div class="live-bottom"><div class="live-battery">${icon('battery-charging-outline','battery')}<div><strong>${fmt(v.soc,'%')}</strong><span class="sub">${batteryLabel}${v.battery==null?'':' · '+fmt(Math.abs(v.battery),'W')}</span>${v.soc==null?'':`<div class="live-soc" role="meter" aria-label="Akkustand" aria-valuenow="${v.soc}" aria-valuemin="0" aria-valuemax="100"><span style="width:${v.soc}%"></span></div>`}</div></div><div class="live-ev">${icon('car-electric-outline')}<div><strong>${fmt(carSoc,'%')}${carSoc!=null&&carLast?'<small class="live-last">zuletzt</small>':''}</strong><span class="sub">${v.ev==null?'Tesla · Leistung unbekannt':(v.ev>10?'Tesla lädt':'Tesla pausiert')+' · '+fmt(v.ev,'W')}</span></div></div></div></div></section>`;
   }
+  consumerCard(){
+    return `<section class="card consumer-card" aria-label="Verbraucher jetzt"><div class="consumer-title"><h2>Verbraucher jetzt</h2><span class="sub">Ganz Home Assistant</span></div><div class="consumer-content">${consumerHeatmap(this._hass?.states,this.status,{unavailable:!!this._error})}</div></section>`;
+  }
+  updateConsumers(){
+    const content=this.shadowRoot?.querySelector('.consumer-content');if(!content)return;
+    const expanded=content.querySelector('details')?.open;
+    const next=consumerHeatmap(this._hass?.states,this.status,{unavailable:!!this._error});
+    if(content.innerHTML===next)return;
+    const focused=content.querySelector('summary')===this.shadowRoot.activeElement;
+    content.innerHTML=next;
+    const details=content.querySelector('details');if(details)details.open=!!expanded;
+    if(focused)content.querySelector('summary')?.focus({preventScroll:true});
+  }
   overview(){
     const t=this.status,s=t.snapshot||{},d=t.decision||{},c=t.settings;
     const soc=Math.min(100,Math.max(0,s.house_soc||0));
@@ -103,6 +121,7 @@ export class SolarPilotPanel extends HTMLElement {
       <section class="card reserve-card"><div class="card-title"><h2>Reserve für den Abend</h2>${batteryStatus}</div><div class="storage">${this.storageDiagram(s,c)}<div><h3>${s.house_soc==null?"Ladestand unbekannt":s.house_soc>=c.reserve_soc?"Zielreserve erreicht":"Reserve wird aufgebaut"}</h3><span class="target">Mindestens ${fmt(c.reserve_soc,"%")} zum Sonnenuntergang</span><div class="bar" style="--soc:${soc};--target:${c.reserve_soc}" aria-label="${esc(`Speicher ${fmt(s.house_soc,"%")}; PV-Potenzial ${fmt(potential,"%")}`)}"><b class="potential" style="left:${soc}%;width:${Math.max(0,(potential??soc)-soc)}%"></b><span></span><i></i></div><span class="sub">Speicherentnahme für Tesla endet bei ${fmt(c.reserve_soc,"%")}.</span><div class="storage-zones-legend"><div><ha-icon icon="mdi:flash"></ha-icon><span><strong>Freigabe über ${fmt(c.storage_release_soc,"%")}</strong><small>Tesla darf auch Speicherenergie nutzen.</small></span></div><div><ha-icon icon="mdi:car-electric"></ha-icon><span><strong>Bis ${fmt(c.reserve_soc,"%")}</strong><small>Nach Freigabe weiterladen, bis die Nachtreserve erreicht ist.</small></span></div><div><ha-icon icon="mdi:home-outline"></ha-icon><span><strong>Nachtreserve schützen</strong><small>Darunter keine Speicherentnahme für Tesla; PV-Laden bleibt möglich.</small></span></div></div></div></div>${potential==null?'<p class="potential-note">PV-Ladepotenzial derzeit nicht berechenbar.</p>':`<p class="potential-note">Speicherprognose bis Abend: <strong>${fmt(potential,"%")}</strong> · bis zu +${fmt(Math.max(0,potential-soc),"Prozentpunkte")}<small>Schraffiert: mögliche Zusatzladung aus der P50-PV-Kurve mit Prognosefaktor, geschätzter Hauslast, Ladeverlusten und Leistungsgrenze; ohne weitere Autoladung. Der Energiepuffer wird nicht abgezogen. Keine Garantie.</small></p>`}<div class="split"><span class="sub">PV-Planungsbudget für Reserve</span><strong>${fmt(d.reserve_charge_w,"W")}</strong></div><p class="note">Rechenwert für die Verteilung vorhandener PV-Leistung, keine aktuelle Ladeleistung und keine Ladegrenze am Wechselrichter.</p>${t.charging_state?.storage_active?`<p class="note">Speicherfreigabe aktiv bis ${fmt(c.reserve_soc,"%")} Abendreserve; aktuelle Steuerfreigabe siehe Entscheidung.</p>`:""}${protection?`<div class="protection ${protection.kind}" role="status">▣ ${esc(protection.text)}</div>`:""}</section></div>
 
       ${this.vehicle(s,c)}
+      ${this.consumerCard()}
       ${this.solarChart(s,c)}
       ${this.dayForecast()}
       ${this.consumptionForecast()}
@@ -315,14 +334,14 @@ export class SolarPilotPanel extends HTMLElement {
     const viewportTop=scrollContainer===doc.scrollingElement?0:scrollContainer.getBoundingClientRect().top;
     const anchor=!resetScroll&&oldShell&&candidates(oldShell).find(el=>{const r=el.getBoundingClientRect();return r.height>0&&r.top>=viewportTop&&r.top<viewportTop+scrollContainer.clientHeight;});
     const anchorState=anchor?{key:anchorKey(anchor),top:anchor.getBoundingClientRect().top}:null;
-    const detailKey=el=>`${el.className}|${el.querySelector('summary')?.textContent.trim()}`;
+    const detailKey=el=>el.classList.contains('consumer-more')?'consumer-more':`${el.className}|${el.querySelector('summary')?.textContent.trim()}`;
     const detailsOpen=new Map([...this.shadowRoot.querySelectorAll("details")].map(el=>[detailKey(el),el.open]));
     const horizontal=[...this.shadowRoot.querySelectorAll('.chart-scroll,.days-table-scroll')].map(el=>el.scrollLeft);
     const active=this.shadowRoot.activeElement;
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.47</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.48</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});

@@ -2089,4 +2089,113 @@ details summary {
   }
 }
 
-.vehicle-live-foot{display:flex;justify-content:space-between;gap:12px;padding:16px 0;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+.vehicle-live-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  color: var(--muted);
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+}
+
+/* Compact, display-only live loads from all Home Assistant sensors. */
+.consumer-card {
+  --load-low: light-dark(#3a996d, #78ce9f);
+  --load-warm: light-dark(#8d982d, #b8cf6c);
+  --load-medium: light-dark(#c1952e, #e5bc61);
+  --load-high: light-dark(#d0684f, #ee9377);
+  color-scheme: light dark;
+  padding: 18px;
+  align-self: start;
+}
+.consumer-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+.consumer-title h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.consumer-rows {
+  display: grid;
+  gap: 3px;
+}
+.consumer-row {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--soft);
+}
+.consumer-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--load-width);
+  background: var(--load-color);
+  opacity: 0.26;
+  z-index: -1;
+}
+.consumer-name {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.consumer-row strong {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.consumer-legend {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.consumer-legend > :last-child {
+  margin-left: auto;
+}
+.consumer-gradient {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--load-low),
+    var(--load-medium),
+    var(--load-high)
+  );
+}
+.consumer-more {
+  margin-top: 8px;
+}
+.consumer-more summary {
+  padding: 8px 0;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.consumer-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+@media (pointer: coarse) {
+  .consumer-more summary {
+    min-height: 44px;
+  }
+}
