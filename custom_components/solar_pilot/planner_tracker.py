@@ -1,13 +1,19 @@
 """Collect existing HA forecasts; solve the observer plan off the event loop."""
 from datetime import datetime
 import math
+from zoneinfo import ZoneInfo
 
 from .energy_planner import PlannerConfig, optimize
 from .source_config import display_sources
 
 
 def finite(value):
-    return type(value) in (float,int) and math.isfinite(value)
+    if value is None or isinstance(value,bool):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except (TypeError,ValueError,OverflowError):
+        return False
 
 
 def collect(controller, now):
@@ -36,10 +42,11 @@ def collect(controller, now):
             continue
         for row in state.attributes.get('detailedForecast',[]):
             try:
-                stamp = datetime.fromisoformat(row['period_start'].replace('Z','+00:00'))
+                raw = row['period_start']
+                stamp = raw if isinstance(raw,datetime) else datetime.fromisoformat(raw.replace('Z','+00:00'))
                 power = row['pv_estimate']
-                if stamp.tzinfo and finite(power) and power >= 0:
-                    pv[stamp.timestamp()] = power
+                if stamp.tzinfo and finite(power) and float(power) >= 0:
+                    pv[stamp.timestamp()] = float(power)
             except (ValueError,TypeError,KeyError):
                 continue
     pv = sorted(pv.items())
@@ -51,8 +58,11 @@ def collect(controller, now):
         load = hours.get(int(t)//3600*3600)
         share = next((p['share'] for p in grid['points'] if p['available'] and p['start']<=t<p['end']),None)
         if not all(finite(v) for v in (power,load,share)):
-            raise ValueError('24-Stunden-Prognose unvollständig (PV, Haus oder EE)')
-        slots.append({'start':t,'end':stop,'pv_kw':power*c.forecast_factor*.95,'load_kw':load,'ee':share})
+            missing = ', '.join(name for name,value in [('PV',power),('Haus',load),('EE',share)] if not finite(value))
+            zone = ZoneInfo(controller.hass.config.time_zone)
+            when = datetime.fromtimestamp(t,zone).strftime('%d.%m. %H:%M')
+            raise ValueError(f'Prognoselücke ab {when}: {missing}. 24 Stunden nicht vollständig verfügbar.')
+        slots.append({'start':t,'end':stop,'pv_kw':power*c.forecast_factor*.95,'load_kw':float(load),'ee':float(share)})
         t = stop
     config = PlannerConfig(capacity=c.capacity_kwh,initial_soc=s.house_soc,minimum_soc=max(floor,c.house_min_soc),
         terminal_soc=c.planner_terminal_soc,charge_kw=c.max_charge_w/1000,discharge_kw=c.normal_discharge_w/1000,
