@@ -66,7 +66,7 @@ export function consumptionBarChart(panel, b, zone) {
     b,
     panel.status?.snapshot,
     panel.status?.settings,
-    { now: liveNow, sunset, minSoc: deviceMinSoc==null?null:Math.max(deviceMinSoc,panel.status?.settings?.house_min_soc??0), pv: forecast, grid: panel.status?.grid_forecast },
+    { now: liveNow, sunset, minSoc: deviceMinSoc, pv: forecast, grid: panel.status?.grid_forecast },
   );
   const { max, step, ticks } = consumptionAxis(
       b.bins,

@@ -25,7 +25,7 @@ class HouseControl(unittest.TestCase):
             decision,_=self.run_control(**kwargs)
             self.assertEqual(decision,self.base)
     def test_invalid_or_stale_measurements_fail_closed(self):
-        for kwargs in ({'device_min_soc':None},{'device_step_w':None},{'s':replace(self.s,house_soc=9)},
+        for kwargs in ({'device_min_soc':None},{'device_step_w':None},{'s':replace(self.s,house_soc=1)},
                        {'s':replace(self.s,meter_age=9999)},{'s':replace(self.s,house_soc_age=9999)},
                        {'s':replace(self.s,house_soc=101)},{'s':replace(self.s,daylight=None)},
                        {'s':replace(self.s,grid_charge_enabled=True)}):
@@ -48,7 +48,7 @@ class HouseControl(unittest.TestCase):
         self.assertEqual(status['source'],'fallback')
         self.assertTrue(status['replan'])
     def test_never_exceeds_remaining_reserve_energy(self):
-        s=replace(self.s,house_soc=10.1)
-        plan={**self.plan,'initial_soc':10.1,'points':[{**self.plan['points'][0],'soc':10}]}
+        s=replace(self.s,house_soc=1.1)
+        plan={**self.plan,'initial_soc':1.1,'points':[{**self.plan['points'][0],'soc':1}]}
         decision,_=self.run_control(s=s,plan=plan,device_step_w=1)
         self.assertLessEqual(decision.discharge_w,.001*self.c.capacity_kwh*self.c.efficiency/.25*1000)

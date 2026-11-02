@@ -11,14 +11,14 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import DOMAIN, ENTITY_DEFAULTS
-from .model import Settings
+from .model import Settings, without_retired_settings
 
 ENERGY = tuple(k for k in ENTITY_DEFAULTS if not k.startswith("car_"))
 CAR = tuple(k for k in ENTITY_DEFAULTS if k.startswith("car_"))
 SETTINGS_FIELDS = (
     "planner_control_enabled",
     "planner_terminal_soc", "planner_ee_weight_eur_kwh", "planner_cycle_eur_kwh",
-    "grid_renewable_enabled", "grid_hold_share", "grid_release_share", "house_min_soc",
+    "grid_renewable_enabled", "grid_hold_share", "grid_release_share",
     "reserve_soc", "capacity_kwh", "car_min_soc", "car_low_soc", "storage_release_soc", "phases", "max_amps",
     "normal_discharge_w", "max_charge_w", "forecast_factor", "buffer_kwh",
     "margin_w", "minimum_house_w", "budget_extra_kwh", "cloud_interval_s", "grid_export_positive",
@@ -106,7 +106,7 @@ class Options(config_entries.OptionsFlow):
     """Do not assign self.config_entry; HA supplies this property."""
     async def async_step_init(self, user_input=None):
         errors = {}
-        current = {**self.config_entry.data.get("settings", {}), **self.config_entry.options.get("settings", {})}
+        current = without_retired_settings({**self.config_entry.data.get("settings", {}), **self.config_entry.options.get("settings", {})})
         if user_input is not None:
             try:
                 settings = Settings(**{**current, **user_input})

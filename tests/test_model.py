@@ -25,13 +25,13 @@ def sample(**changes):
         forecast_kwh=12,forecast_age=300,car_soc=60,car_limit=80,car_age=100,
         at_home=True,cable=True,wallbox_enabled=True,online=True,charging=False,
         charge_changed_age=1000,car_current=16,current_discharge_w=2500,
-        grid_charge_enabled=False), **changes)
+        grid_charge_enabled=False,battery_min_soc=1), **changes)
 
 
 class Decisions(unittest.TestCase):
     def setUp(self): self.c=Settings()
     def test_minimum_never_allows_grid_charge(self):
-        d=decide(sample(car_soc=45,house_soc=10,pv_w=0,grid_export_w=-500,battery_charge_w=0),self.c)
+        d=decide(sample(car_soc=45,house_soc=1,pv_w=0,grid_export_w=-500,battery_charge_w=0),self.c)
         self.assertEqual((d.target_amps,d.discharge_w,d.code),(0,0,"surplus_wait"))
     def test_below_minimum_waits_at_night(self):
         self.assertEqual(decide(sample(car_soc=20,daylight=False,hours_left=0),self.c).target_amps,0)
@@ -276,7 +276,20 @@ class RenewableHousePolicy(unittest.TestCase):
         self.assertEqual(decide(sample(grid_hold=True,at_home=False),Settings()).discharge_w,2500)
     def test_house_minimum_and_tesla_safety_remain(self):
         c=Settings(grid_renewable_enabled=True)
-        for s in [sample(house_soc=10),sample(house_soc=35,wallbox_w=2000),sample(house_soc_age=901)]:
+        for s in [sample(house_soc=1),sample(house_soc=35,wallbox_w=2000),sample(house_soc_age=901)]:
             self.assertEqual(decide(s,c).discharge_w,0)
     def test_invalid_hysteresis(self):
         with self.assertRaises(ValueError):Settings(grid_hold_share=50,grid_release_share=50)
+
+
+class DeviceMinimumOnly(unittest.TestCase):
+    def test_actual_device_floor_replaces_former_ten_percent(self):
+        self.assertEqual(decide(sample(house_soc=6,battery_min_soc=1,at_home=False),Settings()).discharge_w,2500)
+        self.assertEqual(decide(sample(house_soc=6,battery_min_soc=7,at_home=False),Settings()).discharge_w,0)
+    def test_missing_device_floor_cannot_enable_discharge(self):
+        self.assertEqual(decide(sample(house_soc=80,battery_min_soc=None,at_home=False),Settings()).discharge_w,0)
+    def test_old_setting_can_be_removed_without_losing_other_values(self):
+        from pilot_test.model import without_retired_settings
+        c=Settings(**without_retired_settings({'house_min_soc':10,'reserve_soc':65}))
+        self.assertEqual(c.reserve_soc,65)
+        self.assertNotIn('house_min_soc',c.__dict__)

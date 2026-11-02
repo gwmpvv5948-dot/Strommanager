@@ -14,7 +14,6 @@ class Settings:
     grid_renewable_enabled: bool = False
     grid_hold_share: float = 60
     grid_release_share: float = 55
-    house_min_soc: float = 10
     reserve_soc: float = 70
     capacity_kwh: float = 5
     car_min_soc: float = 50
@@ -59,7 +58,7 @@ class Settings:
                 raise ValueError(name)
         ranges = {
             "planner_terminal_soc": (0, 100), "planner_ee_weight_eur_kwh": (0, 5), "planner_cycle_eur_kwh": (0, 5),
-            "grid_hold_share": (0, 100), "grid_release_share": (0, 100), "house_min_soc": (0, 99),
+            "grid_hold_share": (0, 100), "grid_release_share": (0, 100),
             "reserve_soc": (0, 100), "capacity_kwh": (.1, 200),
             "car_min_soc": (0, 100), "car_low_soc": (0, 100),
             "storage_release_soc": (0, 100), "normal_discharge_w": (0, 30000),
@@ -116,6 +115,7 @@ class Snapshot:
     grid_charge_enabled: bool | None
     location_age: float = 0
     grid_hold: bool = False
+    battery_min_soc: float | None = None
 
 
 @dataclass(frozen=True)
@@ -208,7 +208,7 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     watts_running = valid(s.wallbox_w, 200)
     threshold = c.min_amps if watts_running else c.start_amps
     storage_allowed = (state.storage_active and storage_ok and meters_ok
-                       and s.house_soc > max(c.reserve_soc, c.house_min_soc) and not state.minimum_active
+                       and valid(s.battery_min_soc, 0, 100) and s.house_soc > max(c.reserve_soc, s.battery_min_soc) and not state.minimum_active
                        and not (c.grid_renewable_enabled and s.grid_hold))
     # Battery power is a shared house+EV ceiling, not extra power solely for the EV.
     if storage_allowed:
@@ -246,7 +246,7 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     if (watts_running or (valid(s.wallbox_w, 10.000001)) or (target or 0) >= c.min_amps
             or not meters_ok
             or s.daylight is None
-            or not storage_ok or s.house_soc <= c.house_min_soc
+            or not storage_ok or not valid(s.battery_min_soc, 0, 100) or s.house_soc <= s.battery_min_soc
             or (c.grid_renewable_enabled and s.grid_hold)):
         discharge = 0
     if storage_allowed and car_ok and (target or 0) >= c.min_amps and not state.minimum_active:
@@ -306,3 +306,8 @@ def consumption_comparison(s: Snapshot, c: Settings, forecast: dict) -> dict:
     result.update(available=True, reason="Nur Vergleich · bisherige Regelung bleibt aktiv",
                   learned_kwh=learned, safe_kwh=safe, delta_kwh=safe-result["legacy_kwh"])
     return result
+
+
+def without_retired_settings(values):
+    """Read older installations without retaining the removed software floor."""
+    return {key:value for key,value in values.items() if key != "house_min_soc"}

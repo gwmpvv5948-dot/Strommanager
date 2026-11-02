@@ -64,7 +64,7 @@ def collect(controller, now):
             raise ValueError(f'Prognoselücke ab {when}: {missing}. 24 Stunden nicht vollständig verfügbar.')
         slots.append({'start':t,'end':stop,'pv_kw':power*c.forecast_factor*.95,'load_kw':float(load),'ee':float(share)})
         t = stop
-    config = PlannerConfig(capacity=c.capacity_kwh,initial_soc=s.house_soc,minimum_soc=max(floor,c.house_min_soc),
+    config = PlannerConfig(capacity=c.capacity_kwh,initial_soc=s.house_soc,minimum_soc=floor,
         terminal_soc=c.planner_terminal_soc,charge_kw=c.max_charge_w/1000,discharge_kw=c.normal_discharge_w/1000,
         efficiency=c.efficiency,purchase=c.purchase_eur_kwh,feed_in=c.feed_in_eur_kwh,
         ee_weight=c.planner_ee_weight_eur_kwh,cycle_cost=c.planner_cycle_eur_kwh,

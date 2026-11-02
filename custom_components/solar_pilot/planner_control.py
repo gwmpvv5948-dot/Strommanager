@@ -19,13 +19,13 @@ def apply_house_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device
         return decision,meta
     if not all(valid(v) for v in (device_min_soc,device_max_w,device_step_w)) or not 0<=device_min_soc<=100 or device_max_w<0 or device_step_w<=0:
         return result('protection','Entladung gesperrt · Geräte-Grenzen fehlen',0)
-    minimum = max(c.house_min_soc,device_min_soc)
+    minimum = device_min_soc
     if (not valid(s.house_soc) or not 0<=s.house_soc<=100 or not 0<=s.house_soc_age<=c.meter_max_age_s
             or not 0<=s.meter_age<=c.meter_max_age_s or s.daylight is None
             or not all(valid(v) for v in (s.pv_w,s.grid_export_w,s.battery_charge_w,s.wallbox_w))):
         return result('protection','Entladung gesperrt · Messwerte fehlen oder sind veraltet',0)
     if s.house_soc<=minimum:
-        return result('protection','Akku am oder unter dem Haus-Mindeststand · Entladung gesperrt',0)
+        return result('protection','Akku am oder unter dem Wechselrichter-Mindeststand · Entladung gesperrt',0)
     if s.grid_charge_enabled is True:
         return result('protection','Entladung gesperrt · Netzladung muss zuerst ausgeschaltet sein',0)
     ceiling = min(c.normal_discharge_w,device_max_w)

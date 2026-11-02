@@ -16,7 +16,7 @@ from homeassistant.util import dt as dt_util
 from .source_config import display_sources, validate_mapping, LEARNING_DEFAULTS, LEARNING_LABELS, DISPLAY_LABELS, ENTITY_ID
 from .const import DOMAIN, ENTITY_DEFAULTS, ENTITY_LABELS, MODES
 from .executor import Command, Executor, plan
-from .model import Settings, Snapshot, decide, ChargingState, charging_state, consumption_comparison
+from .model import Settings, Snapshot, decide, without_retired_settings, ChargingState, charging_state, consumption_comparison
 from .grid_forecast import GridForecast
 from .planner_tracker import PlannerTracker
 from .planner_control import apply_house_plan
@@ -29,7 +29,7 @@ class Controller:
         self.hass, self.entry = hass, entry
         config = {**entry.data, **entry.options}
         self.entities = {k:v for k,v in config["entities"].items() if k != "legacy_automation"}
-        self.settings = Settings(**config.get("settings", {}))
+        self.settings = Settings(**without_retired_settings(config.get("settings", {})))
         self.grid_forecast = GridForecast()
         self.planner = PlannerTracker()
         self.energy_control = None
@@ -84,6 +84,17 @@ class Controller:
         state = self.state(key)
         return state.state == "on" if state and state.state in ("on", "off") else None
 
+    def battery_minimum_soc(self):
+        sources = display_sources(self.entities, self.entry.options.get("display_sources"))
+        state = self.hass.states.get(sources["battery_min_soc"])
+        if not state or state.state in ("unknown", "unavailable") or state.attributes.get("restored") or state.attributes.get("unit_of_measurement") != "%":
+            return None
+        try:
+            value = float(state.state)
+            return value if math.isfinite(value) and 0 <= value <= 100 else None
+        except (ValueError, TypeError):
+            return None
+
     def read(self):
         now = dt_util.utcnow().timestamp()
         sun = self.state("sun")
@@ -121,6 +132,7 @@ class Controller:
             grid_charge_enabled=self.boolean("grid_charge"),
             location_age=self.age("car_home", now),
             grid_hold=self.grid_forecast.status(now, self.settings)["hold"],
+            battery_min_soc=self.battery_minimum_soc(),
         )
 
     async def async_start(self):
@@ -207,14 +219,13 @@ class Controller:
                 self.charging_state = charging_state(self.snapshot, self.settings, self.charging_state)
             self.decision = decide(self.snapshot, self.settings, self.mode, self.charging_state)
             display = display_sources(self.entities,self.entry.options.get("display_sources"))
-            floor_state = self.hass.states.get(display['battery_min_soc'])
             def attribute_number(state,key=None):
                 try:
                     value = float(state.attributes[key] if key else state.state)
                     return value if math.isfinite(value) else None
                 except (AttributeError,KeyError,TypeError,ValueError):
                     return None
-            floor = attribute_number(floor_state) if floor_state and floor_state.state not in ('unknown','unavailable') and not floor_state.attributes.get('restored') and floor_state.attributes.get('unit_of_measurement')=='%' else None
+            floor = self.battery_minimum_soc()
             actuator = self.state('discharge_limit')
             unit = actuator.attributes.get('unit_of_measurement') if actuator else None
             factor = 1000 if unit=='kW' else 1 if unit=='W' else None

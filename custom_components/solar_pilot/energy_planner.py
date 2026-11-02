@@ -112,7 +112,7 @@ def explain(point, c):
         return 'Akku und Netz versorgen das Haus', 'Der Akku deckt einen Teil des Bedarfs; das Netz ergänzt die Leistung.'
     if point['grid_kw'] > .02:
         if point['soc'] <= c.minimum_soc+.1:
-            return 'Netz versorgt das Haus', 'Der Akku liegt am oder unter dem Haus-Mindeststand. Entladung bleibt gesperrt, bis PV-Überschuss ihn wieder aufgefüllt hat.'
+            return 'Netz versorgt das Haus', 'Der Akku liegt am oder unter dem Wechselrichter-Mindeststand. Entladung bleibt gesperrt, bis PV-Überschuss ihn wieder aufgefüllt hat.'
         return 'Netz bevorzugt · Akku bewahren', 'Die Gesamtplanung bewahrt Akkuenergie für andere Zeitfenster oder die Endreserve.'
     return 'PV versorgt das Haus', 'Die prognostizierte PV-Leistung deckt den Hausbedarf.'
 

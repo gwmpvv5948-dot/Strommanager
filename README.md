@@ -209,7 +209,7 @@ Die neue Kachel zeigt Erneuerbaren-Anteil, geplante Freigabeintervalle, die aktu
 Empfehlung und die tatsächlich eingestellte Entladegrenze. PV hat weiter Vorrang.
 Bei hohem Anteil wird die Akkuentladung gesperrt, nicht aus dem Netz geladen.
 Das Haus darf auch tagsüber unter der Tesla-Abendreserve aus dem Akku versorgt werden,
-bis zur eigenen Haus-Untergrenze (Standard 10 %); die Hardware-Untergrenze bleibt gültig.
+bis zur aktuellen Wechselrichter-Untergrenze. Eine zusätzliche Strommanager-Untergrenze gibt es nicht.
 Tesla und Haus teilen den Entladeaktor: Lädt Tesla ohne Speicherfreigabe, bleibt die
 gesamte Entladung gesperrt. Tesla-Speicherfreigabe übersteuert kein Netz-Bewahren.
 Beobachten und Pause senden weiterhin keine Befehle. Die Akku-Prognose im Verbrauch
@@ -230,8 +230,8 @@ Ohne gültigen Plan übernimmt die bisherige Regelung: optional die konfigurierb
 EE-Schwellenregel, andernfalls normaler Eigenverbrauch. Ein Plan gilt maximal zehn
 Minuten; fehlende aktuelle Prognosequellen, ein fehlendes Zeitfenster oder mehr als fünf
 Prozentpunkte Abweichung vom geplanten SoC lösen den Fallback aus. Fehlende oder veraltete
-Messdaten oder ungültige Gerätegrenzen sperren die Entladung. Haus- und Geräte-Mindeststand
-haben immer Vorrang. Bei tatsächlicher oder geplanter Tesla-Ladung bleibt die bisherige
+Messdaten oder ungültige Gerätegrenzen sperren die Entladung. Die Wechselrichter-Untergrenze
+hat immer Vorrang. Bei tatsächlicher oder geplanter Tesla-Ladung bleibt die bisherige
 Tesla-Regelung für die gemeinsame Entladegrenze zuständig. Angezeigt werden der
 Steuerungsgrund und die angeforderte sowie tatsächlich eingestellte Entladegrenze.
 Die bisherige große „Netz & Akku · Ausblick“-Kachel entfällt; der aktuelle EE-Anteil bleibt sichtbar.
@@ -246,7 +246,7 @@ PV deckt zuerst das Haus; nur PV-Überschuss kann den Speicher laden. Entladung 
 Hausbedarf und Leistungsgrenze begrenzt; kein Netzladen, kein Akku-Export. Deshalb
 sind Laden und Entladen in einem Intervall strukturell ausgeschlossen und es werden
 für dieses Teilmodell keine MILP-Binärvariablen benötigt. Speicherbilanz, Wirkungsgrade,
-Kapazität und Geräte-/Haus-Mindeststand sind Nebenbedingungen. Die Lösung wird
+Kapazität und Wechselrichter-Mindeststand sind Nebenbedingungen. Die Lösung wird
 unabhängig auf Bilanz und Grenzen geprüft. Solver-Zeitlimit: fünf Sekunden, ein Thread.
 Es wird nur ein optimal gelöstes, physikalisch geprüftes Ergebnis veröffentlicht.
 
@@ -279,3 +279,10 @@ P50 und P10 erscheinen als formtreue kubische Flächenkurven ohne Überschwingen
 fehlende Prognoseintervalle bleiben Lücken. Die tatsächliche Leistung bleibt als
 orange Messlinie erhalten. Die Tagesenergiemengen beziehen sich weiterhin auf den
 gesamten Kalendertag; die Glättung ändert weder Prognosedaten noch Steuerungswerte.
+
+
+Ab 0.1.69 wird ausschließlich die konfigurierte Wechselrichter-Untergrenze aus der
+zugeordneten Entität „Akku-Mindestladestand“ verwendet: für HiGHS, Fallback und
+Akku-Verbrauchsprognose. Unter Einstellungen erscheint dieser Wert nur lesend.
+Ältere gespeicherte Strommanager-Untergrenzen werden beim Laden entfernt. Fehlt ein
+gültiger Gerätewert, bleibt die Entladung gesperrt; es wird keine Ersatzgrenze angenommen.

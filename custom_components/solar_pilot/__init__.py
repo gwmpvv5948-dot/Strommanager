@@ -17,7 +17,7 @@ from homeassistant.helpers.service import async_register_admin_service
 
 from .const import DOMAIN, MODES, PANEL_PATH, VERSION
 from .controller import Controller
-from .model import Settings
+from .model import Settings, without_retired_settings
 
 PLATFORMS = ["sensor"]
 
@@ -35,6 +35,13 @@ def controller_for(hass, entry_id):
 
 
 async def async_setup_entry(hass, entry):
+    changes = {}
+    for name, value in (("data", entry.data), ("options", entry.options)):
+        settings = without_retired_settings(value.get("settings", {}))
+        if settings != value.get("settings", {}):
+            changes[name] = {**value, "settings": settings}
+    if changes:
+        hass.config_entries.async_update_entry(entry, **changes)
     data = hass.data.setdefault(DOMAIN, {"controllers": {}})
     if not data.get("registered"):
         await hass.http.async_register_static_paths([
