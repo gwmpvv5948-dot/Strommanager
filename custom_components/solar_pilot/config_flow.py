@@ -16,6 +16,7 @@ from .model import Settings
 ENERGY = tuple(k for k in ENTITY_DEFAULTS if not k.startswith("car_"))
 CAR = tuple(k for k in ENTITY_DEFAULTS if k.startswith("car_"))
 SETTINGS_FIELDS = (
+    "planner_control_enabled",
     "planner_terminal_soc", "planner_ee_weight_eur_kwh", "planner_cycle_eur_kwh",
     "grid_renewable_enabled", "grid_hold_share", "grid_release_share", "house_min_soc",
     "reserve_soc", "capacity_kwh", "car_min_soc", "car_low_soc", "storage_release_soc", "phases", "max_amps",

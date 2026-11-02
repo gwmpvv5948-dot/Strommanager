@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {solarDayData} from '../custom_components/solar_pilot/frontend/solar-timeline-view.js';
+import {solarDayData,solarPlotBounds,forecastSegments,smoothPath} from '../custom_components/solar_pilot/frontend/solar-timeline-view.js';
 const now=Date.parse('2026-11-02T16:00:00+01:00');
 const row=(time,p)=>({period_start:time,pv_estimate:p,pv_estimate10:p/2});
 const source={forecastIds:['today','tomorrow'],forecastId:'today'};
@@ -18,4 +18,19 @@ test('missing tomorrow stays missing',()=>{
 });
 test('next local day handles autumn DST',()=>{
  const d=solarDayData({...options,now:Date.parse('2026-10-24T12:00:00+02:00'),offset:1});assert.equal(d.key,'2026-10-25');assert.equal(d.end-d.start,25*3600000);
+});
+
+test('sunrise and sunset bound viewport with 30 minute buffer, day totals unchanged',()=>{
+ const day=solarDayData(options), rise=Date.parse('2026-11-02T07:00:00+01:00')/1000,set=Date.parse('2026-11-02T16:40:00+01:00')/1000;
+ assert.deepEqual(solarPlotBounds(day,{rise,set}),{start:(rise-1800)*1000,end:(set+1800)*1000});
+ assert.equal(day.end-day.start,86400000);
+ assert.deepEqual(solarPlotBounds(day,{rise:null,set:null}),{start:day.start,end:day.end});
+});
+test('forecast curves preserve missing intervals and missing P10',()=>{
+ const rows=[{start:0,end:30,p:1,low:.5},{start:30,end:60,p:3,low:null},{start:90,end:120,p:1,low:.5}];
+ assert.equal(forecastSegments(rows,'p').length,2);assert.equal(forecastSegments(rows,'low').length,2);
+ const points=forecastSegments(rows,'p')[0];const path=smoothPath(points,x=>x,y=>y);
+ assert.match(path,/ C/);assert.doesNotMatch(path,/NaN|Infinity/);
+ const coords=[...path.matchAll(/[MC]?(-?[\d.]+),(-?[\d.]+)/g)].map(m=>Number(m[2]));
+ assert.ok(coords.every(v=>v>=1 && v<=3));
 });

@@ -7,6 +7,7 @@ from math import floor, isfinite
 
 @dataclass(frozen=True)
 class Settings:
+    planner_control_enabled: bool = False
     planner_terminal_soc: float = 20
     planner_ee_weight_eur_kwh: float = .12
     planner_cycle_eur_kwh: float = .02
@@ -45,7 +46,7 @@ class Settings:
     def __post_init__(self):
         for f in fields(self):
             value = getattr(self, f.name)
-            if f.name not in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled") and (type(value) not in (int, float)):
+            if f.name not in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled", "planner_control_enabled") and (type(value) not in (int, float)):
                 raise ValueError(f.name)
             if isinstance(value, (int, float)) and not isfinite(value):
                 raise ValueError(f.name)
@@ -53,7 +54,7 @@ class Settings:
                      "meter_max_age_s", "car_max_age_s", "forecast_max_age_s", "minimum_pause_s"):
             if type(getattr(self, name)) is not int:
                 raise ValueError(name)
-        for name in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled"):
+        for name in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled", "planner_control_enabled"):
             if type(getattr(self, name)) is not bool:
                 raise ValueError(name)
         ranges = {

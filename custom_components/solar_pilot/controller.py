@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import asdict
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 import math
 
 from homeassistant.core import callback
@@ -18,6 +19,7 @@ from .executor import Command, Executor, plan
 from .model import Settings, Snapshot, decide, ChargingState, charging_state, consumption_comparison
 from .grid_forecast import GridForecast
 from .planner_tracker import PlannerTracker
+from .planner_control import apply_house_plan
 from .day_budget import DayBudgetTracker
 from .consumption_tracker import ConsumptionTracker
 
@@ -30,6 +32,7 @@ class Controller:
         self.settings = Settings(**config.get("settings", {}))
         self.grid_forecast = GridForecast()
         self.planner = PlannerTracker()
+        self.energy_control = None
         self.charging_state = ChargingState()
         self.mode = "observe"
         self.executor = Executor(self._send)
@@ -203,6 +206,29 @@ class Controller:
             if self.mode not in ("observe", "paused"):
                 self.charging_state = charging_state(self.snapshot, self.settings, self.charging_state)
             self.decision = decide(self.snapshot, self.settings, self.mode, self.charging_state)
+            display = display_sources(self.entities,self.entry.options.get("display_sources"))
+            floor_state = self.hass.states.get(display['battery_min_soc'])
+            def attribute_number(state,key=None):
+                try:
+                    value = float(state.attributes[key] if key else state.state)
+                    return value if math.isfinite(value) else None
+                except (AttributeError,KeyError,TypeError,ValueError):
+                    return None
+            floor = attribute_number(floor_state) if floor_state and floor_state.state not in ('unknown','unavailable') and not floor_state.attributes.get('restored') and floor_state.attributes.get('unit_of_measurement')=='%' else None
+            actuator = self.state('discharge_limit')
+            unit = actuator.attributes.get('unit_of_measurement') if actuator else None
+            factor = 1000 if unit=='kW' else 1 if unit=='W' else None
+            upper,step = attribute_number(actuator,'max'),attribute_number(actuator,'step')
+            maximum = upper*factor if upper is not None and factor else None
+            increment = step*factor if step is not None and factor else None
+            current_grid = self.grid_forecast.status(self.snapshot.now,self.settings)
+            house_updated = self.consumption.result.get('updated')
+            inputs_valid = (current_grid['available'] and isinstance(house_updated,(int,float)) and 0<=self.snapshot.now-house_updated<=900
+                and 0<=self.snapshot.forecast_age<=self.settings.forecast_max_age_s)
+            self.decision,self.energy_control = apply_house_plan(self.snapshot,self.settings,self.decision,self.mode,
+                self.planner.status(self.snapshot.now),device_min_soc=floor,device_max_w=maximum,device_step_w=increment,inputs_valid=inputs_valid)
+            if self.energy_control['replan'] and not self.planner.busy:
+                self.planner.attempted = None
             self.adapter_error = None
             if self.mode not in ("observe", "paused"):
                 try:
@@ -214,7 +240,7 @@ class Controller:
                     self.adapter_error = str(exc)[:300]
                 await self.persist()
             if hasattr(self.hass, "config") and not self.planner.busy:
-                self.entry.async_create_background_task(self.hass,self.planner.refresh(self),"Strommanager observer energy plan")
+                self.entry.async_create_background_task(self.hass,self.planner.refresh(self),"Strommanager energy plan")
             self.updated = dt_util.utcnow().isoformat()
             self.publish()
 
@@ -360,6 +386,26 @@ class Controller:
         for listener in tuple(self.listeners):
             listener()
 
+    def solar_times(self):
+        """HA astronomical events for each displayed local day; no weather API."""
+        today = dt_util.utcnow().astimezone(ZoneInfo(getattr(getattr(self.hass, "config", None), "time_zone", "Europe/Berlin"))).date()
+        cached = getattr(self, "_solar_times", None)
+        if cached and cached[0] == today:
+            return cached[1]
+        try:
+            from homeassistant.helpers.sun import get_astral_event_date
+            days = {}
+            for offset in (0, 1):
+                date = today + timedelta(days=offset)
+                rising = get_astral_event_date(self.hass, "sunrise", date)
+                setting = get_astral_event_date(self.hass, "sunset", date)
+                if rising and setting:
+                    days[date.isoformat()] = {"rise": rising.timestamp(), "set": setting.timestamp()}
+            self._solar_times = (today, days)
+            return days
+        except (ImportError, AttributeError, ValueError, KeyError):
+            return {}
+
     def status(self):
         snapshot = asdict(self.snapshot) if self.snapshot else None
         if snapshot:
@@ -374,6 +420,8 @@ class Controller:
             if stamp:
                 source_reports[entity_id] = stamp.timestamp()
         return {
+            "solar_times": self.solar_times(),
+            "energy_control": self.energy_control,
             "energy_plan": self.planner.status(dt_util.utcnow().timestamp()),
             "grid_forecast": self.grid_forecast.status(dt_util.utcnow().timestamp(), self.settings),
             "source_reports": source_reports,

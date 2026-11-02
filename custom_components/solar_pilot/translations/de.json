@@ -62,7 +62,8 @@
           "house_min_soc": "Hausversorgung bis Hausspeicher-Ladestand (% SoC)",
           "planner_terminal_soc": "Fahrplan-Endreserve (% Hausspeicher-SoC)",
           "planner_ee_weight_eur_kwh": "EE-Gewichtung (€/kWh nicht erneuerbar, nur Modell)",
-          "planner_cycle_eur_kwh": "Akku-Durchsatzgewicht (€/kWh, nur Modell)"
+          "planner_cycle_eur_kwh": "Akku-Durchsatzgewicht (€/kWh, nur Modell)",
+          "planner_control_enabled": "HiGHS steuert den Hausakku (Schwellenregel als Fallback)"
         }
       }
     },
@@ -106,7 +107,8 @@
           "house_min_soc": "Hausversorgung bis Hausspeicher-Ladestand (% SoC)",
           "planner_terminal_soc": "Fahrplan-Endreserve (% Hausspeicher-SoC)",
           "planner_ee_weight_eur_kwh": "EE-Gewichtung (€/kWh nicht erneuerbar, nur Modell)",
-          "planner_cycle_eur_kwh": "Akku-Durchsatzgewicht (€/kWh, nur Modell)"
+          "planner_cycle_eur_kwh": "Akku-Durchsatzgewicht (€/kWh, nur Modell)",
+          "planner_control_enabled": "HiGHS steuert den Hausakku (Schwellenregel als Fallback)"
         }
       }
     },

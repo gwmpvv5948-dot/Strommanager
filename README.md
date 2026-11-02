@@ -217,12 +217,24 @@ berücksichtigt die geplanten Netzphasen; sie ist keine Garantie und plant keine
 zusätzlichen Tesla-Ladevorgänge.
 
 
-### Energie-Fahrplan im Beobachtungsmodus (ab 0.1.65)
+### Energie-Fahrplan mit HiGHS (ab 0.1.68)
 
 Die Kachel „Energie-Fahrplan“ löst zentral in HA ein LP mit HiGHS (`highspy`).
 Sie plant ausschließlich Haus und Hausspeicher über 24 Stunden, im Viertelstundenraster.
-Tesla ist nicht Bestandteil dieses ersten Optimierers. Der Plan führt keine Gerätebefehle
-aus und ändert weder den Betriebsmodus noch den vorhandenen Entscheidungsalgorithmus.
+Tesla ist nicht Bestandteil des Optimierers. Unter Einstellungen kann **HiGHS steuert
+den Hausakku** eingeschaltet werden (bei neuen Installationen aus). In aktiven Modi setzt
+der gültige Plan die bestehende gemeinsame Entladegrenze. Beobachten und Pause senden
+weiterhin keine Befehle. Betriebsmodus und Tesla-Einstellungen werden nicht geändert.
+
+Ohne gültigen Plan übernimmt die bisherige Regelung: optional die konfigurierbare
+EE-Schwellenregel, andernfalls normaler Eigenverbrauch. Ein Plan gilt maximal zehn
+Minuten; fehlende aktuelle Prognosequellen, ein fehlendes Zeitfenster oder mehr als fünf
+Prozentpunkte Abweichung vom geplanten SoC lösen den Fallback aus. Fehlende oder veraltete
+Messdaten oder ungültige Gerätegrenzen sperren die Entladung. Haus- und Geräte-Mindeststand
+haben immer Vorrang. Bei tatsächlicher oder geplanter Tesla-Ladung bleibt die bisherige
+Tesla-Regelung für die gemeinsame Entladegrenze zuständig. Angezeigt werden der
+Steuerungsgrund und die angeforderte sowie tatsächlich eingestellte Entladegrenze.
+Die bisherige große „Netz & Akku · Ausblick“-Kachel entfällt; der aktuelle EE-Anteil bleibt sichtbar.
 
 Ziel: Bezugskosten minus Einspeisevergütung plus konfigurierbare Gewichte für
 nicht erneuerbaren Netzbezug und Akku-Durchsatz. Diese Gewichte sind keine echten
@@ -255,3 +267,15 @@ Alle fünf Minuten Neuberechnung im HA-Executor, nach zehn Minuten ohne aktualis
 Lösung keine gültige Plananzeige. Ohne vollständige Daten erscheint der konkrete Grund.
 Die Kachel enthält Hausversorgung, SoC-Verlauf, EE-Ampel und per Pfeil wählbare
 Erklärungen. Keine Hover-Fenster; mobile Diagramme haben eigene lesbare Koordinaten.
+
+
+### PV-Tagesdiagramm
+
+Heute und Morgen bleiben getrennt per Pfeil wählbar. Die sichtbare Zeitachse umfasst
+Sonnenaufgang bis Sonnenuntergang am HA-Standort plus jeweils 30 Minuten Puffer.
+Die Sonnenzeiten kommen aus der astronomischen HA-Berechnung, nicht aus Wetterdaten.
+Wenn keine Sonnenzeiten verfügbar sind, bleibt die gesamte Tagesachse sichtbar.
+P50 und P10 erscheinen als formtreue kubische Flächenkurven ohne Überschwingen;
+fehlende Prognoseintervalle bleiben Lücken. Die tatsächliche Leistung bleibt als
+orange Messlinie erhalten. Die Tagesenergiemengen beziehen sich weiterhin auf den
+gesamten Kalendertag; die Glättung ändert weder Prognosedaten noch Steuerungswerte.
