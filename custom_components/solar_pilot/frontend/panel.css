@@ -2420,3 +2420,7 @@ details summary {
   }
 }
 #settings > h3 { margin: 20px 0 12px; }
+.benefit-sums { margin-top: 17px; padding-top: 10px; border-top: 1px solid var(--line); }
+.benefit-sums > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 9px; font-size: 12px; }
+.benefit-sums strong { font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.benefit-sums small { display: block; font-size: 11px; color: var(--muted); }

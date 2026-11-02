@@ -71,3 +71,11 @@ werden pro Quelle einen Tag im Browser-Arbeitsspeicher gehalten (maximal
 18 Cache-Einträge). Beim Blättern werden nur ausgewählte Woche und heutiger
 Tag abgefragt. Preise `feed_in_eur_kwh` und `purchase_eur_kwh` gelten auch für
 die Bewertung historischer Tage; die Kachel ist keine Abrechnungsdatenbank.
+
+Wochensumme und Gesamtsumme bewerten dieselben Energieanteile. Die Gesamtsumme
+lädt abgeschlossene tägliche Statistiken einmal pro Quellensatz und Tag,
+normalisiert sie einmalig und ergänzt den aktuellen Tag ohne Doppelzählung.
+Der erste gemeinsame Tag aller vier Quellen bleibt als möglicher Teilmesstag
+ausgeschlossen. Nur Tage mit allen notwendigen Zählern und plausibler Bilanz
+fließen in die Gesamtsumme ein; Zeitraum, Anzahl und ausgelassene Tage stehen
+in der Kachel beziehungsweise den Berechnungsdetails.

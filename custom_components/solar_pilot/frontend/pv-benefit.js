@@ -1,10 +1,32 @@
 // Financial display only. Energy is read from HA long-term statistics in kWh.
-import { esc, fmt } from "./view-format.js?v=0.1.52";
-import { dateKey } from "./day-forecast.js?v=0.1.52";
+import { esc, fmt } from "./view-format.js?v=0.1.53";
+import { dateKey } from "./day-forecast.js?v=0.1.53";
 import { dayBounds, number } from "./solar-chart.js";
 const DAY = 86400000;
 const stamp = (v) =>
   typeof v === "number" ? (v < 1e11 ? v * 1000 : v) : Date.parse(v);
+const dateFormatters = new Map();
+function statisticDay(value, zone) {
+  const t = stamp(value);
+  if (!Number.isFinite(t)) return null;
+  if (!dateFormatters.has(zone))
+    dateFormatters.set(
+      zone,
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: zone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }),
+    );
+  const parts = Object.fromEntries(
+    dateFormatters
+      .get(zone)
+      .formatToParts(new Date(t))
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
 export const money = (v) =>
   number(v) === null
     ? "—"
@@ -44,7 +66,7 @@ export function benefitAmounts(
   const byId = ids.map((id) => {
     const values = new Map();
     for (const row of statistics?.[id] || []) {
-      const day = dateKey(stamp(row.start), zone),
+      const day = statisticDay(row.start, zone),
         v = number(row.change);
       if (day)
         values.set(day, v !== null && v >= -1e-7 ? Math.max(0, v) : null);
@@ -77,6 +99,72 @@ export function benefitAmounts(
     };
   });
 }
+// Exclude the first common day: one source may have started at midday.
+export function benefitArchive(
+  statistics,
+  ids,
+  zone = "Europe/Berlin",
+  beforeDay = null,
+) {
+  const dates = ids.map((id) =>
+    (statistics?.[id] || [])
+      .map((r) => statisticDay(r.start, zone))
+      .filter(Boolean)
+      .sort(),
+  );
+  if (dates.some((rows) => !rows.length)) return [];
+  const first = dates
+    .map((rows) => rows[0])
+    .sort()
+    .at(-1);
+  const days = [...new Set(dates.flat())]
+    .sort()
+    .filter((day) => day > first && (!beforeDay || day < beforeDay));
+  return benefitAmounts(statistics, ids, days, {}, zone).map(
+    ({ day, selfKwh, exportKwh }) => ({ day, selfKwh, exportKwh }),
+  );
+}
+export function benefitTotal(archive, today, settings = {}) {
+  const feed = settings.feed_in_eur_kwh ?? 0.082,
+    purchase = settings.purchase_eur_kwh ?? 0.27;
+  const rows = [
+    ...new Map(
+      [...(archive || []), ...(today ? [today] : [])].map((row) => [
+        row.day,
+        row,
+      ]),
+    ).values(),
+  ];
+  const valid = rows
+    .filter((r) => number(r.selfKwh) !== null && number(r.exportKwh) !== null)
+    .sort((a, b) => a.day.localeCompare(b.day));
+  if (!valid.length)
+    return {
+      total: null,
+      income: null,
+      saving: null,
+      days: 0,
+      first: null,
+      last: null,
+      missing: rows.length,
+    };
+  const income = valid.reduce((sum, r) => sum + r.exportKwh * feed, 0),
+    saving = valid.reduce((sum, r) => sum + r.selfKwh * purchase, 0);
+  return {
+    total: income + saving,
+    income,
+    saving,
+    days: valid.length,
+    first: valid[0].day,
+    last: valid.at(-1).day,
+    missing: rows.length - valid.length,
+  };
+}
+function longDay(day) {
+  return day
+    ? day.slice(8) + "." + day.slice(5, 7) + "." + day.slice(0, 4)
+    : "—";
+}
 function dayLabel(day) {
   return day.slice(8) + "." + day.slice(5, 7) + ".";
 }
@@ -88,6 +176,7 @@ export function pvBenefitCard(panel) {
     sources = ids.join("|") + "|" + zone;
   const todayKey = "today:" + week.today + "|" + sources,
     weekKey = "week:" + week.days[0] + "|" + sources;
+  const allData = panel.benefitCache?.get("all:" + week.today + "|" + sources);
   const todayData = panel.benefitCache?.get(todayKey),
     weekData = panel.benefitCache?.get(weekKey),
     settings = panel.status?.settings || {};
@@ -114,6 +203,19 @@ export function pvBenefitCard(panel) {
       ? { ...r, income: null, saving: null, total: null, future: true }
       : r,
   );
+  const weeklyKnown = rows.filter((r) => !r.future && r.total !== null);
+  const weeklyTotal = weeklyKnown.length
+    ? weeklyKnown.reduce((sum, r) => sum + r.total, 0)
+    : null;
+  const weekComplete =
+    weeklyKnown.length === rows.filter((r) => !r.future).length;
+  const all = allData?.archive
+    ? benefitTotal(
+        allData.archive,
+        today.total !== null ? today : null,
+        settings,
+      )
+    : { total: null, days: 0 };
   const max = Math.max(
     1,
     Math.ceil(Math.max(0, ...rows.map((r) => r.total ?? 0))),
@@ -121,7 +223,7 @@ export function pvBenefitCard(panel) {
   const total = today.total || 0,
     feed = settings.feed_in_eur_kwh ?? 0.082,
     purchase = settings.purchase_eur_kwh ?? 0.27;
-  const error = todayData?.error || weekData?.error;
+  const error = todayData?.error || weekData?.error || allData?.error;
   const rate = (value) => fmt(value, "€/kWh", 3);
-  return `<section class="card benefit-card" aria-label="Dein PV-Vorteil"><div class="benefit-heading"><h2>Dein PV-Vorteil</h2><span class="sub">Heute · bisher</span></div><div class="benefit-pair"><div class="benefit-stat"><span><i class="benefit-dot export"></i>Einnahmen</span><strong>${money(today.income)}</strong><small>${fmt(today.exportKwh, "kWh", 2)} · ${rate(feed)}</small></div><div class="benefit-stat"><span><i class="benefit-dot saving"></i>Ersparnis</span><strong>${money(today.saving)}</strong><small>${fmt(today.selfKwh, "kWh", 2)} · ${rate(purchase)}</small></div></div><div class="benefit-share" aria-hidden="true"><span class="export" style="width:${total ? (today.income / total) * 100 : 0}%"></span><span class="saving" style="width:${total ? (today.saving / total) * 100 : 0}%"></span></div><div class="benefit-total"><span>Dein Vorteil heute</span><strong>${money(today.total)}</strong></div><div class="benefit-history"><div class="benefit-week-nav" role="group" aria-label="PV-Vorteil nach Kalenderwoche"><button data-benefit-week="older" aria-label="Ältere Kalenderwoche">←</button><div><strong>KW ${week.week} · ${week.year}</strong><span>${dayLabel(week.days[0])} – ${dayLabel(week.days[6])}</span></div><button data-benefit-week="newer" aria-label="Neuere Kalenderwoche" ${(panel.benefitWeekOffset ?? -1) >= 0 ? "disabled" : ""}>→</button></div><div class="benefit-chart-legend"><span><i class="benefit-dot export"></i>Einspeisevergütung</span><span><i class="benefit-dot saving"></i>Ersparnis</span><span>€ / Tag</span></div><div class="benefit-chart" role="img" aria-label="Tagesbalken für Kalenderwoche ${week.week}. Gestapelt: Einspeisevergütung und Ersparnis. Gedankenstrich bedeutet fehlende Daten, nicht null Euro."><div class="benefit-gridlines">${[0, 0.5, 1].map((v) => `<div style="bottom:${v * 100}%"><span>${fmt(v * max, "", 1)}</span></div>`).join("")}</div>${rows.map((r, i) => `<div class="benefit-day" role="img" aria-label="${esc(r.day)}: ${r.future ? "zukünftig" : r.total === null ? "Daten unvollständig" : money(r.income) + " Einspeisevergütung, " + money(r.saving) + " Ersparnis"}"><div class="benefit-day-column"><span class="benefit-day-value" style="bottom:${((r.total ?? 0) / max) * 100}%">${r.total === null ? "—" : fmt(r.total, "", 2)}</span>${r.total !== null ? `<div class="benefit-day-stack" style="height:${(r.total / max) * 100}%"><span class="export" style="height:${r.total ? (r.income / r.total) * 100 : 0}%"></span><span class="saving" style="height:${r.total ? (r.saving / r.total) * 100 : 0}%"></span></div>` : ""}</div><span class="benefit-day-label">${["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"][i]}<small>${dayLabel(r.day)}</small></span></div>`).join("")}</div></div>${error ? `<p class="note weather-warning">${esc(error)}</p>` : !todayData && !weekData ? '<p class="note">Energiestatistik wird geladen …</p>' : today.total === null ? '<p class="note">Tageswerte unvollständig · fehlende Messwerte werden nicht als null gerechnet.</p>' : ""}<details class="benefit-help"><summary>Berechnung und Datenquellen</summary><p class="note">Einspeisung × ${rate(feed)}; selbst genutzte Energie × ${rate(purchase)}. Selbst genutzt = AC-Wechselrichterertrag + Garage + Schuppen − Einspeisung. Akkuladung wird nicht zusätzlich gutgeschrieben; entnommene Energie steckt bereits im AC-Ertrag. Netzgeladene Speicherenergie ist anhand dieser Zähler nicht von PV-Strom unterscheidbar.<br>HA-Langzeitstatistik, bis zu fünf Minuten verzögert. Historische Tage werden mit den aktuell eingestellten Preisen bewertet. Fehlende Tageswerte bleiben offen. Preisänderungen unter Einstellungen; Energiequellen unter Verwendete Entitäten.</p></details></section>`;
+  return `<section class="card benefit-card" aria-label="Dein PV-Vorteil"><div class="benefit-heading"><h2>Dein PV-Vorteil</h2><span class="sub">Heute · bisher</span></div><div class="benefit-pair"><div class="benefit-stat"><span><i class="benefit-dot export"></i>Einnahmen</span><strong>${money(today.income)}</strong><small>${fmt(today.exportKwh, "kWh", 2)} · ${rate(feed)}</small></div><div class="benefit-stat"><span><i class="benefit-dot saving"></i>Ersparnis</span><strong>${money(today.saving)}</strong><small>${fmt(today.selfKwh, "kWh", 2)} · ${rate(purchase)}</small></div></div><div class="benefit-share" aria-hidden="true"><span class="export" style="width:${total ? (today.income / total) * 100 : 0}%"></span><span class="saving" style="width:${total ? (today.saving / total) * 100 : 0}%"></span></div><div class="benefit-total"><span>Dein Vorteil heute</span><strong>${money(today.total)}</strong></div><div class="benefit-history"><div class="benefit-week-nav" role="group" aria-label="PV-Vorteil nach Kalenderwoche"><button data-benefit-week="older" aria-label="Ältere Kalenderwoche">←</button><div><strong>KW ${week.week} · ${week.year}</strong><span>${dayLabel(week.days[0])} – ${dayLabel(week.days[6])}</span></div><button data-benefit-week="newer" aria-label="Neuere Kalenderwoche" ${(panel.benefitWeekOffset ?? -1) >= 0 ? "disabled" : ""}>→</button></div><div class="benefit-chart-legend"><span><i class="benefit-dot export"></i>Einspeisevergütung</span><span><i class="benefit-dot saving"></i>Ersparnis</span><span>€ / Tag</span></div><div class="benefit-chart" role="img" aria-label="Tagesbalken für Kalenderwoche ${week.week}. Gestapelt: Einspeisevergütung und Ersparnis. Gedankenstrich bedeutet fehlende Daten, nicht null Euro."><div class="benefit-gridlines">${[0, 0.5, 1].map((v) => `<div style="bottom:${v * 100}%"><span>${fmt(v * max, "", 1)}</span></div>`).join("")}</div>${rows.map((r, i) => `<div class="benefit-day" role="img" aria-label="${esc(r.day)}: ${r.future ? "zukünftig" : r.total === null ? "Daten unvollständig" : money(r.income) + " Einspeisevergütung, " + money(r.saving) + " Ersparnis"}"><div class="benefit-day-column"><span class="benefit-day-value" style="bottom:${((r.total ?? 0) / max) * 100}%">${r.total === null ? "—" : fmt(r.total, "", 2)}</span>${r.total !== null ? `<div class="benefit-day-stack" style="height:${(r.total / max) * 100}%"><span class="export" style="height:${r.total ? (r.income / r.total) * 100 : 0}%"></span><span class="saving" style="height:${r.total ? (r.saving / r.total) * 100 : 0}%"></span></div>` : ""}</div><span class="benefit-day-label">${["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"][i]}<small>${dayLabel(r.day)}</small></span></div>`).join("")}</div></div><div class="benefit-sums"><div><span>${weekComplete ? "Wochensumme" : "Woche · erfasste Tage"}</span><strong>${money(weeklyTotal)}</strong></div><div><span>Gesamtsumme<small>${all.first ? longDay(all.first) + " – " + longDay(all.last) : allData?.archive ? "Kein gemeinsamer Zeitraum" : "Zeitraum wird geladen …"}</small></span><strong>${money(all.total)}</strong></div></div>${error ? `<p class="note weather-warning">${esc(error)}</p>` : !todayData && !weekData ? '<p class="note">Energiestatistik wird geladen …</p>' : today.total === null ? '<p class="note">Tageswerte unvollständig · fehlende Messwerte werden nicht als null gerechnet.</p>' : ""}<details class="benefit-help"><summary>Berechnung und Datenquellen</summary><p class="note">Einspeisung × ${rate(feed)}; selbst genutzte Energie × ${rate(purchase)}. Selbst genutzt = AC-Wechselrichterertrag + Garage + Schuppen − Einspeisung. Akkuladung wird nicht zusätzlich gutgeschrieben; entnommene Energie steckt bereits im AC-Ertrag. Netzgeladene Speicherenergie ist anhand dieser Zähler nicht von PV-Strom unterscheidbar.<br>HA-Langzeitstatistik, bis zu fünf Minuten verzögert. Historische Tage werden mit den aktuell eingestellten Preisen bewertet. Gesamtsumme: ${all.days} Tage mit allen benötigten Zählern; ${all.missing ?? 0} nicht auswertbare Tage ausgelassen. Der erste gemeinsame Tag wird als möglicher Teilmesstag nicht mitgerechnet. Einnahmen gesamt ${money(all.income)}, Ersparnis gesamt ${money(all.saving)}. Fehlende Tageswerte bleiben offen. Preisänderungen unter Einstellungen; Energiequellen unter Verwendete Entitäten.</p></details></section>`;
 }

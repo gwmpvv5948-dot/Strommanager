@@ -114,3 +114,53 @@ test("renders calendar controls, daily stacks and an explicit gap for unavailabl
     Date.now = now;
   }
 });
+
+test("all-time archive excludes the partial first common day and keeps missing days unknown", async () => {
+  const { benefitArchive, benefitTotal } = await import(
+    "../custom_components/solar_pilot/frontend/pv-benefit.js"
+  );
+  const data = Object.fromEntries(
+    ids.map((id, i) => [
+      id,
+      [
+        { start: "2024-08-07T00:00:00+02:00", change: i === 3 ? 1 : 4 },
+        { start: "2024-08-08T00:00:00+02:00", change: i === 3 ? 2 : 4 },
+        { start: "2024-08-09T00:00:00+02:00", change: i === 1 ? null : 4 },
+      ],
+    ]),
+  );
+  const archive = benefitArchive(data, ids);
+  assert.equal(archive[0].day, "2024-08-08");
+  assert.equal(
+    benefitArchive(data, ids, "Europe/Berlin", "2024-08-09").length,
+    1,
+  );
+  const total = benefitTotal(archive, {
+    day: "2026-11-02",
+    selfKwh: 8.4,
+    exportKwh: 3.2,
+  });
+  assert.equal(total.days, 2);
+  assert.equal(total.first, "2024-08-08");
+  assert.equal(total.last, "2026-11-02");
+  assert.equal(total.missing, 1);
+  assert.ok(Math.abs(total.total - 5.3944) < 1e-8);
+  assert.equal(benefitTotal([]).total, null);
+  const dedup = benefitTotal([{ day: date, selfKwh: 1, exportKwh: 0 }], {
+    day: date,
+    selfKwh: 2,
+    exportKwh: 0,
+  });
+  assert.equal(dedup.days, 1);
+  assert.equal(dedup.total, 0.54);
+});
+
+test("card includes both a calendar-week sum and dated all-time sum", () => {
+  const html = pvBenefitCard({
+    _hass: { config: { time_zone: "Europe/Berlin" } },
+    status: { source_entities: { display: {} }, settings: {} },
+    benefitCache: new Map(),
+  });
+  assert.match(html, /class="benefit-sums"/);
+  assert.match(html, /Gesamtsumme/);
+});
