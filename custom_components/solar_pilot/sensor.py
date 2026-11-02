@@ -73,7 +73,7 @@ class PilotSensor(SensorEntity):
         if d is None:
             return None
         if self.key == "status":
-            return "conflict" if self.controller.conflict and self.controller.mode not in ("observe", "paused") else d.code
+            return d.code
         return getattr(d, self.key)
 
     @property

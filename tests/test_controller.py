@@ -199,4 +199,30 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         await self.c.async_start()
         json.dumps(self.c.status(),allow_nan=False)
 
+    async def test_evaluate_publishes_status_sensor_without_removed_conflict_field(self):
+        from unittest.mock import patch
+        component=types.ModuleType("homeassistant.components")
+        sensors=types.ModuleType("homeassistant.components.sensor")
+        sensors.SensorEntity=type("SensorEntity",(),{})
+        sensors.SensorDeviceClass=SimpleNamespace(ENERGY="energy")
+        sensors.SensorStateClass=SimpleNamespace(TOTAL="total")
+        registry=types.ModuleType("homeassistant.helpers.device_registry")
+        registry.DeviceInfo=lambda **kwargs:kwargs
+        with patch.dict(sys.modules,{"homeassistant.components":component,"homeassistant.components.sensor":sensors,"homeassistant.helpers.device_registry":registry}):
+            spec=importlib.util.spec_from_file_location("pilot_test.sensor",root/"sensor.py")
+            mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+        self.entry.runtime_data=self.c
+        sensor=mod.PilotSensor(self.entry,"status","Regelstatus",None,"mdi:state-machine")
+        self.assertIsNone(sensor.native_value)
+        published=[]
+        sensor.async_write_ha_state=lambda:published.append(sensor.native_value)
+        unsubscribe=self.c.subscribe(sensor._changed)
+        try:
+            self.assertFalse(hasattr(self.c,"conflict"))
+            for mode in ("observe","paused","auto","storage_first","charge_minimum"):
+                self.c.mode=mode
+                await self.c.async_update()
+                self.assertEqual(published[-1],self.c.decision.code)
+        finally:unsubscribe()
+
 if __name__=="__main__": unittest.main()
