@@ -17,6 +17,7 @@ from .const import DOMAIN, ENTITY_DEFAULTS, ENTITY_LABELS, MODES
 from .executor import Command, Executor, plan
 from .model import Settings, Snapshot, decide, ChargingState, charging_state, consumption_comparison
 from .grid_forecast import GridForecast
+from .planner_tracker import PlannerTracker
 from .day_budget import DayBudgetTracker
 from .consumption_tracker import ConsumptionTracker
 
@@ -28,6 +29,7 @@ class Controller:
         self.entities = {k:v for k,v in config["entities"].items() if k != "legacy_automation"}
         self.settings = Settings(**config.get("settings", {}))
         self.grid_forecast = GridForecast()
+        self.planner = PlannerTracker()
         self.charging_state = ChargingState()
         self.mode = "observe"
         self.executor = Executor(self._send)
@@ -211,6 +213,8 @@ class Controller:
                 except Exception as exc:
                     self.adapter_error = str(exc)[:300]
                 await self.persist()
+            if hasattr(self.hass, "config") and not self.planner.busy:
+                self.entry.async_create_background_task(self.hass,self.planner.refresh(self),"Strommanager observer energy plan")
             self.updated = dt_util.utcnow().isoformat()
             self.publish()
 
@@ -341,6 +345,7 @@ class Controller:
     async def async_stop(self):
         # Unloading never changes devices.
         self._stopping = True
+        self.planner.stopped = True
         self.consumption.stopped = True
         await self.day_budget.async_stop()
         async with self.lock:
@@ -369,6 +374,7 @@ class Controller:
             if stamp:
                 source_reports[entity_id] = stamp.timestamp()
         return {
+            "energy_plan": self.planner.status(dt_util.utcnow().timestamp()),
             "grid_forecast": self.grid_forecast.status(dt_util.utcnow().timestamp(), self.settings),
             "source_reports": source_reports,
             "last_car_soc": self.last_car_soc,

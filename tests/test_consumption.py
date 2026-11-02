@@ -21,7 +21,7 @@ class Forecast(unittest.TestCase):
         with self.db.connect() as conn:
             conn.executemany("INSERT INTO hours(stamp,kwh,temperature,coverage,source) VALUES (?,?,?,?,?)",self.seed())
         result=self.db.forecast(self.now,10.)
-        self.assertGreaterEqual(result["window_hours"][-1]["stamp"]+3600,self.now+12*3600)
+        self.assertGreaterEqual(result["window_hours"][-1]["stamp"]+3600,self.now+24*3600)
         self.assertTrue(all(p["stamp"]<result["day_end"] for p in result["hours"]))
         self.assertAlmostEqual(result["remaining_kwh"],sum(p["kwh"]*p["remaining_fraction"] for p in result["hours"]))
         self.assertLessEqual(result["window_observed"][0]["stamp"],self.now-12*3600)

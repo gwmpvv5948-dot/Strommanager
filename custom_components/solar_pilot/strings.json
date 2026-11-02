@@ -59,7 +59,10 @@
           "grid_renewable_enabled": "Akku nach Erneuerbaren-Prognose bewahren",
           "grid_hold_share": "Akku bewahren ab EE-Anteil im Netzstrom (%)",
           "grid_release_share": "Akku freigeben unter EE-Anteil im Netzstrom (%)",
-          "house_min_soc": "Hausversorgung bis Hausspeicher-Ladestand (% SoC)"
+          "house_min_soc": "Hausversorgung bis Hausspeicher-Ladestand (% SoC)",
+          "planner_terminal_soc": "Fahrplan-Endreserve (% Hausspeicher-SoC)",
+          "planner_ee_weight_eur_kwh": "EE-Gewichtung (€/kWh nicht erneuerbar, nur Modell)",
+          "planner_cycle_eur_kwh": "Akku-Durchsatzgewicht (€/kWh, nur Modell)"
         }
       }
     },
@@ -100,7 +103,10 @@
           "grid_renewable_enabled": "Akku nach Erneuerbaren-Prognose bewahren",
           "grid_hold_share": "Akku bewahren ab EE-Anteil im Netzstrom (%)",
           "grid_release_share": "Akku freigeben unter EE-Anteil im Netzstrom (%)",
-          "house_min_soc": "Hausversorgung bis Hausspeicher-Ladestand (% SoC)"
+          "house_min_soc": "Hausversorgung bis Hausspeicher-Ladestand (% SoC)",
+          "planner_terminal_soc": "Fahrplan-Endreserve (% Hausspeicher-SoC)",
+          "planner_ee_weight_eur_kwh": "EE-Gewichtung (€/kWh nicht erneuerbar, nur Modell)",
+          "planner_cycle_eur_kwh": "Akku-Durchsatzgewicht (€/kWh, nur Modell)"
         }
       }
     },

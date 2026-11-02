@@ -16,6 +16,7 @@ from .model import Settings
 ENERGY = tuple(k for k in ENTITY_DEFAULTS if not k.startswith("car_"))
 CAR = tuple(k for k in ENTITY_DEFAULTS if k.startswith("car_"))
 SETTINGS_FIELDS = (
+    "planner_terminal_soc", "planner_ee_weight_eur_kwh", "planner_cycle_eur_kwh",
     "grid_renewable_enabled", "grid_hold_share", "grid_release_share", "house_min_soc",
     "reserve_soc", "capacity_kwh", "car_min_soc", "car_low_soc", "storage_release_soc", "phases", "max_amps",
     "normal_discharge_w", "max_charge_w", "forecast_factor", "buffer_kwh",
@@ -42,7 +43,7 @@ def settings_schema(defaults):
         elif key == "phases":
             field = vol.All(vol.Coerce(int), vol.In((1, 3)))
         else:
-            field = vol.Coerce(int if isinstance(value, int) and key not in ("feed_in_eur_kwh", "purchase_eur_kwh", "benefit_initial_savings_eur") else float)
+            field = vol.Coerce(int if isinstance(value, int) and key not in ("feed_in_eur_kwh", "purchase_eur_kwh", "benefit_initial_savings_eur", "planner_ee_weight_eur_kwh", "planner_cycle_eur_kwh") else float)
         schema[vol.Required(key, default=value)] = field
     return vol.Schema(schema)
 

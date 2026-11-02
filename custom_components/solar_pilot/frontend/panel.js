@@ -1,23 +1,27 @@
-import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.64";
-import {solarTimeline} from "./solar-timeline-view.js?v=0.1.64";
-import {gridForecastCard} from "./grid-forecast-view.js?v=0.1.64";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.64';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.64';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.64';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.64';
+import {energyPlanCard} from "./energy-plan-view.js?v=0.1.65";
+import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.65";
+import {solarTimeline} from "./solar-timeline-view.js?v=0.1.65";
+import {gridForecastCard} from "./grid-forecast-view.js?v=0.1.65";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.65';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.65';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.65';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.65';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.64';
-import {esc,fmt} from './view-format.js?v=0.1.64';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.64';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.65';
+import {esc,fmt} from './view-format.js?v=0.1.65';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.65';
 import {liveEnergy} from './live-energy.js?v=0.1.40';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
 import {dayAllocation,remainingPV} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.64";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.65";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
 const FIELD_INFO = {
+  planner_terminal_soc:["Fahrplan-Endreserve", "% Hausspeicher-SoC · nur Beobachtung", 0, 100, 1],
+  planner_ee_weight_eur_kwh:["EE-Gewichtung im Fahrplan", "€/kWh nicht erneuerbar · Modellgewicht", 0, 5, .01],
+  planner_cycle_eur_kwh:["Akku-Durchsatzgewicht im Fahrplan", "€/kWh · Modellgewicht", 0, 5, .01],
   grid_hold_share:["Akku bewahren ab EE-Anteil im Netz", "% EE im Netzstrom", 1, 100, 1],
   grid_release_share:["Akku freigeben unter EE-Anteil im Netz", "% EE im Netzstrom", 0, 99, 1],
   house_min_soc:["Hausversorgung bis Akku-Mindeststand", "% Akku-Ladestand (SoC)", 0, 99, 1],
@@ -36,6 +40,9 @@ const FIELD_INFO = {
   cloud_interval_s:["Mindestabstand Tesla-Befehle", "s", 120, 3600, 30],
 };
 const FIELD_HELP = {
+  planner_terminal_soc:"Gewünschte Mindestreserve am Ende der 24-Stunden-Planung. Bei bereits niedrigerem Startstand auf diesen begrenzt. Nur Beobachtungsplan; verändert keine Geräte.",
+  planner_ee_weight_eur_kwh:"Zusätzliche Bewertung nicht erneuerbaren Netzbezugs im Optimierungsziel, keine Stromgebühr und kein CO₂-Messwert. Höhere Werte gewichten EE-Zeitfenster stärker. Nur Beobachtung.",
+  planner_cycle_eur_kwh:"Bewertung je kWh Ladung plus Entladung zur Vermeidung unnötiger Zyklen. Reines Modellgewicht, kein gemessener Verschleißpreis. Nur Beobachtung.",
   grid_hold_share:"EE = erneuerbare Energien. Prozentwert des prognostizierten EE-Anteils im Netzstrom, nicht des Akku-Ladestands. Ab dieser Schwelle wird die Entladung für Haus und Tesla gesperrt. PV versorgt das Haus weiterhin zuerst.",
   grid_release_share:"Bezieht sich auf den prognostizierten EE-Anteil im Netzstrom, nicht auf den Akku. Unterhalb dieser Schwelle wird die Entladung wieder freigegeben. Muss niedriger als die Einschaltschwelle sein; verhindert ständiges Umschalten.",
   house_min_soc:"Bezieht sich auf den Ladestand (SoC) des Hausspeichers, nicht auf den EE-Anteil. Bei Erreichen dieser Grenze keine weitere Entladung fürs Haus. Die Mindestgrenze des Wechselrichters gilt zusätzlich. Tesla hat eigene höhere Reservegrenzen.",
@@ -132,6 +139,7 @@ export class SolarPilotPanel extends HTMLElement {
     const batteryStatus=`<span class="storage-status ${batteryState[0]}" role="status" aria-label="Hausspeicher: ${esc(batteryState[2])}${batteryFresh?', '+fmt(Math.abs(power),'W'):''}"><ha-icon icon="mdi:${batteryState[1]}" aria-hidden="true"></ha-icon><span>${esc(batteryState[2])}${batteryFresh?' · '+fmt(Math.abs(power),'W'):''}</span></span>`;
     return `<div class="grid">
       ${this.liveEnergyCard()}
+      ${energyPlanCard(this)}
       ${gridForecastCard(t,this._hass.config?.time_zone,matchMedia("(max-width:600px)").matches)}
       ${this.budgetCard(s,c)}
       <div class="status-pair full"><section class="card hero decision-overview"><div class="split"><span class="eyebrow">Die aktuelle Entscheidung</span><span class="hero-label">${esc(MODES[t.mode])}</span></div><h2>${esc(this.title)}</h2><p>${t.mode==="observe"?"Die Empfehlungen unten sind eine Vorschau. Geräte werden nicht verändert.":t.mode==="paused"?"Die Regelung pausiert. Die zuletzt gesetzten Gerätewerte bleiben bestehen.":"Tesla-Untergrenze, PV-Überschuss und Speicherfreigabe bestimmen das Ladebudget."}</p><div class="metrics"><div class="metric"><strong>${planned}</strong><span>Tesla · Empfehlung</span><small>Eingestellt: ${fmt(s.car_current,"A")}</small></div><div class="metric"><strong>${fmt(d.discharge_w,"W")}</strong><span>Entladegrenze · Empfehlung</span><small>Eingestellt: ${fmt(s.current_discharge_w,"W")}</small></div><div class="metric"><strong>${fmt(s.forecast_kwh,"kWh",1)}</strong><span>PV · Restprognose</span></div></div><div class="live-values"><div class="live-heading">Messwerte jetzt</div><div class="energy"><div class="node"><span class="symbol">☀</span><b>${fmt(s.pv_w==null?null:s.pv_w/1000,"kW",2)}</b><span>PV-Leistung</span></div><div class="node"><span class="symbol">↔</span><b>${fmt(s.grid_export_w==null?null:Math.abs(s.grid_export_w)/1000,"kW",2)}</b><span>${s.grid_export_w==null?"Netz":s.grid_export_w>=0?"Einspeisung":"Netzbezug"}</span></div><div class="node"><span class="symbol">▣</span><b>${fmt(s.battery_charge_w==null?null:Math.abs(s.battery_charge_w),"W")}</b><span>${s.battery_charge_w==null?"Speicher":s.battery_charge_w>=0?"Speicher lädt":"Speicher entlädt"}</span></div><div class="node"><span class="symbol">ϟ</span><b>${fmt(s.wallbox_w==null?null:s.wallbox_w/1000,"kW",2)}</b><span>Wallbox</span></div></div><p class="note">Einspeisung und Batterieleistung werden gemeinsam betrachtet, damit Speicherentladung nicht als PV-Überschuss zählt.</p></div></section>
@@ -359,7 +367,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.64</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.65</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
@@ -394,6 +402,7 @@ export class SolarPilotPanel extends HTMLElement {
     this.shadowRoot.querySelector("#sidebar")?.addEventListener("click",()=>this.dispatchEvent(new Event("hass-toggle-menu",{bubbles:true,composed:true})));
     this.shadowRoot.querySelectorAll("[data-action]").forEach(el=>el.onclick=()=>this.action(el.dataset.action));
     this.shadowRoot.querySelector("#mode")?.addEventListener("change",e=>{const mode=e.target.value;if(!["observe","paused"].includes(mode)&&["observe","paused"].includes(this.status.mode)){this.action("activate",mode);}else this.service("set_mode",{mode});});
+    this.shadowRoot.querySelectorAll('[data-plan-step]').forEach(el=>el.onclick=()=>{this.planGroupIndex=Math.max(0,(this.planGroupIndex??0)+Number(el.dataset.planStep));this.render();});
     this.shadowRoot.querySelectorAll('[data-pv-day]').forEach(el=>el.onclick=()=>{this.pvDayOffset=Number(el.dataset.pvDay);this.render();});
     this.shadowRoot.querySelectorAll('[data-benefit-week]').forEach(el=>el.onclick=()=>{
       this.benefitWeekOffset=Math.min(0,(this.benefitWeekOffset??-1)+(el.dataset.benefitWeek==='older'?-1:1));

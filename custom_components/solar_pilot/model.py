@@ -7,6 +7,9 @@ from math import floor, isfinite
 
 @dataclass(frozen=True)
 class Settings:
+    planner_terminal_soc: float = 20
+    planner_ee_weight_eur_kwh: float = .12
+    planner_cycle_eur_kwh: float = .02
     grid_renewable_enabled: bool = False
     grid_hold_share: float = 60
     grid_release_share: float = 55
@@ -54,6 +57,7 @@ class Settings:
             if type(getattr(self, name)) is not bool:
                 raise ValueError(name)
         ranges = {
+            "planner_terminal_soc": (0, 100), "planner_ee_weight_eur_kwh": (0, 5), "planner_cycle_eur_kwh": (0, 5),
             "grid_hold_share": (0, 100), "grid_release_share": (0, 100), "house_min_soc": (0, 99),
             "reserve_soc": (0, 100), "capacity_kwh": (.1, 200),
             "car_min_soc": (0, 100), "car_low_soc": (0, 100),

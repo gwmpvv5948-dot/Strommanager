@@ -215,3 +215,43 @@ gesamte Entladung gesperrt. Tesla-Speicherfreigabe übersteuert kein Netz-Bewahr
 Beobachten und Pause senden weiterhin keine Befehle. Die Akku-Prognose im Verbrauch
 berücksichtigt die geplanten Netzphasen; sie ist keine Garantie und plant keine
 zusätzlichen Tesla-Ladevorgänge.
+
+
+### Energie-Fahrplan im Beobachtungsmodus (ab 0.1.65)
+
+Die Kachel „Energie-Fahrplan“ löst zentral in HA ein LP mit HiGHS (`highspy`).
+Sie plant ausschließlich Haus und Hausspeicher über 24 Stunden, im Viertelstundenraster.
+Tesla ist nicht Bestandteil dieses ersten Optimierers. Der Plan führt keine Gerätebefehle
+aus und ändert weder den Betriebsmodus noch den vorhandenen Entscheidungsalgorithmus.
+
+Ziel: Bezugskosten minus Einspeisevergütung plus konfigurierbare Gewichte für
+nicht erneuerbaren Netzbezug und Akku-Durchsatz. Diese Gewichte sind keine echten
+Gebühren oder gemessenen CO₂-Werte. Einstellungen: Endreserve, EE-Gewicht und
+Durchsatzgewicht (Defaults 20 % Akku-SoC, 0,12 €/kWh, 0,02 €/kWh).
+Der Startstand begrenzt die angeforderte Endreserve, falls der Akku bereits darunter liegt.
+
+PV deckt zuerst das Haus; nur PV-Überschuss kann den Speicher laden. Entladung ist auf
+Hausbedarf und Leistungsgrenze begrenzt; kein Netzladen, kein Akku-Export. Deshalb
+sind Laden und Entladen in einem Intervall strukturell ausgeschlossen und es werden
+für dieses Teilmodell keine MILP-Binärvariablen benötigt. Speicherbilanz, Wirkungsgrade,
+Kapazität und Geräte-/Haus-Mindeststand sind Nebenbedingungen. Die Lösung wird
+unabhängig auf Bilanz und Grenzen geprüft. Solver-Zeitlimit: fünf Sekunden, ein Thread.
+Es wird nur ein optimal gelöstes, physikalisch geprüftes Ergebnis veröffentlicht.
+
+Eingänge: bestehende Solcast-Hauptanlagen-Prognose (P50 × Prognosefaktor × 0,95),
+gelernte Haus-Stundenprognose, Energy-Charts-EE-Anteile, aktueller SoC und bestehende
+Preise/Leistungsgrenzen. Die Hausprognose wird für das Planungsfenster auf 24 Stunden
+erweitert; die heutige Restprognose bleibt unverändert. Fehlende PV-/Haus-/EE-Intervalle
+werden nicht interpoliert oder als Null ausgegeben. Garage/Schuppen haben aktuell keine
+separate PV-Prognose in diesem Modell. Der Akku-Energieinhalt wird nicht pauschal als
+reiner PV-Strom oder nachweisliche CO₂-Ersparnis behandelt.
+
+Der Vergleich ist eine Simulation der bisherigen EE-Schwellenregel mit derselben
+Endreserve; der Optimierer muss exakt denselben Endladestand erreichen. Angezeigt
+werden Differenzen von tatsächlichen Tarifkosten, Netzbezug und Akku-Durchsatz,
+nicht die Modellgewichte als Stromkosten. Positive Differenzen bedeuten Mehrkosten
+bzw. Mehrverbrauch. Ergebnisse sind Prognosen, keine garantierten Einsparungen.
+Alle fünf Minuten Neuberechnung im HA-Executor, nach zehn Minuten ohne aktualisierte
+Lösung keine gültige Plananzeige. Ohne vollständige Daten erscheint der konkrete Grund.
+Die Kachel enthält Hausversorgung, SoC-Verlauf, EE-Ampel und per Pfeil wählbare
+Erklärungen. Keine Hover-Fenster; mobile Diagramme haben eigene lesbare Koordinaten.
