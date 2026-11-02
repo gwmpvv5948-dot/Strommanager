@@ -36,7 +36,7 @@ export function gridForecastCard(
           ? available && g.hold
             ? "Akku bewahren · Netz ergänzt PV"
             : "Entladung gesperrt · " +
-              (s?.house_soc <= c.house_min_soc
+              (typeof s?.house_soc === "number" && s.house_soc <= c.house_min_soc
                 ? "Haus-Mindeststand"
                 : s?.wallbox_w > 10
                   ? "Tesla-Schutz"
