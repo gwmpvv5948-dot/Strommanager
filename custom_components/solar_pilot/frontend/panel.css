@@ -2431,3 +2431,5 @@ details summary {
 .grid-chart[data-narrow="true"] text{font-size:14px}.grid-chart[data-narrow="true"]{max-height:none}
 
 .grid-day-band{fill:var(--ink);opacity:.06}.grid-day-1{opacity:.12}.grid-chart .grid-day-label{fill:var(--ink);font-weight:600}.grid-day-divider{stroke:var(--ink);opacity:.35;stroke-dasharray:3 3}.grid-now{stroke:var(--ink);stroke-width:1.5}.grid-now-dot{fill:var(--ink)}.grid-chart .grid-now-label{fill:var(--ink);font-weight:700;letter-spacing:.6px}
+
+.solar-chart.pv-rolling{min-width:0}.pv-day-band{fill:var(--ink);opacity:.08}.solar-chart .pv-day-label,.solar-chart .pv-now-label{fill:var(--ink);font-weight:700}.pv-rolling[data-narrow="true"] text{font-size:12px}.pv-rolling[data-narrow="true"] .pv-now-label{font-size:14px}

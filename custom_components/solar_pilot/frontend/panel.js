@@ -1,19 +1,20 @@
-import {gridForecastCard} from "./grid-forecast-view.js?v=0.1.60";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.60';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.60';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.60';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.60';
+import {solarTimeline} from "./solar-timeline-view.js?v=0.1.61";
+import {gridForecastCard} from "./grid-forecast-view.js?v=0.1.61";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.61';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.61';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.61';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.61';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.60';
-import {esc,fmt} from './view-format.js?v=0.1.60';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.60';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.61';
+import {esc,fmt} from './view-format.js?v=0.1.61';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.61';
 import {liveEnergy} from './live-energy.js?v=0.1.40';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
 import {dayAllocation,remainingPV} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.60";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.61";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
 const FIELD_INFO = {
   grid_hold_share:["Akku bewahren ab EE-Anteil im Netz", "% EE im Netzstrom", 1, 100, 1],
@@ -244,7 +245,7 @@ export class SolarPilotPanel extends HTMLElement {
     if(!id||this.historyDay===bounds.key&&this.historySources===sourceKey&&Date.now()-this.historyLoaded<300000)return;
     this._historyLoading=true;
     try{
-      const rows=await this._hass.callApi("GET",`history/period/${encodeURIComponent(new Date(Math.min(bounds.start,Date.now()-12*3600*1000)).toISOString())}?filter_entity_id=${encodeURIComponent(sourceKey)}&end_time=${encodeURIComponent(new Date().toISOString())}&minimal_response&no_attributes&significant_changes_only=0`);
+      const rows=await this._hass.callApi("GET",`history/period/${encodeURIComponent(new Date(Math.min(bounds.start,Date.now()-24*3600*1000)).toISOString())}?filter_entity_id=${encodeURIComponent(sourceKey)}&end_time=${encodeURIComponent(new Date().toISOString())}&minimal_response&no_attributes&significant_changes_only=0`);
       const grouped=new Map((Array.isArray(rows)?rows:[]).filter(Array.isArray).map(group=>[group.find(row=>row.entity_id)?.entity_id,group]));
       this.solarHistory=grouped.get(id)||[];this.socHistory=grouped.get(socId)||[];this.socHistoryId=socId;
       this.pvExtraHistory=Object.fromEntries(ids.filter(key=>key!==id).map(key=>[key,grouped.get(key)||[]]));this.historyError="";
@@ -277,25 +278,13 @@ export class SolarPilotPanel extends HTMLElement {
   solarChart(s,c){
     const tz=this._hass?.config?.time_zone||"Europe/Berlin",now=Date.now(),bounds=dayBounds(now,tz),source=this.solarSources();
     const rows=forecastPoints(source.forecast?.attributes?.detailedForecast,bounds.start,bounds.end);
-    const points=rows.filter(p=>p.p>0||p.low>0),history=this.historyDay===bounds.key?this.solarHistory:[];
-    const actual=actualSegments(history,bounds.start,now,source.power?.attributes?.unit_of_measurement);
     const attrs=source.forecast?.attributes||{},total=numeric(attrs.estimate),p10=numeric(attrs.estimate10);
     const daily=dailyConsumption(source.roofDaily,now,tz);
     const rest=rows.length?rows.reduce((sum,p,i)=>sum+p.p*Math.max(0,Math.min(bounds.end,rows[i+1]?.t??p.t+1800000)-Math.max(now,p.t))/3600000,0):null;
-    const metrics=`<div class="forecast-metrics">${[[daily,"Dach-Ertrag heute"],[total,"Prognose P50"],[p10,"Vorsichtig P10"],[rest,"Rest P50"]].map(([v,label])=>`<div><strong>${fmt(v,"kWh",1)}</strong><span>${label}</span></div>`).join("")}</div>`;
-    if(!rows.length)return `<section class="card full"><div class="card-title"><h2>PV-Prognose heute</h2><span class="sub">Solcast</span></div>${metrics}<p class="note">Für diese Zuordnung ist keine gültige Solcast-Tageskurve verfügbar. Die Restprognose für die Regelung bleibt davon unabhängig.</p></section>`;
-    const start=Math.max(bounds.start,(points[0]?.t??bounds.start)-3600000),end=Math.min(bounds.end,(points.at(-1)?.t??bounds.end-3600000)+5400000);
-    const max=Math.max(1,...rows.map(p=>p.p),...actual.flatMap(seg=>seg.map(p=>p.p)))*1.12;
-    const x=t=>64+(t-start)/(end-start)*860,y=v=>260-Math.min(max,v)/max*220;
-    const visible=rows.filter(p=>p.t>=start&&p.t<=end),path=(series,key='p')=>series.map((p,i)=>`${i?'L':'M'}${x(p.t).toFixed(1)},${y(p[key]).toFixed(1)}`).join(' ');
-    const area=key=>{const a=visible.filter(p=>p[key]!=null);return a.length?`${path(a,key)} L${x(a.at(-1).t).toFixed(1)},260 L${x(a[0].t).toFixed(1)},260 Z`:'';};
-    const time=t=>new Intl.DateTimeFormat('de-DE',{timeZone:tz,hour:'2-digit',minute:'2-digit'}).format(t);
-    const ticks=Array.from({length:6},(_,i)=>max*i/5).map(v=>`<line x1="64" x2="924" y1="${y(v)}" y2="${y(v)}" class="chart-grid"/><text x="52" y="${y(v)+4}" text-anchor="end">${fmt(v,'',1)}</text>`).join('');
-    const hours=[];for(let t=start;t<=end;t+=2*3600000)hours.push(`<text x="${x(t)}" y="284" text-anchor="middle">${time(t)}</text>`);
-    const current=now>=start&&now<=end?`<line x1="${x(now)}" x2="${x(now)}" y1="32" y2="260" class="chart-now"/><text x="${Math.min(890,x(now)+5)}" y="26">Jetzt</text>`:'';
-    const measured=actual.map(seg=>seg.filter(p=>p.t>=start&&p.t<=end)).filter(seg=>seg.length);
-    return `<section class="card full forecast-card"><div class="card-title"><h2>PV-Prognose heute</h2><span class="sub">Solcast · ${time(now)}</span></div>${metrics}<div class="chart-scroll"><svg class="solar-chart" viewBox="0 0 960 300" role="img" aria-label="PV-Leistung heute: gemessener Verlauf und Solcast-Prognosen P50 und P10, in Kilowatt"><text x="20" y="20">kW</text>${ticks}<path d="${area('p')}" class="forecast-area"/><path d="${area('low')}" class="forecast-low"/>${measured.map(seg=>`<path d="${path(seg)}" class="actual-line"/>${seg.length===1?`<circle cx="${x(seg[0].t)}" cy="${y(seg[0].p)}" r="2.5" class="actual-dot"/>`:''}`).join('')}${current}${hours.join('')}${visible.map(p=>`<circle cx="${x(p.t)}" cy="${y(p.p)}" r="5" fill="transparent"><title>${esc(time(p.t))} · P50 ${fmt(p.p,'kW',2)} · P10 ${fmt(p.low,'kW',2)}</title></circle>`).join('')}</svg></div><div class="chart-legend"><span><i class="legend-actual"></i>PV-Ist (Eingang) · ${fmt(s.pv_w==null?null:s.pv_w/1000,'kW',2)}</span><span><i class="legend-forecast"></i>Prognose P50</span><span><i class="legend-low"></i>Vorsichtig P10</span></div><p class="note">${this.historyError||(!measured.length?'Kein gespeicherter PV-Verlauf für heute verfügbar. ':'')}Ist-Verlauf aus HA, maximal alle 5 Minuten nachgeladen. Datenlücken werden nicht verbunden. Die Speicherregelung nutzt die zugeordnete Restprognose mit zusätzlichen Puffern; das schraffierte Speicherpotenzial berücksichtigt keine weitere Autoladung.</p></section>`;
+    const metrics=`<div class="forecast-metrics">${[[daily,"Dach-Ertrag heute"],[total,"Heute · Prognose P50"],[p10,"Heute · Vorsichtig P10"],[rest,"Heute · Rest P50"]].map(([v,label])=>`<div><strong>${fmt(v,"kWh",1)}</strong><span>${label}</span></div>`).join("")}</div>`;
+    return solarTimeline(this,s,metrics,now);
   }
+
   sunsetTime(day,zone){
     const id=this.status?.entities?.sun||'sun.sun',sun=this._hass?.states?.[id],key=`solar_pilot.sunsets.${id}.${zone}`;
     if(!this._sunsets||this._sunsetKey!==key){this._sunsetKey=key;try{this._sunsets=JSON.parse(localStorage.getItem(key))||{};}catch{this._sunsets={};}}
@@ -378,7 +367,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.60</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.61</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
