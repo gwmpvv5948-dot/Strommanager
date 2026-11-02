@@ -1,32 +1,32 @@
-import {gridForecastCard} from "./grid-forecast-view.js?v=0.1.59";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.59';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.59';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.59';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.59';
+import {gridForecastCard} from "./grid-forecast-view.js?v=0.1.60";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.60';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.60';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.60';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.60';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.59';
-import {esc,fmt} from './view-format.js?v=0.1.59';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.59';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.60';
+import {esc,fmt} from './view-format.js?v=0.1.60';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.60';
 import {liveEnergy} from './live-energy.js?v=0.1.40';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
 import {dayAllocation,remainingPV} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.59";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.60";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
 const FIELD_INFO = {
-  grid_hold_share:["Akku bewahren ab Erneuerbaren-Anteil", "%", 1, 100, 1],
-  grid_release_share:["Akku wieder freigeben unter", "%", 0, 99, 1],
-  house_min_soc:["Akku-Mindeststand fürs Haus", "%", 0, 99, 1],
+  grid_hold_share:["Akku bewahren ab EE-Anteil im Netz", "% EE im Netzstrom", 1, 100, 1],
+  grid_release_share:["Akku freigeben unter EE-Anteil im Netz", "% EE im Netzstrom", 0, 99, 1],
+  house_min_soc:["Hausversorgung bis Akku-Mindeststand", "% Akku-Ladestand (SoC)", 0, 99, 1],
   benefit_initial_savings_eur:["Geschätzte Ersparnis vor HA", "€ · nur zur Gesamtsumme", 0, 10000000, .01],
   feed_in_eur_kwh:["Einspeisevergütung", "€/kWh · PV-Vorteil", 0, 5, .001],
   purchase_eur_kwh:["Strombezugspreis", "€/kWh · PV-Vorteil", 0, 5, .001],
   budget_extra_kwh:["Zusätzlicher Hausbedarf pro PV-Tag", "kWh · nur Budgetanzeige", 0, 30, .1],
-  reserve_soc:["Abendreserve", "%", 0, 100, 1], capacity_kwh:["Speicherkapazität", "kWh", .1, 200, .1],
-  car_low_soc:["Tesla-Untergrenze für Netzladung", "%", 0, 99, 1],
-  storage_release_soc:["Speicherfreigabe für Tesla", "%", 0, 100, 1],
-  car_min_soc:["Tesla-Mindestziel", "%", 0, 100, 1], phases:["Ladephasen", "1 oder 3", 1, 3, 2],
+  reserve_soc:["Abendreserve / Tesla-Entnahmegrenze", "% Hausspeicher-SoC", 0, 100, 1], capacity_kwh:["Speicherkapazität", "kWh", .1, 200, .1],
+  car_low_soc:["Tesla-Untergrenze für Netzladung", "% Tesla-Akku-SoC", 0, 99, 1],
+  storage_release_soc:["Tesla-Speicherfreigabe ab Akku-Ladestand", "% Hausspeicher-SoC", 0, 100, 1],
+  car_min_soc:["Tesla-Mindestziel", "% Tesla-Akku-SoC", 0, 100, 1], phases:["Ladephasen", "1 oder 3", 1, 3, 2],
   max_amps:["Maximaler Ladestrom", "A", 8, 48, 1], normal_discharge_w:["Entladeleistung ohne Schutz", "W", 0, 30000, 100],
   max_charge_w:["Speicher-Ladebudget maximal", "W", 0, 30000, 100],
   forecast_factor:["Anteil der PV-Prognose einplanen", "Faktor", .1, 1, .05], buffer_kwh:["Energiepuffer", "kWh", 0, 30, .1],
@@ -34,9 +34,9 @@ const FIELD_INFO = {
   cloud_interval_s:["Mindestabstand Tesla-Befehle", "s", 120, 3600, 30],
 };
 const FIELD_HELP = {
-  grid_hold_share:"Ab diesem prognostizierten Erneuerbaren-Anteil wird die Entladung für Haus und Tesla gesperrt. PV versorgt das Haus weiterhin zuerst.",
-  grid_release_share:"Unterhalb dieser Schwelle wird der Akku wieder freigegeben. Muss niedriger als die Einschaltschwelle sein; verhindert ständiges Umschalten.",
-  house_min_soc:"Unterhalb dieser Grenze keine Entladung fürs Haus. Die Mindestgrenze des Wechselrichters gilt zusätzlich. Tesla hat eigene höhere Reservegrenzen.",
+  grid_hold_share:"EE = erneuerbare Energien. Prozentwert des prognostizierten EE-Anteils im Netzstrom, nicht des Akku-Ladestands. Ab dieser Schwelle wird die Entladung für Haus und Tesla gesperrt. PV versorgt das Haus weiterhin zuerst.",
+  grid_release_share:"Bezieht sich auf den prognostizierten EE-Anteil im Netzstrom, nicht auf den Akku. Unterhalb dieser Schwelle wird die Entladung wieder freigegeben. Muss niedriger als die Einschaltschwelle sein; verhindert ständiges Umschalten.",
+  house_min_soc:"Bezieht sich auf den Ladestand (SoC) des Hausspeichers, nicht auf den EE-Anteil. Bei Erreichen dieser Grenze keine weitere Entladung fürs Haus. Die Mindestgrenze des Wechselrichters gilt zusätzlich. Tesla hat eigene höhere Reservegrenzen.",
   benefit_initial_savings_eur: "Einmaliger Startbetrag für die Zeit zwischen Anlageninstallation und Beginn der HA-Daten. Wird ausschließlich zur Gesamtsumme addiert; Tages- und Wochenwerte bleiben unverändert.",
   feed_in_eur_kwh: "Vergütung je eingespeister kWh. Bewertet auch historische Tage mit diesem aktuellen Preis; ohne Einfluss auf die Ladesteuerung.",
   purchase_eur_kwh: "Vermiedener Arbeitspreis je selbst genutzter kWh. Ohne Grundgebühr; bewertet auch historische Tage mit diesem aktuellen Preis.",
@@ -378,7 +378,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.59</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.60</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
