@@ -15,6 +15,7 @@ Diagrammbibliothek und keinen Build-Schritt.
 | `view-format.js` | Gemeinsame Zahlenformatierung, HTML-Escaping und Template-Tag |
 | `consumption-chart.js` | Verbrauchsdaten für die Darstellung aufbereiten |
 | `power-consumers.js` | HA-weite Leistungssensoren filtern, sortieren und als kompakte Heatmap darstellen; keine Gerätebefehle |
+| `battery-history.js` | Gemessenen Akku-SoC aus Recorder-Historie aufbereiten; Lücken bleiben sichtbar |
 | `battery-forecast.js` | Akku-Prognose berechnen; keine Gerätebefehle |
 
 Die View-Funktionen erzeugen Markup. Daten und benötigte Panel-Helfer werden

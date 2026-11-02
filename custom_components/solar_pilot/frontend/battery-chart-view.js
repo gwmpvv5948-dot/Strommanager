@@ -10,14 +10,6 @@ export function renderBatteryOverlay(battery, { bx, by, time, end }) {
         `Akku-Prognose: ${fmt(battery.sunsetSoc, "%", 0)} bei Sonnenuntergang; Mindeststand ${fmt(battery.minSoc, "%")}; ${battery.completeCoverage ? "Hausbedarf bis Mitternacht gedeckt" : "erste Deckungslücke um " + time(battery.exhaustedAt)}`,
       )}"
     >
-      <text x="946" y="17" text-anchor="end" style="fill:#91bfee">Akku %</text>
-      ${[0, 25, 50, 75, 100]
-        .map(
-          (v) => html`
-            <text x="891" y="${by(v) + 4}" style="fill:#91bfee">${v}</text>
-          `,
-        )
-        .join("")}
       <path
         d="${battery.points
           .map(

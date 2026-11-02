@@ -2199,3 +2199,7 @@ details summary {
     min-height: 44px;
   }
 }
+
+.consumption-legend .battery-legend-line.actual {
+  border-top-style: solid;
+}

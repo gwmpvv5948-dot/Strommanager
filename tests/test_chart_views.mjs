@@ -20,3 +20,12 @@ test('historical PV uses selected day coordinates, expands scale and keeps separ
  assert.match(result,/stroke="#d6b04f"/);assert.match(clean(result),/>4<\/text>/);
  assert.match(result,/<circle/);
 });
+
+test('measured SoC remains visible when future battery simulation is unavailable',()=>{
+ const {now,b,settings}=fixture,originalNow=Date.now;Date.now=()=>now*1000;
+ try {
+ const panel={socHistoryId:'sensor.soc',socHistory:[{last_updated:new Date((now-3600)*1000).toISOString(),state:'40'},{last_updated:new Date((now-1800)*1000).toISOString(),state:'42'}],status:{entities:{house_soc:'sensor.soc'},snapshot:{now,house_soc:45,house_soc_age:0},settings},_hass:{states:{'sensor.soc':{state:'45',attributes:{unit_of_measurement:'%'}}}},solarHistory:[],solarSources:()=>({}),auxiliarySolarSources:()=>[],sunsetTime:()=>null};
+ const result=views.consumptionBarChart(panel,b,'Europe/Berlin');
+ assert.match(result,/class="battery-actual"/);assert.match(result,/class="battery-soc-axis"/);assert.ok(!result.includes('class="battery-forecast"'));assert.match(result,/Gemessener Akku-SoC/);
+ } finally {Date.now=originalNow;}
+});

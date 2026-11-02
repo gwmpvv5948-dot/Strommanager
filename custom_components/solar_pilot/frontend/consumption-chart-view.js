@@ -1,3 +1,4 @@
+import { batteryHistory } from "./battery-history.js?v=0.1.50";
 import { esc, fmt, html } from "./view-format.js?v=0.1.41";
 import { batteryForecast } from "./battery-forecast.js?v=0.1.40";
 import { pvOverlay } from "./pv-overlay.js?v=20261028-2";
@@ -10,7 +11,7 @@ import {
   forecastPoints,
 } from "./solar-chart.js?v=20261027-2";
 import { dateKey, pvDayIds } from "./day-forecast.js?v=20261029-7";
-import { renderBatteryOverlay } from "./battery-chart-view.js?v=0.1.41";
+import { renderBatteryOverlay } from "./battery-chart-view.js?v=0.1.50";
 
 // Display only. Panel supplies live data and cached history; no device calls.
 
@@ -18,7 +19,7 @@ export function consumptionBarChart(panel, b, zone) {
   const source = panel.solarSources(),
     forecast = [
       ...new Map(
-        (source.forecastIds||pvDayIds(source.forecastId))
+        (source.forecastIds || pvDayIds(source.forecastId))
           .flatMap((id) => {
             const state = panel._hass?.states?.[id];
             return state &&
@@ -46,7 +47,10 @@ export function consumptionBarChart(panel, b, zone) {
   const liveNow = Date.now() / 1000,
     sun = panel._hass?.states?.[panel.status?.entities?.sun || "sun.sun"],
     floorState =
-      panel._hass?.states?.[panel.status?.source_entities?.display?.battery_min_soc||"number.batterien_entlade_ende_ladestand"];
+      panel._hass?.states?.[
+        panel.status?.source_entities?.display?.battery_min_soc ||
+          "number.batterien_entlade_ende_ladestand"
+      ];
   const sunset =
     sun?.state === "below_horizon"
       ? liveNow
@@ -256,6 +260,27 @@ export function consumptionBarChart(panel, b, zone) {
           </g>
         `
       : "";
+  const socId = panel.status?.entities?.house_soc;
+  const socActual = batteryHistory(
+    panel.socHistoryId === socId ? panel.socHistory : [],
+    {
+      start: b.start,
+      now: liveNow,
+      unit: panel._hass?.states?.[socId]?.attributes?.unit_of_measurement,
+      snapshot: panel.status?.snapshot,
+      settings: panel.status?.settings,
+    },
+  );
+  const showSocAxis = battery.available || socActual.length > 0;
+  const socMarkup = socActual
+    .map(
+      (segment) =>
+        `<g class="battery-actual" aria-label="Gemessener Akku-SoC"><path d="${segment.map((p, i) => `${i ? "L" : "M"}${bx(p.t).toFixed(2)},${by(p.soc).toFixed(2)}`).join(" ")}" fill="none" stroke="#91bfee" stroke-width="2.7" pointer-events="none"/>${segment.length === 1 ? `<circle cx="${bx(segment[0].t)}" cy="${by(segment[0].soc)}" r="3" fill="#91bfee"/>` : ""}</g>`,
+    )
+    .join("");
+  const socAxis = showSocAxis
+    ? `<g class="battery-soc-axis"><text x="946" y="17" text-anchor="end" style="fill:#91bfee">Akku %</text>${[0, 25, 50, 75, 100].map((v) => `<text x="891" y="${by(v) + 4}" style="fill:#91bfee">${v}</text>`).join("")}</g>`
+    : "";
   const batteryOverlay = renderBatteryOverlay(battery, {
     bx,
     by,
@@ -268,7 +293,7 @@ export function consumptionBarChart(panel, b, zone) {
         class="solar-chart consumption-bars"
         viewBox="0 0 960 ${battery.available ? 265 : 245}"
         role="img"
-        aria-label="Stündlicher Hausverbrauch zwölf Stunden vor und nach jetzt ohne Tesla: volle Balken für bilanzierte Messwerte, Schraffur für verbleibende Prognose, Fragezeichen für Messlücken. Gelbe durchgezogene PV-Ist-Gesamtkurve aus Hauptanlage, Garage und Schuppen bis zum Datenstand, gestrichelte Solcast-Prognose nur der Hauptanlage danach. Linke Y-Achse Kilowattstunden je Stunde; blaue gestrichelte Akkuprognose auf rechter Prozentachse; grünes Abdeckungsband, rot ab erster Deckungslücke; X-Achse Uhrzeit."
+        aria-label="Stündlicher Hausverbrauch zwölf Stunden vor und nach jetzt ohne Tesla: volle Balken für bilanzierte Messwerte, Schraffur für verbleibende Prognose, Fragezeichen für Messlücken. Gelbe durchgezogene PV-Ist-Gesamtkurve aus Hauptanlage, Garage und Schuppen bis zum Datenstand, gestrichelte Solcast-Prognose nur der Hauptanlage danach. Linke Y-Achse Kilowattstunden je Stunde; blauer durchgezogener Akku-Ist-Verlauf bis jetzt und gestrichelte Akkuprognose danach auf rechter Prozentachse; grünes Abdeckungsband, rot ab erster Deckungslücke; X-Achse Uhrzeit."
       >
         <defs>
           <clipPath id="rolling-plot-clip">
@@ -301,7 +326,8 @@ export function consumptionBarChart(panel, b, zone) {
             "forecast",
           )}
         </g>
-        ${batteryOverlay}${sunsetAxis}
+        <g clip-path="url(#rolling-plot-clip)">${socMarkup}</g>
+        ${batteryOverlay}${socAxis}${sunsetAxis}
         <line
           x1="${nowX}"
           x2="${nowX}"
