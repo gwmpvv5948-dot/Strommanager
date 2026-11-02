@@ -87,7 +87,8 @@ class ConsumptionDB:
         samples = [(stamp, kwh, temp, datetime.fromtimestamp(stamp, self.zone)) for stamp,kwh,temp in rows]
         points = []
         hour = now//3600*3600
-        while hour < max(end, now + 24*3600):
+        # One extra hour keeps the rolling 24h plan covered between 5-minute updates.
+        while hour < max(end, now + 25*3600):
             dt = datetime.fromtimestamp(hour, self.zone)
             temp = number((temperatures or {}).get(hour, temperature))
             peers = [(stamp,kwh,t,d) for stamp,kwh,t,d in samples if d.hour == dt.hour and stamp < hour]
