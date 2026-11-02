@@ -114,12 +114,12 @@ export function solarTimeline(panel, s, metrics, now = Date.now()) {
         `<line x1="${left}" x2="${right}" y1="${y(v * max)}" y2="${y(v * max)}" class="chart-grid"/><text x="${left - 8}" y="${y(v * max) + 4}" text-anchor="end">${fmt(v * max, "", 1)}</text>`,
     )
     .join("");
-  const step = hours === 24 ? 6 : 3;
+  const step = narrow || hours === 24 ? 6 : 3;
   const axis = [];
   for (let offset = -hours; offset <= hours; offset += step) {
     const t = now + offset * 3600000;
     axis.push(
-      `<text x="${x(t)}" y="276" text-anchor="${offset === -hours ? "start" : offset === hours ? "end" : "middle"}">${time(t)}</text>`,
+      `<text x="${x(t)}" y="276" text-anchor="middle">${time(t)}</text>`,
     );
   }
   const areas = (key) =>
