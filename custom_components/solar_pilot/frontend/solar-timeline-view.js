@@ -34,7 +34,7 @@ export function solarTimelineData({
     .sort((a, b) => a.t - b.t)
     .map((p) => ({
       ...p,
-      start: Math.max(now, p.t),
+      start: Math.max(start, p.t),
       end: Math.min(end, p.t + 1800000),
     }))
     .filter((p) => p.end > p.start);
@@ -137,5 +137,5 @@ export function solarTimeline(panel, s, metrics, now = Date.now()) {
     )
     .join("");
   const marker = `<line x1="${x(now)}" x2="${x(now)}" y1="38" y2="${bottom}" class="chart-now"/><text class="pv-now-label" x="${x(now)}" y="305" text-anchor="middle">JETZT</text>`;
-  return `<section class="card full forecast-card"><div class="card-title"><h2>PV-Verlauf & Prognose</h2><span class="sub">Solcast · ±${hours} h</span></div>${metrics}<svg class="solar-chart pv-rolling" data-narrow="${narrow}" viewBox="0 0 ${W} ${H}" role="img" aria-label="PV-Leistung ${hours} Stunden vor und nach JETZT. Links gemessener PV-Verlauf, rechts Solcast-Prognose P50 und P10, in Kilowatt. Fehlende Daten bleiben Lücken."><text x="${left - 25}" y="43">kW</text>${dayLabels}${ticks}${areas("p")}${areas("low")}${actualPaths}${marker}${axis.join("")}</svg><div class="chart-legend"><span><i class="legend-actual"></i>PV-Ist (Eingang) · ${fmt(s.pv_w == null ? null : s.pv_w / 1000, "kW", 2)}</span><span><i class="legend-forecast"></i>Prognose P50</span><span><i class="legend-low"></i>Vorsichtig P10</span></div>${panel.historyError || !actual.length || !forecast.length ? `<p class="note">${esc(panel.historyError || (!actual.length ? "Kein gemessener PV-Verlauf im Zeitfenster. " : ""))}${!forecast.length ? " Keine gültige Solcast-Prognose im Zeitfenster." : ""}</p>` : ""}</section>`;
+  return `<section class="card full forecast-card"><div class="card-title"><h2>PV-Verlauf & Prognose</h2><span class="sub">Solcast · ±${hours} h</span></div>${metrics}<svg class="solar-chart pv-rolling" data-narrow="${narrow}" viewBox="0 0 ${W} ${H}" role="img" aria-label="PV-Leistung ${hours} Stunden vor und nach JETZT. Gemessener PV-Verlauf bis JETZT und verfügbare Solcast-Prognose P50 und P10 im gesamten Zeitfenster, in Kilowatt. Fehlende Daten bleiben Lücken."><text x="${left - 25}" y="43">kW</text>${dayLabels}${ticks}${areas("p")}${areas("low")}${actualPaths}${marker}${axis.join("")}</svg><div class="chart-legend"><span><i class="legend-actual"></i>PV-Ist (Eingang) · ${fmt(s.pv_w == null ? null : s.pv_w / 1000, "kW", 2)}</span><span><i class="legend-forecast"></i>Prognose P50</span><span><i class="legend-low"></i>Vorsichtig P10</span></div>${panel.historyError || !actual.length || !forecast.length ? `<p class="note">${esc(panel.historyError || (!actual.length ? "Kein gemessener PV-Verlauf im Zeitfenster. " : ""))}${!forecast.length ? " Keine gültige Solcast-Prognose im Zeitfenster." : ""}</p>` : ""}</section>`;
 }
