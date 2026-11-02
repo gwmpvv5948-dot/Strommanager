@@ -22,6 +22,7 @@ class Settings:
     buffer_kwh: float = .5
     efficiency: float = .9
     margin_w: float = 200
+    benefit_initial_savings_eur: float = 0.0
     feed_in_eur_kwh: float = .082
     purchase_eur_kwh: float = .27
     budget_extra_kwh: float = 2.5
@@ -54,6 +55,7 @@ class Settings:
             "storage_release_soc": (0, 100), "normal_discharge_w": (0, 30000),
             "max_charge_w": (0, 30000), "forecast_factor": (.1, 1),
             "buffer_kwh": (0, 30), "budget_extra_kwh": (0, 30), "efficiency": (.5, 1),
+            "benefit_initial_savings_eur": (0, 10000000),
             "feed_in_eur_kwh": (0, 5), "purchase_eur_kwh": (0, 5),
             "margin_w": (0, 3000), "minimum_house_w": (0, 5000),
             "cloud_interval_s": (120, 3600), "meter_max_age_s": (30, 900),

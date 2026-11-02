@@ -112,6 +112,9 @@ class Decisions(unittest.TestCase):
     def test_financial_tariffs_are_validated_and_do_not_change_control_decisions(self):
         self.assertEqual(Settings().feed_in_eur_kwh,.082)
         self.assertEqual(Settings().purchase_eur_kwh,.27)
+        self.assertEqual(Settings().benefit_initial_savings_eur,0)
+        self.assertEqual(decide(sample(),Settings()),decide(sample(),Settings(benefit_initial_savings_eur=1800)))
+        with self.assertRaises(ValueError):Settings(benefit_initial_savings_eur=-1)
         for key in ("feed_in_eur_kwh","purchase_eur_kwh"):
             for value in (-.01,6,float("nan"),float("inf")):
                 with self.assertRaises(ValueError):Settings(**{key:value})

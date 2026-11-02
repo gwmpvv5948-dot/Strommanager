@@ -164,3 +164,25 @@ test("card includes both a calendar-week sum and dated all-time sum", () => {
   assert.match(html, /class="benefit-sums"/);
   assert.match(html, /Gesamtsumme/);
 });
+
+test("initial savings offset is added exactly once to all-time total only, independent of tariffs", async () => {
+  const { benefitTotal } = await import(
+    "../custom_components/solar_pilot/frontend/pv-benefit.js"
+  );
+  const archive = [{ day: "2024-08-08", selfKwh: 10, exportKwh: 2 }],
+    settings = { benefit_initial_savings_eur: 1800 };
+  const total = benefitTotal(archive, null, settings);
+  assert.equal(total.initialSaving, 1800);
+  assert.equal(total.total, total.recordedTotal + 1800);
+  assert.equal(total.saving, 2.7);
+  assert.equal(
+    benefitTotal(archive, null, { ...settings, purchase_eur_kwh: 0.5 })
+      .initialSaving,
+    1800,
+  );
+  assert.equal(
+    benefitAmounts(stats([10, 1, 0.6, 3.2]), ids, [date], settings)[0].total,
+    benefitAmounts(stats([10, 1, 0.6, 3.2]), ids, [date])[0].total,
+  );
+  assert.equal(benefitTotal([], null, settings).total, null);
+});

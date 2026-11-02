@@ -19,7 +19,7 @@ SETTINGS_FIELDS = (
     "reserve_soc", "capacity_kwh", "car_min_soc", "car_low_soc", "storage_release_soc", "phases", "max_amps",
     "normal_discharge_w", "max_charge_w", "forecast_factor", "buffer_kwh",
     "margin_w", "minimum_house_w", "budget_extra_kwh", "cloud_interval_s", "grid_export_positive",
-    "battery_charge_positive", "feed_in_eur_kwh", "purchase_eur_kwh",
+    "battery_charge_positive", "benefit_initial_savings_eur", "feed_in_eur_kwh", "purchase_eur_kwh",
 )
 
 
@@ -41,7 +41,7 @@ def settings_schema(defaults):
         elif key == "phases":
             field = vol.All(vol.Coerce(int), vol.In((1, 3)))
         else:
-            field = vol.Coerce(int if isinstance(value, int) else float)
+            field = vol.Coerce(int if isinstance(value, int) and key not in ("feed_in_eur_kwh", "purchase_eur_kwh", "benefit_initial_savings_eur") else float)
         schema[vol.Required(key, default=value)] = field
     return vol.Schema(schema)
 

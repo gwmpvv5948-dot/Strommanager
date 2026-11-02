@@ -54,7 +54,8 @@
           "battery_charge_positive": "Positive Batterieleistung = Laden",
           "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)",
           "feed_in_eur_kwh": "Einspeisevergütung (€/kWh)",
-          "purchase_eur_kwh": "Strombezugspreis (€/kWh)"
+          "purchase_eur_kwh": "Strombezugspreis (€/kWh)",
+          "benefit_initial_savings_eur": "Geschätzte Ersparnis vor HA (€)"
         }
       }
     },
@@ -90,7 +91,8 @@
           "battery_charge_positive": "Positive Batterieleistung = Laden",
           "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)",
           "feed_in_eur_kwh": "Einspeisevergütung (€/kWh)",
-          "purchase_eur_kwh": "Strombezugspreis (€/kWh)"
+          "purchase_eur_kwh": "Strombezugspreis (€/kWh)",
+          "benefit_initial_savings_eur": "Geschätzte Ersparnis vor HA (€)"
         }
       }
     },

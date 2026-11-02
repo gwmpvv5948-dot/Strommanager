@@ -79,3 +79,7 @@ Der erste gemeinsame Tag aller vier Quellen bleibt als möglicher Teilmesstag
 ausgeschlossen. Nur Tage mit allen notwendigen Zählern und plausibler Bilanz
 fließen in die Gesamtsumme ein; Zeitraum, Anzahl und ausgelassene Tage stehen
 in der Kachel beziehungsweise den Berechnungsdetails.
+
+`benefit_initial_savings_eur` ist ein einmaliger, separat ausgewiesener
+Schätzbetrag vor HA. Standard 0 €; nur die Gesamtsumme erhält diesen Betrag.
+Tageswerte, Wochenwerte und gemessene Energieanteile bleiben unverändert.
