@@ -1,21 +1,21 @@
-import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.63";
-import {solarTimeline} from "./solar-timeline-view.js?v=0.1.63";
-import {gridForecastCard} from "./grid-forecast-view.js?v=0.1.63";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.63';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.63';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.63';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.63';
+import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.64";
+import {solarTimeline} from "./solar-timeline-view.js?v=0.1.64";
+import {gridForecastCard} from "./grid-forecast-view.js?v=0.1.64";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.64';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.64';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.64';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.64';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.63';
-import {esc,fmt} from './view-format.js?v=0.1.63';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.63';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.64';
+import {esc,fmt} from './view-format.js?v=0.1.64';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.64';
 import {liveEnergy} from './live-energy.js?v=0.1.40';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
 import {dayAllocation,remainingPV} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.63";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.64";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
 const FIELD_INFO = {
   grid_hold_share:["Akku bewahren ab EE-Anteil im Netz", "% EE im Netzstrom", 1, 100, 1],
@@ -276,16 +276,7 @@ export class SolarPilotPanel extends HTMLElement {
     if(!channels)return {actual:[]};
     return pvOverlay(channels[0].history,channels[0].unit,[],day.day_start,day.day_end,day.day_end-.001,channels.slice(1));
   }
-  solarChart(s,c){
-    const tz=this._hass?.config?.time_zone||"Europe/Berlin",now=Date.now(),bounds=dayBounds(now,tz),source=this.solarSources();
-    const rows=forecastPoints(source.forecast?.attributes?.detailedForecast,bounds.start,bounds.end);
-    const attrs=source.forecast?.attributes||{},total=numeric(attrs.estimate),p10=numeric(attrs.estimate10);
-    const daily=dailyConsumption(source.roofDaily,now,tz);
-    const rest=rows.length?rows.reduce((sum,p,i)=>sum+p.p*Math.max(0,Math.min(bounds.end,rows[i+1]?.t??p.t+1800000)-Math.max(now,p.t))/3600000,0):null;
-    const metrics=`<div class="forecast-metrics">${[[daily,"Dach-Ertrag heute"],[total,"Heute · Prognose P50"],[p10,"Heute · Vorsichtig P10"],[rest,"Heute · Rest P50"]].map(([v,label])=>`<div><strong>${fmt(v,"kWh",1)}</strong><span>${label}</span></div>`).join("")}</div>`;
-    return solarTimeline(this,s,metrics,now);
-  }
-
+  solarChart(s,c){return solarTimeline(this,s);}
   sunsetTime(day,zone){
     const id=this.status?.entities?.sun||'sun.sun',sun=this._hass?.states?.[id],key=`solar_pilot.sunsets.${id}.${zone}`;
     if(!this._sunsets||this._sunsetKey!==key){this._sunsetKey=key;try{this._sunsets=JSON.parse(localStorage.getItem(key))||{};}catch{this._sunsets={};}}
@@ -368,7 +359,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.63</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.64</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
@@ -403,6 +394,7 @@ export class SolarPilotPanel extends HTMLElement {
     this.shadowRoot.querySelector("#sidebar")?.addEventListener("click",()=>this.dispatchEvent(new Event("hass-toggle-menu",{bubbles:true,composed:true})));
     this.shadowRoot.querySelectorAll("[data-action]").forEach(el=>el.onclick=()=>this.action(el.dataset.action));
     this.shadowRoot.querySelector("#mode")?.addEventListener("change",e=>{const mode=e.target.value;if(!["observe","paused"].includes(mode)&&["observe","paused"].includes(this.status.mode)){this.action("activate",mode);}else this.service("set_mode",{mode});});
+    this.shadowRoot.querySelectorAll('[data-pv-day]').forEach(el=>el.onclick=()=>{this.pvDayOffset=Number(el.dataset.pvDay);this.render();});
     this.shadowRoot.querySelectorAll('[data-benefit-week]').forEach(el=>el.onclick=()=>{
       this.benefitWeekOffset=Math.min(0,(this.benefitWeekOffset??-1)+(el.dataset.benefitWeek==='older'?-1:1));
       this.render();this.loadBenefitHistory().then(()=>{if(this.isConnected)this.render();});

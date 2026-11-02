@@ -2433,3 +2433,5 @@ details summary {
 .grid-day-band{fill:var(--ink);opacity:.06}.grid-day-1{opacity:.12}.grid-chart .grid-day-label{fill:var(--ink);font-weight:600}.grid-day-divider{stroke:var(--ink);opacity:.35;stroke-dasharray:3 3}.grid-now{stroke:var(--ink);stroke-width:1.5}.grid-now-dot{fill:var(--ink)}.grid-chart .grid-now-label{fill:var(--ink);font-weight:700;letter-spacing:.6px}
 
 .solar-chart.pv-rolling{min-width:0}.pv-day-band{fill:var(--ink);opacity:.08}.solar-chart .pv-day-label,.solar-chart .pv-now-label{fill:var(--ink);font-weight:700}.pv-rolling[data-narrow="true"] text{font-size:14px}.pv-rolling[data-narrow="true"] .pv-now-label{font-size:14px}
+
+.pv-day-nav{display:flex;align-items:center;justify-content:center;gap:20px;margin:4px 0 24px}.pv-day-nav button{font-size:24px;line-height:1;padding:4px 15px}.pv-day-nav strong{min-width:160px;text-align:center}.pv-day-nav button:disabled{opacity:.25;cursor:default}

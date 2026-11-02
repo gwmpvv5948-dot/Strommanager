@@ -1,21 +1,29 @@
-// Rolling PV timeline. Display only; no commands or changes to daily accounting.
-import { actualSegments, forecastPoints, number } from "./solar-chart.js";
-import { pvDayIds, dateKey } from "./day-forecast.js";
-import { gridDaySections } from "./grid-forecast-view.js?v=0.1.61";
+// Fixed local-day PV view. Display only; never changes controller decisions.
+import {
+  actualSegments,
+  forecastPoints,
+  number,
+  dayBounds,
+} from "./solar-chart.js";
+import { pvDayIds, pvDays, dateKey } from "./day-forecast.js";
+import { dailyConsumption } from "./consumption-chart.js";
 import { esc, fmt } from "./view-format.js";
 
-export function solarTimelineData({
+export function solarDayData({
   now,
-  hours,
+  offset = 0,
+  zone = "Europe/Berlin",
   states,
   source,
   history,
   unit,
 }) {
-  const start = now - hours * 3600000,
-    end = now + hours * 3600000;
-  const rows = new Map();
-  for (const id of source.forecastIds || pvDayIds(source.forecastId)) {
+  const today = dayBounds(now, zone),
+    bounds = offset === 1 ? dayBounds(today.end + 1, zone) : today;
+  const { start, end } = bounds,
+    ids = source.forecastIds || pvDayIds(source.forecastId),
+    rows = new Map();
+  for (const id of ids) {
     const state = states[id];
     if (
       !state ||
@@ -25,35 +33,47 @@ export function solarTimelineData({
       continue;
     for (const p of forecastPoints(
       state.attributes?.detailedForecast,
-      start - 1800000,
+      start,
       end,
     ))
       rows.set(p.t, p);
   }
   const forecast = [...rows.values()]
     .sort((a, b) => a.t - b.t)
-    .map((p) => ({
-      ...p,
-      start: Math.max(start, p.t),
-      end: Math.min(end, p.t + 1800000),
-    }))
-    .filter((p) => p.end > p.start);
+    .map((p) => ({ ...p, start: p.t, end: Math.min(end, p.t + 1800000) }));
+  const key = dateKey(start, zone);
+  const totals = pvDays(states, source.forecastId, zone, ids)[key];
+  const remaining = forecast.length
+    ? forecast.reduce(
+        (sum, p) =>
+          sum + (p.p * Math.max(0, p.end - Math.max(now, p.start))) / 3600000,
+        0,
+      )
+    : null;
   return {
     start,
     end,
+    key,
     forecast,
-    actual: actualSegments(history, start, now, unit),
+    remaining,
+    total: totals?.kwh ?? null,
+    low: totals?.low ?? null,
+    actual:
+      offset === 1
+        ? []
+        : actualSegments(history, start, Math.min(end, now), unit),
   };
 }
 
-export function solarTimeline(panel, s, metrics, now = Date.now()) {
+export function solarTimeline(panel, s, now = Date.now()) {
   const zone = panel._hass?.config?.time_zone || "Europe/Berlin",
     source = panel.solarSources();
   const narrow = matchMedia("(max-width:700px)").matches,
-    hours = matchMedia("(min-width:1000px)").matches ? 24 : 12;
-  const data = solarTimelineData({
+    offset = panel.pvDayOffset === 1 ? 1 : 0;
+  const day = solarDayData({
     now,
-    hours,
+    offset,
+    zone,
     states: panel._hass?.states || {},
     source,
     history: panel.historySources?.split(",").includes(source.powerId)
@@ -61,13 +81,36 @@ export function solarTimeline(panel, s, metrics, now = Date.now()) {
       : [],
     unit: source.power?.attributes?.unit_of_measurement,
   });
-  const { start, end, forecast, actual } = data;
+  const { start, end, forecast, actual } = day;
+  const date = new Intl.DateTimeFormat("de-DE", {
+    timeZone: zone,
+    day: "2-digit",
+    month: "2-digit",
+  }).format(new Date(start));
+  const metrics = (
+    offset === 0
+      ? [
+          [dailyConsumption(source.roofDaily, now, zone), "Dach-Ertrag heute"],
+          [day.total, "Prognose P50"],
+          [day.low, "Vorsichtig P10"],
+          [day.remaining, "Rest P50"],
+        ]
+      : [
+          [day.total, "Prognose P50"],
+          [day.low, "Vorsichtig P10"],
+        ]
+  )
+    .map(
+      ([v, label]) =>
+        `<div><strong>${fmt(v, "kWh", 1)}</strong><span>${label}</span></div>`,
+    )
+    .join("");
   const W = narrow ? 420 : 960,
-    H = 325,
+    H = 300,
     left = narrow ? 42 : 64,
     right = W - 22,
-    top = 52,
-    bottom = 250;
+    top = 28,
+    bottom = 240;
   const max =
     Math.max(
       1,
@@ -88,40 +131,18 @@ export function solarTimeline(panel, s, metrics, now = Date.now()) {
         (p, i) => `${i ? "L" : "M"}${x(p.t).toFixed(2)},${y(p.p).toFixed(2)}`,
       )
       .join(" ");
-  const today = dateKey(now, zone);
-  const dayLabels = gridDaySections(start / 1000, end / 1000, zone)
-    .map((part) => {
-      const offset = Math.round(
-        (Date.parse(dateKey(part.start * 1000, zone)) - Date.parse(today)) /
-          86400000,
-      );
-      const label =
-        {
-          [-2]: "Vorgestern",
-          [-1]: "Gestern",
-          0: "Heute",
-          1: "Morgen",
-          2: "Übermorgen",
-        }[offset] || dateKey(part.start * 1000, zone);
-      const a = x(part.start * 1000),
-        b = x(part.end * 1000);
-      return `<rect x="${a}" y="9" width="${b - a}" height="22" class="pv-day-band"/><text class="pv-day-label" x="${(a + b) / 2}" y="25" text-anchor="middle">${label}</text>${part.start * 1000 > start ? `<line x1="${a}" x2="${a}" y1="34" y2="${bottom}" class="grid-day-divider"/>` : ""}`;
-    })
-    .join("");
   const ticks = [0, 0.25, 0.5, 0.75, 1]
     .map(
       (v) =>
         `<line x1="${left}" x2="${right}" y1="${y(v * max)}" y2="${y(v * max)}" class="chart-grid"/><text x="${left - 8}" y="${y(v * max) + 4}" text-anchor="end">${fmt(v * max, "", 1)}</text>`,
     )
     .join("");
-  const step = narrow || hours === 24 ? 6 : 3;
   const axis = [];
-  for (let offset = -hours; offset <= hours; offset += step) {
-    const t = now + offset * 3600000;
+  for (let t = start; t < end; t += (narrow ? 6 : 3) * 3600000)
     axis.push(
-      `<text x="${x(t)}" y="276" text-anchor="middle">${time(t)}</text>`,
+      `<text x="${x(t)}" y="266" text-anchor="middle">${time(t)}</text>`,
     );
-  }
+  axis.push(`<text x="${right}" y="266" text-anchor="middle">24:00</text>`);
   const areas = (key) =>
     forecast
       .filter((p) => number(p[key]) !== null)
@@ -130,12 +151,15 @@ export function solarTimeline(panel, s, metrics, now = Date.now()) {
           `<path d="M${x(p.start)},${bottom} L${x(p.start)},${y(p[key])} L${x(p.end)},${y(p[key])} L${x(p.end)},${bottom} Z" class="${key === "p" ? "forecast-area" : "forecast-low"}"/>`,
       )
       .join("");
-  const actualPaths = actual
+  const measured = actual
     .map(
       (seg) =>
         `<path d="${path(seg)}" class="actual-line"/>${seg.length === 1 ? `<circle cx="${x(seg[0].t)}" cy="${y(seg[0].p)}" r="2.5" class="actual-dot"/>` : ""}`,
     )
     .join("");
-  const marker = `<line x1="${x(now)}" x2="${x(now)}" y1="38" y2="${bottom}" class="chart-now"/><text class="pv-now-label" x="${x(now)}" y="305" text-anchor="middle">JETZT</text>`;
-  return `<section class="card full forecast-card"><div class="card-title"><h2>PV-Verlauf & Prognose</h2><span class="sub">Solcast · ±${hours} h</span></div>${metrics}<svg class="solar-chart pv-rolling" data-narrow="${narrow}" viewBox="0 0 ${W} ${H}" role="img" aria-label="PV-Leistung ${hours} Stunden vor und nach JETZT. Gemessener PV-Verlauf bis JETZT und verfügbare Solcast-Prognose P50 und P10 im gesamten Zeitfenster, in Kilowatt. Fehlende Daten bleiben Lücken."><text x="${left - 25}" y="43">kW</text>${dayLabels}${ticks}${areas("p")}${areas("low")}${actualPaths}${marker}${axis.join("")}</svg><div class="chart-legend"><span><i class="legend-actual"></i>PV-Ist (Eingang) · ${fmt(s.pv_w == null ? null : s.pv_w / 1000, "kW", 2)}</span><span><i class="legend-forecast"></i>Prognose P50</span><span><i class="legend-low"></i>Vorsichtig P10</span></div>${panel.historyError || !actual.length || !forecast.length ? `<p class="note">${esc(panel.historyError || (!actual.length ? "Kein gemessener PV-Verlauf im Zeitfenster. " : ""))}${!forecast.length ? " Keine gültige Solcast-Prognose im Zeitfenster." : ""}</p>` : ""}</section>`;
+  const marker =
+    offset === 0 && now >= start && now < end
+      ? `<line x1="${x(now)}" x2="${x(now)}" y1="16" y2="${bottom}" class="chart-now"/><text class="pv-now-label" x="${Math.min(right - 20, Math.max(left + 20, x(now)))}" y="291" text-anchor="middle">JETZT</text>`
+      : "";
+  return `<section class="card full forecast-card"><div class="card-title"><h2>PV-Prognose</h2><span class="sub">Solcast</span></div><nav class="pv-day-nav" aria-label="PV-Prognose nach Tag"><button type="button" data-pv-day="0" aria-label="PV-Prognose heute anzeigen" ${offset === 0 ? "disabled" : ""}>‹</button><strong>${offset === 0 ? "Heute" : "Morgen"} · ${esc(date)}</strong><button type="button" data-pv-day="1" aria-label="PV-Prognose morgen anzeigen" ${offset === 1 ? "disabled" : ""}>›</button></nav><div class="forecast-metrics">${metrics}</div><svg class="solar-chart pv-rolling" data-narrow="${narrow}" viewBox="0 0 ${W} ${H}" role="img" aria-label="PV-Leistung ${offset === 0 ? "heute" : "morgen"} von 0 bis 24 Uhr. ${offset === 0 ? "Gemessener PV-Verlauf und " : ""}Solcast-Prognose P50 und P10 in Kilowatt."><text x="${left - 25}" y="17">kW</text>${ticks}${areas("p")}${areas("low")}${measured}${marker}${axis.join("")}</svg><div class="chart-legend">${offset === 0 ? `<span><i class="legend-actual"></i>PV-Ist (Eingang) · ${fmt(s.pv_w == null ? null : s.pv_w / 1000, "kW", 2)}</span>` : ""}<span><i class="legend-forecast"></i>Prognose P50</span><span><i class="legend-low"></i>Vorsichtig P10</span></div>${!forecast.length ? '<p class="note">Keine gültige Solcast-Prognose für diesen Tag verfügbar.</p>' : ""}${offset === 0 && panel.historyError ? `<p class="note">${esc(panel.historyError)}</p>` : ""}</section>`;
 }
