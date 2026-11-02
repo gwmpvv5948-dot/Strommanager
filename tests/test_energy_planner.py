@@ -58,8 +58,22 @@ class EnergyPlanner(unittest.TestCase):
     def test_forecast_gaps_and_bad_soc_are_rejected(self):
         bad=slots();bad[5]['load_kw']=None
         with self.assertRaises(ValueError):optimize(bad,config())
-        with self.assertRaises(ValueError):optimize(slots(),config(initial_soc=0))
+        with self.assertRaises(ValueError):optimize(slots(),config(initial_soc=-1))
         with self.assertRaises(ValueError):optimize(slots(),config(initial_soc=float('nan')))
+    def test_initial_soc_below_minimum_waits_for_pv_recovery(self):
+        c=config(initial_soc=7,minimum_soc=10)
+        data=slots(hours=8,load=.5,pv=0)
+        for p in data[16:24]:p['pv_kw']=1
+        r=optimize(data,c)
+        self.assertTrue(all(p['battery_kw']<1e-6 for p in r['points'][:16]))
+        self.assertTrue(all(abs(p['soc']-7)<1e-6 for p in r['points'][:16]))
+        self.assertGreaterEqual(r['points'][23]['soc'],10-1e-6)
+        self.assertGreaterEqual(r['terminal_soc'],10-1e-6)
+    def test_low_soc_without_pv_preserves_existing_energy(self):
+        c=config(initial_soc=7,minimum_soc=10)
+        r=optimize(slots(hours=8),c)
+        self.assertTrue(all(abs(p['soc']-7)<1e-6 for p in r['points']))
+        self.assertTrue(all(p['battery_kw']<1e-6 for p in r['points']))
     def test_zero_load_does_not_invent_self_consumption(self):
         c=config();r=optimize(slots(hours=3,load=0,pv=0),c);self.physical(r,c)
         self.assertAlmostEqual(r['totals']['grid_kwh'],0)

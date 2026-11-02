@@ -26,7 +26,7 @@ def validate(slots, c):
     values = list(vars(c).values())
     if any(type(v) not in (int, float, bool) or not math.isfinite(v) for v in values):
         raise ValueError('Ungültige Planungsparameter')
-    if not (c.capacity > 0 and 0 <= c.minimum_soc <= c.initial_soc <= 100 and 0 <= c.terminal_soc <= 100
+    if not (c.capacity > 0 and 0 <= c.minimum_soc <= 100 and 0 <= c.initial_soc <= 100 and 0 <= c.terminal_soc <= 100
             and .5 <= c.efficiency <= 1 and c.charge_kw >= 0 and c.discharge_kw >= 0
             and min(c.purchase, c.feed_in, c.ee_weight, c.cycle_cost) >= 0):
         raise ValueError('Ungültige Akku- oder Preisgrenzen')
@@ -46,15 +46,31 @@ def components(s):
     return direct, max(0, s['pv_kw']-direct), max(0, s['load_kw']-direct), (s['end']-s['start'])/3600
 
 
+def recovery_bounds(slots, c):
+    """Restore a pre-existing low SoC only from available PV, never invent energy."""
+    minimum = c.capacity*c.minimum_soc/100
+    initial = c.capacity*c.initial_soc/100
+    guaranteed = min(initial,minimum)
+    floors,forced = [],[]
+    for s in slots:
+        _,surplus,_,hours = components(s)
+        charge = min(surplus,c.charge_kw,max(0,minimum-guaranteed)/c.efficiency/hours)
+        guaranteed = min(minimum,guaranteed+charge*hours*c.efficiency)
+        floors.append(guaranteed)
+        forced.append(charge)
+    target = max(floors[-1],min(initial,c.capacity*c.terminal_soc/100))
+    return floors,forced,target
+
+
 def reference_plan(slots, c):
     """Existing EE-threshold policy, with an explicit end reserve for comparison."""
+    floors,_,target = recovery_bounds(slots,c)
     floor = c.capacity*c.minimum_soc/100
-    target = max(floor, min(c.capacity*c.terminal_soc/100, c.capacity*c.initial_soc/100))
     required = [0.]*(len(slots)+1)
     required[-1] = target
     for i in range(len(slots)-1, -1, -1):
         _, surplus, _, h = components(slots[i])
-        required[i] = max(floor, required[i+1]-min(surplus,c.charge_kw)*h*c.efficiency)
+        required[i] = max(min(c.capacity*c.initial_soc/100,floor) if i==0 else floors[i-1], required[i+1]-min(surplus,c.charge_kw)*h*c.efficiency)
     energy = c.capacity*c.initial_soc/100
     hold = c.initial_hold
     result = []
@@ -96,7 +112,7 @@ def explain(point, c):
         return 'Akku und Netz versorgen das Haus', 'Der Akku deckt einen Teil des Bedarfs; das Netz ergänzt die Leistung.'
     if point['grid_kw'] > .02:
         if point['soc'] <= c.minimum_soc+.1:
-            return 'Netz versorgt das Haus', 'Der Akku hat seinen Haus-Mindeststand erreicht.'
+            return 'Netz versorgt das Haus', 'Der Akku liegt am oder unter dem Haus-Mindeststand. Entladung bleibt gesperrt, bis PV-Überschuss ihn wieder aufgefüllt hat.'
         return 'Netz bevorzugt · Akku bewahren', 'Die Gesamtplanung bewahrt Akkuenergie für andere Zeitfenster oder die Endreserve.'
     return 'PV versorgt das Haus', 'Die prognostizierte PV-Leistung deckt den Hausbedarf.'
 
@@ -116,13 +132,14 @@ def optimize(slots, c):
     initial = c.capacity*c.initial_soc/100
     floor = c.capacity*c.minimum_soc/100
     previous = initial
+    floors,forced,_ = recovery_bounds(slots,c)
     variables = []
-    for s in slots:
+    for i,s in enumerate(slots):
         _, surplus, need, hours = components(s)
         import_price = c.purchase+c.ee_weight*(1-min(100,s['ee'])/100)
-        charge = h.addVariable(lb=0,ub=min(surplus,c.charge_kw),obj=(c.feed_in+c.cycle_cost)*hours)
+        charge = h.addVariable(lb=forced[i],ub=min(surplus,c.charge_kw),obj=(c.feed_in+c.cycle_cost)*hours)
         discharge = h.addVariable(lb=0,ub=min(need,c.discharge_kw),obj=(-import_price+c.cycle_cost)*hours)
-        energy = h.addVariable(lb=floor,ub=c.capacity)
+        energy = h.addVariable(lb=floors[i],ub=c.capacity)
         h.addConstr(energy == previous+charge*hours*c.efficiency-discharge*hours/c.efficiency)
         previous = energy
         variables.append((charge,discharge,energy))
@@ -133,12 +150,12 @@ def optimize(slots, c):
     points = [flow(s,h.val(ch),h.val(dis),h.val(energy),c) for s,(ch,dis,energy) in zip(slots,variables)]
     # Independently verify physical feasibility; never expose solver noise as power.
     previous = initial
-    for p in points:
+    for i,p in enumerate(points):
         _,surplus,need,hours = components(p)
         energy = p['soc']/100*c.capacity
         if (not all(math.isfinite(v) for v in p.values()) or p['charge_kw'] > min(surplus,c.charge_kw)+1e-5
                 or p['battery_kw'] > min(need,c.discharge_kw)+1e-5
-                or not floor-1e-5 <= energy <= c.capacity+1e-5
+                or not floors[i]-1e-5 <= energy <= c.capacity+1e-5
                 or abs(energy-previous-p['charge_kw']*hours*c.efficiency+p['battery_kw']*hours/c.efficiency)>1e-5):
             raise ValueError('Fahrplan verletzt die Energiebilanz')
         previous = energy
