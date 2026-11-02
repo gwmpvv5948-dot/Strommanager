@@ -7,6 +7,10 @@ from math import floor, isfinite
 
 @dataclass(frozen=True)
 class Settings:
+    grid_renewable_enabled: bool = False
+    grid_hold_share: float = 60
+    grid_release_share: float = 55
+    house_min_soc: float = 10
     reserve_soc: float = 70
     capacity_kwh: float = 5
     car_min_soc: float = 50
@@ -38,7 +42,7 @@ class Settings:
     def __post_init__(self):
         for f in fields(self):
             value = getattr(self, f.name)
-            if f.name not in ("grid_export_positive", "battery_charge_positive") and (type(value) not in (int, float)):
+            if f.name not in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled") and (type(value) not in (int, float)):
                 raise ValueError(f.name)
             if isinstance(value, (int, float)) and not isfinite(value):
                 raise ValueError(f.name)
@@ -46,10 +50,11 @@ class Settings:
                      "meter_max_age_s", "car_max_age_s", "forecast_max_age_s", "minimum_pause_s"):
             if type(getattr(self, name)) is not int:
                 raise ValueError(name)
-        for name in ("grid_export_positive", "battery_charge_positive"):
+        for name in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled"):
             if type(getattr(self, name)) is not bool:
                 raise ValueError(name)
         ranges = {
+            "grid_hold_share": (0, 100), "grid_release_share": (0, 100), "house_min_soc": (0, 99),
             "reserve_soc": (0, 100), "capacity_kwh": (.1, 200),
             "car_min_soc": (0, 100), "car_low_soc": (0, 100),
             "storage_release_soc": (0, 100), "normal_discharge_w": (0, 30000),
@@ -65,6 +70,8 @@ class Settings:
         for name, (low, high) in ranges.items():
             if not low <= getattr(self, name) <= high:
                 raise ValueError(name)
+        if self.grid_release_share >= self.grid_hold_share:
+            raise ValueError("grid_release_share must be below grid_hold_share")
         if self.car_low_soc >= self.car_min_soc:
             raise ValueError("car_low_soc must be below car_min_soc")
         if self.storage_release_soc < self.reserve_soc:
@@ -103,6 +110,7 @@ class Snapshot:
     current_discharge_w: float | None
     grid_charge_enabled: bool | None
     location_age: float = 0
+    grid_hold: bool = False
 
 
 @dataclass(frozen=True)
@@ -169,7 +177,7 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     if eligible and not car_ok:
         problems.append("Fahrzeugdaten fehlen oder sind veraltet")
     if s.daylight is None:
-        problems.append("Sonnenstand unbekannt; Speicher bleibt geschützt")
+        problems.append("Sonnenstand unbekannt; PV-Laden eingeschränkt")
     hours_ok = valid(s.hours_left, 0, 24)
     hours = max(.25, s.hours_left or 0)
     needed = max(0, (c.reserve_soc - s.house_soc) * c.capacity_kwh / 100 / c.efficiency) if storage_ok else None
@@ -195,7 +203,8 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     watts_running = valid(s.wallbox_w, 200)
     threshold = c.min_amps if watts_running else c.start_amps
     storage_allowed = (state.storage_active and storage_ok and meters_ok
-                       and s.house_soc > c.reserve_soc and not state.minimum_active)
+                       and s.house_soc > max(c.reserve_soc, c.house_min_soc) and not state.minimum_active
+                       and not (c.grid_renewable_enabled and s.grid_hold))
     # Battery power is a shared house+EV ceiling, not extra power solely for the EV.
     if storage_allowed:
         car_w = max(0, power_balance + c.normal_discharge_w - reserve - c.margin_w)
@@ -232,7 +241,8 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     if (watts_running or (valid(s.wallbox_w, 10.000001)) or (target or 0) >= c.min_amps
             or not meters_ok
             or s.daylight is None
-            or (s.daylight and (not storage_ok or s.house_soc < c.reserve_soc))):
+            or not storage_ok or s.house_soc <= c.house_min_soc
+            or (c.grid_renewable_enabled and s.grid_hold)):
         discharge = 0
     if storage_allowed and car_ok and (target or 0) >= c.min_amps and not state.minimum_active:
         discharge = c.normal_discharge_w

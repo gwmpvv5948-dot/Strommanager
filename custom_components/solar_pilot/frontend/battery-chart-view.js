@@ -42,7 +42,7 @@ export function renderBatteryOverlay(battery, { bx, by, time, end }) {
             />
           `,
         )
-        .join("")}${battery.exhaustedAt == null
+        .join("")}${battery.gridPolicy ? battery.gridBands.map(band=>`<rect x="${bx(band.start)}" y="194" width="${Math.max(0,bx(band.end)-bx(band.start))}" height="7" fill="#df6767"/>`).join("") : battery.exhaustedAt == null
         ? ""
         : html`
             <rect
@@ -58,7 +58,7 @@ export function renderBatteryOverlay(battery, { bx, by, time, end }) {
       <text x="880" y="252" text-anchor="end" style="font-size:11px">
         ${battery.completeCoverage
           ? "Bis " + time(end) + " gedeckt"
-          : "Deckungslücke " + time(battery.exhaustedAt)}
+          : (battery.gridPolicy?"Netzbedarf ":"Deckungslücke ") + time(battery.exhaustedAt)}
       </text>
     </g>
   `;

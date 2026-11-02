@@ -16,6 +16,7 @@ from .source_config import display_sources, validate_mapping, LEARNING_DEFAULTS,
 from .const import DOMAIN, ENTITY_DEFAULTS, ENTITY_LABELS, MODES
 from .executor import Command, Executor, plan
 from .model import Settings, Snapshot, decide, ChargingState, charging_state, consumption_comparison
+from .grid_forecast import GridForecast
 from .day_budget import DayBudgetTracker
 from .consumption_tracker import ConsumptionTracker
 
@@ -26,6 +27,7 @@ class Controller:
         config = {**entry.data, **entry.options}
         self.entities = {k:v for k,v in config["entities"].items() if k != "legacy_automation"}
         self.settings = Settings(**config.get("settings", {}))
+        self.grid_forecast = GridForecast()
         self.charging_state = ChargingState()
         self.mode = "observe"
         self.executor = Executor(self._send)
@@ -113,6 +115,7 @@ class Controller:
             current_discharge_w=self.number("discharge_limit"),
             grid_charge_enabled=self.boolean("grid_charge"),
             location_age=self.age("car_home", now),
+            grid_hold=self.grid_forecast.status(now, self.settings)["hold"],
         )
 
     async def async_start(self):
@@ -186,6 +189,8 @@ class Controller:
     async def async_update(self):
         if self.lock.locked() or self._stopping:
             return
+        if not self.grid_forecast.busy and (self.grid_forecast.attempted is None or dt_util.utcnow().timestamp()-self.grid_forecast.attempted >= 900) and hasattr(self.hass, "config"):
+            self.entry.async_create_background_task(self.hass, self.grid_forecast.refresh(self.hass, dt_util.utcnow().timestamp()), "Strommanager Energy-Charts")
         async with self.lock:
             self.snapshot = self.read()
             if self.snapshot.car_soc is not None:
@@ -364,6 +369,7 @@ class Controller:
             if stamp:
                 source_reports[entity_id] = stamp.timestamp()
         return {
+            "grid_forecast": self.grid_forecast.status(dt_util.utcnow().timestamp(), self.settings),
             "source_reports": source_reports,
             "last_car_soc": self.last_car_soc,
             "entry_id": self.entry.entry_id, "mode": self.mode,

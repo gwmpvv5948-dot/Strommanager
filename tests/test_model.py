@@ -39,7 +39,7 @@ class Decisions(unittest.TestCase):
         self.assertGreater(decide(sample(car_soc=20),self.c).target_amps,0)
     def test_low_forecast_prioritizes_reserve(self):
         d=decide(sample(house_soc=40,forecast_kwh=1),self.c)
-        self.assertEqual((d.reserve_charge_w,d.target_amps,d.discharge_w),(2500,0,0))
+        self.assertEqual((d.reserve_charge_w,d.target_amps,d.discharge_w),(2500,0,2500))
     def test_strong_forecast_allows_shared_charging(self):
         d=decide(sample(house_soc=60,forecast_kwh=20,grid_export_w=3000,battery_charge_w=2000),self.c)
         self.assertLess(d.reserve_charge_w,2500)
@@ -263,3 +263,20 @@ class Execution(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(sent),2)
 
 if __name__=="__main__": unittest.main()
+
+class RenewableHousePolicy(unittest.TestCase):
+    def test_house_allowed_below_tesla_reserve_in_daylight(self):
+        s=sample(house_soc=35, at_home=False, pv_w=100, grid_export_w=-600, battery_charge_w=0)
+        self.assertEqual(decide(s,Settings(),"storage_first").discharge_w,2500)
+    def test_high_renewables_hold_even_above_tesla_release(self):
+        c=Settings(grid_renewable_enabled=True)
+        s=sample(house_soc=90,grid_hold=True)
+        self.assertEqual(decide(s,c,state=ChargingState(storage_active=True)).discharge_w,0)
+    def test_disabled_grid_signal_does_not_block_house(self):
+        self.assertEqual(decide(sample(grid_hold=True,at_home=False),Settings()).discharge_w,2500)
+    def test_house_minimum_and_tesla_safety_remain(self):
+        c=Settings(grid_renewable_enabled=True)
+        for s in [sample(house_soc=10),sample(house_soc=35,wallbox_w=2000),sample(house_soc_age=901)]:
+            self.assertEqual(decide(s,c).discharge_w,0)
+    def test_invalid_hysteresis(self):
+        with self.assertRaises(ValueError):Settings(grid_hold_share=50,grid_release_share=50)

@@ -187,3 +187,31 @@ Sensor-IDs angegeben werden, auch wenn sie heute nicht mehr in HA existieren.
 Bereits gelernte Daten werden durch eine Zuordnungsänderung nicht rückwirkend
 umgeschrieben. Eigene Strommanager-Sensoren sind schreibgeschützte Ergebnisse.
 Der direkte Open-Meteo-Ausblick hat keine zuordenbare HA-Entität.
+
+
+### Netz & Akku: Erneuerbaren-Prognose (ab 0.1.56)
+
+Der Strommanager ruft die Energy-Charts-Prognose für Deutschland zentral in HA ab
+(15 Minuten, ohne API-Schlüssel und ohne zusätzliche HA-Integration). Bevorzugt wird
+`/v2/ren_share_forecast?country=de`; bei Fehlern wird der bisherige v1-Endpunkt versucht.
+Die Quelle und der Abrufstand stehen unter „Berechnung und Datenquellen“.
+Daten: [Energy-Charts / Fraunhofer ISE](https://energy-charts.info/), CC BY 4.0.
+
+Unter Einstellungen lässt sich „Akku nach Erneuerbaren-Prognose bewahren“ aktivieren.
+Standardmäßig ist diese neue Funktion aus. Die voreingestellten, veränderbaren Schwellen
+sind 60 % zum Bewahren und unter 55 % zum Freigeben. Das ist eine Schwellenstrategie
+mit Forecast-Zeitplan, keine globale Energie-/CO₂-Optimierung: Der prognostizierte Anteil
+der Erneuerbaren an der Last ist kein CO₂-Messwert. Die API-Verfügbarkeit bestimmt den
+Horizont. Fehlende Intervalle und Ersatzdaten werden nicht als Null interpretiert;
+nach zwei Stunden ohne erfolgreichen Abruf gilt normale Eigenverbrauchsregelung.
+
+Die neue Kachel zeigt Erneuerbaren-Anteil, geplante Freigabeintervalle, die aktuelle
+Empfehlung und die tatsächlich eingestellte Entladegrenze. PV hat weiter Vorrang.
+Bei hohem Anteil wird die Akkuentladung gesperrt, nicht aus dem Netz geladen.
+Das Haus darf auch tagsüber unter der Tesla-Abendreserve aus dem Akku versorgt werden,
+bis zur eigenen Haus-Untergrenze (Standard 10 %); die Hardware-Untergrenze bleibt gültig.
+Tesla und Haus teilen den Entladeaktor: Lädt Tesla ohne Speicherfreigabe, bleibt die
+gesamte Entladung gesperrt. Tesla-Speicherfreigabe übersteuert kein Netz-Bewahren.
+Beobachten und Pause senden weiterhin keine Befehle. Die Akku-Prognose im Verbrauch
+berücksichtigt die geplanten Netzphasen; sie ist keine Garantie und plant keine
+zusätzlichen Tesla-Ladevorgänge.

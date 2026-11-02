@@ -1,6 +1,6 @@
 import { batteryHistory } from "./battery-history.js?v=0.1.50";
 import { esc, fmt, html } from "./view-format.js?v=0.1.41";
-import { batteryForecast } from "./battery-forecast.js?v=0.1.40";
+import { batteryForecast } from "./battery-forecast.js?v=0.1.56";
 import { pvOverlay } from "./pv-overlay.js?v=20261028-2";
 import {
   consumptionAxis,
@@ -11,7 +11,7 @@ import {
   forecastPoints,
 } from "./solar-chart.js?v=20261027-2";
 import { dateKey, pvDayIds } from "./day-forecast.js?v=20261029-7";
-import { renderBatteryOverlay } from "./battery-chart-view.js?v=0.1.50";
+import { renderBatteryOverlay } from "./battery-chart-view.js?v=0.1.56";
 
 // Display only. Panel supplies live data and cached history; no device calls.
 
@@ -57,7 +57,7 @@ export function consumptionBarChart(panel, b, zone) {
       : sun?.state === "above_horizon"
         ? Date.parse(sun.attributes?.next_setting) / 1000
         : null;
-  const minSoc =
+  const deviceMinSoc =
     floorState?.attributes?.unit_of_measurement === "%" &&
     !floorState.attributes.restored
       ? numeric(floorState.state)
@@ -66,7 +66,7 @@ export function consumptionBarChart(panel, b, zone) {
     b,
     panel.status?.snapshot,
     panel.status?.settings,
-    { now: liveNow, sunset, minSoc, pv: forecast },
+    { now: liveNow, sunset, minSoc: deviceMinSoc==null?null:Math.max(deviceMinSoc,panel.status?.settings?.house_min_soc??0), pv: forecast, grid: panel.status?.grid_forecast },
   );
   const { max, step, ticks } = consumptionAxis(
       b.bins,

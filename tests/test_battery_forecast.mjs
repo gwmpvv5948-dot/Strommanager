@@ -33,3 +33,12 @@ test('coverage starts at PV shortfall before sunset, excludes surplus and zero d
  const zero=batteryForecast({...b,bins:b.bins.map(p=>({...p,future:0}))},s,c,opts);
  assert.equal(zero.bands.length,0);assert.equal(zero.exhaustedAt,null);
 });
+
+test('renewable grid hold preserves battery and marks grid demand',()=>{
+ const now=10000,end=13600;
+ const b={now,end,bins:[{stamp:10000,future:1}]};
+ const s={now,house_soc:70,house_soc_age:0,forecast_age:0};
+ const c={capacity_kwh:5,efficiency:.9,normal_discharge_w:2500,max_charge_w:2500,forecast_factor:.85,meter_max_age_s:300,forecast_max_age_s:3600};
+ const result=batteryForecast(b,s,c,{now,sunset:now,minSoc:10,grid:{enabled:true,points:[{start:now,end,available:true,hold:true}]}});
+ assert.equal(result.available,true);assert.equal(result.points.at(-1).soc,70);assert.equal(result.bands.length,0);assert.equal(result.gridBands.length,1);
+});

@@ -55,7 +55,11 @@
           "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)",
           "feed_in_eur_kwh": "Einspeisevergütung (€/kWh)",
           "purchase_eur_kwh": "Strombezugspreis (€/kWh)",
-          "benefit_initial_savings_eur": "Geschätzte Ersparnis vor HA (€)"
+          "benefit_initial_savings_eur": "Geschätzte Ersparnis vor HA (€)",
+          "grid_renewable_enabled": "Akku nach Erneuerbaren-Prognose bewahren",
+          "grid_hold_share": "Akku bewahren ab Erneuerbaren-Anteil (%)",
+          "grid_release_share": "Akku wieder freigeben unter (%)",
+          "house_min_soc": "Akku-Mindeststand für Haus (%)"
         }
       }
     },
@@ -92,7 +96,11 @@
           "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)",
           "feed_in_eur_kwh": "Einspeisevergütung (€/kWh)",
           "purchase_eur_kwh": "Strombezugspreis (€/kWh)",
-          "benefit_initial_savings_eur": "Geschätzte Ersparnis vor HA (€)"
+          "benefit_initial_savings_eur": "Geschätzte Ersparnis vor HA (€)",
+          "grid_renewable_enabled": "Akku nach Erneuerbaren-Prognose bewahren",
+          "grid_hold_share": "Akku bewahren ab Erneuerbaren-Anteil (%)",
+          "grid_release_share": "Akku wieder freigeben unter (%)",
+          "house_min_soc": "Akku-Mindeststand für Haus (%)"
         }
       }
     },
