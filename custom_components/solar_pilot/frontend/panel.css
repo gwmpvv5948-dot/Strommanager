@@ -2203,3 +2203,220 @@ details summary {
 .consumption-legend .battery-legend-line.actual {
   border-top-style: solid;
 }
+
+/* PV benefit: fixed currency values, calendar-week daily energy statistics. */
+.benefit-card {
+  --benefit-export: #d6b04f;
+  --benefit-saving: var(--green);
+  align-self: start;
+}
+.benefit-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+.benefit-heading h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.benefit-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin: 22px 0;
+}
+.benefit-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.benefit-stat + .benefit-stat {
+  border-left: 1px solid var(--line);
+  padding-left: 18px;
+}
+.benefit-stat > span,
+.benefit-chart-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.benefit-stat > strong {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.benefit-stat small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.benefit-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.benefit-card .export {
+  background: var(--benefit-export);
+}
+.benefit-card .saving {
+  background: var(--benefit-saving);
+}
+.benefit-share {
+  display: flex;
+  gap: 3px;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--soft);
+}
+.benefit-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+.benefit-total strong {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.benefit-history {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.benefit-week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.benefit-week-nav button {
+  border: 1px solid var(--line);
+  background: var(--soft);
+  color: var(--ink);
+  border-radius: 8px;
+  width: 36px;
+  height: 34px;
+}
+.benefit-week-nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.benefit-week-nav > div {
+  text-align: center;
+  font-size: 13px;
+}
+.benefit-week-nav > div > span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.benefit-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 16px 0 20px;
+}
+.benefit-chart-legend > span {
+  font-size: 11px;
+}
+.benefit-chart-legend > :last-child {
+  margin-left: auto;
+}
+.benefit-chart {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  padding-left: 27px;
+  padding-top: 10px;
+}
+.benefit-gridlines {
+  pointer-events: none;
+  position: absolute;
+  top: 10px;
+  left: 27px;
+  right: 0;
+  height: 150px;
+}
+.benefit-gridlines > div {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--line);
+}
+.benefit-gridlines span {
+  position: absolute;
+  right: calc(100% + 7px);
+  top: -9px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.benefit-day {
+  min-width: 0;
+  position: relative;
+}
+.benefit-day-column {
+  position: relative;
+  height: 150px;
+}
+.benefit-day-stack {
+  position: absolute;
+  bottom: 0;
+  left: 18%;
+  right: 18%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.benefit-day-stack > span {
+  display: block;
+  width: 100%;
+}
+.benefit-day-value {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -4px);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.benefit-day-label {
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.benefit-day-label small {
+  display: block;
+  font-size: 11px;
+}
+.benefit-help {
+  margin-top: 18px;
+}
+.benefit-help summary {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .benefit-week-nav button {
+    width: 44px;
+    height: 44px;
+  }
+  .benefit-help summary {
+    min-height: 44px;
+    padding: 10px 0;
+  }
+}
+#settings > h3 { margin: 20px 0 12px; }

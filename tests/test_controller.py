@@ -156,6 +156,16 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         self.values["discharge_limit"].attributes["step"]=100
         with self.assertRaises(ValidationError): await self.c._send(Command("discharge_limit",1250))
 
+    async def test_tariffs_persist_without_device_commands_or_source_changes(self):
+        self.entry.options={"display_sources":{"roof_daily":"sensor.custom_roof"},"other":"keep"}
+        await self.c.async_configure({"feed_in_eur_kwh":.095,"purchase_eur_kwh":.31})
+        saved=self.hass.config_entries.async_update_entry.call_args.kwargs["options"]
+        self.assertEqual(saved["settings"]["feed_in_eur_kwh"],.095)
+        self.assertEqual(saved["settings"]["purchase_eur_kwh"],.31)
+        self.assertEqual(saved["display_sources"],self.entry.options["display_sources"])
+        self.assertEqual(saved["other"],"keep")
+        self.assertEqual(self.calls,[])
+
     async def test_settings_validation_preserves_previous_values(self):
         with self.assertRaises(ValidationError): await self.c.async_configure({"reserve_soc":150})
         self.hass.config_entries.async_update_entry.assert_not_called()

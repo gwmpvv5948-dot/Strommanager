@@ -109,6 +109,14 @@ class Decisions(unittest.TestCase):
     def test_idempotent_plan(self):
         s=sample(car_soc=45,car_current=16,charging=True,current_discharge_w=0)
         self.assertEqual(plan(s,decide(s,self.c),self.c),[])
+    def test_financial_tariffs_are_validated_and_do_not_change_control_decisions(self):
+        self.assertEqual(Settings().feed_in_eur_kwh,.082)
+        self.assertEqual(Settings().purchase_eur_kwh,.27)
+        for key in ("feed_in_eur_kwh","purchase_eur_kwh"):
+            for value in (-.01,6,float("nan"),float("inf")):
+                with self.assertRaises(ValueError):Settings(**{key:value})
+        self.assertEqual(decide(sample(),Settings()),decide(sample(),Settings(feed_in_eur_kwh=.2,purchase_eur_kwh=.5)))
+
     def test_invalid_settings(self):
         for v in ({"reserve_soc":101},{"phases":2},{"max_amps":3},{"capacity_kwh":0},
                   {"forecast_factor":float("nan")},{"phases":1.0},{"grid_export_positive":"yes"}):

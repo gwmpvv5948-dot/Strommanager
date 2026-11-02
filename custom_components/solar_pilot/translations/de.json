@@ -52,7 +52,9 @@
           "cloud_interval_s": "Mindestabstand Tesla-Befehle (Sekunden)",
           "grid_export_positive": "Positive Netzleistung = Einspeisung",
           "battery_charge_positive": "Positive Batterieleistung = Laden",
-          "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)"
+          "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)",
+          "feed_in_eur_kwh": "Einspeisevergütung (€/kWh)",
+          "purchase_eur_kwh": "Strombezugspreis (€/kWh)"
         }
       }
     },
@@ -86,7 +88,9 @@
           "cloud_interval_s": "Mindestabstand Tesla-Befehle (Sekunden)",
           "grid_export_positive": "Positive Netzleistung = Einspeisung",
           "battery_charge_positive": "Positive Batterieleistung = Laden",
-          "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)"
+          "budget_extra_kwh": "Zusätzlicher Hausbedarf pro PV-Tag (kWh, Budgetanzeige)",
+          "feed_in_eur_kwh": "Einspeisevergütung (€/kWh)",
+          "purchase_eur_kwh": "Strombezugspreis (€/kWh)"
         }
       }
     },

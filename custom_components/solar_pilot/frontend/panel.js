@@ -1,19 +1,22 @@
-import {consumerHeatmap} from './power-consumers.js?v=0.1.51';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.51';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.51';
+import {pvBenefitCard,benefitSources,benefitWeek} from './pv-benefit.js?v=0.1.52';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.52';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.52';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.52';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.51';
-import {esc,fmt} from './view-format.js?v=0.1.51';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.51';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.52';
+import {esc,fmt} from './view-format.js?v=0.1.52';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.52';
 import {liveEnergy} from './live-energy.js?v=0.1.40';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
 import {dayAllocation,remainingPV} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.51";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.52";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
 const FIELD_INFO = {
+  feed_in_eur_kwh:["Einspeisevergütung", "€/kWh · PV-Vorteil", 0, 5, .001],
+  purchase_eur_kwh:["Strombezugspreis", "€/kWh · PV-Vorteil", 0, 5, .001],
   budget_extra_kwh:["Zusätzlicher Hausbedarf pro PV-Tag", "kWh · nur Budgetanzeige", 0, 30, .1],
   reserve_soc:["Abendreserve", "%", 0, 100, 1], capacity_kwh:["Speicherkapazität", "kWh", .1, 200, .1],
   car_low_soc:["Tesla-Untergrenze für Netzladung", "%", 0, 99, 1],
@@ -26,6 +29,8 @@ const FIELD_INFO = {
   cloud_interval_s:["Mindestabstand Tesla-Befehle", "s", 120, 3600, 30],
 };
 const FIELD_HELP = {
+  feed_in_eur_kwh: "Vergütung je eingespeister kWh. Bewertet auch historische Tage mit diesem aktuellen Preis; ohne Einfluss auf die Ladesteuerung.",
+  purchase_eur_kwh: "Vermiedener Arbeitspreis je selbst genutzter kWh. Ohne Grundgebühr; bewertet auch historische Tage mit diesem aktuellen Preis.",
   "budget_extra_kwh": "Zusätzlicher Tagesbedarf über der Grundlast während der PV-Zeit. Bereits bilanzierter Mehrverbrauch wird abgezogen. Dauerhaft in HA gespeichert; beeinflusst nur die Budgetanzeige.",
   "reserve_soc": "Nachtreserve und untere Grenze für Speicherentnahme zum Tesla. Bei Erreichen wird die Entnahme gesperrt; der Speicher darf darüber hinaus laden.",
   "capacity_kwh": "Nutzbare Energie des Hausspeichers. Damit wird berechnet, wie viel bis zur Abendreserve fehlt.",
@@ -45,7 +50,7 @@ const FIELD_HELP = {
 
 
 export class SolarPilotPanel extends HTMLElement {
-  constructor(){super();this.attachShadow({mode:"open"});this.tab="overview";this.consumptionView="total";this.consumptionHistoryDate=null;this.status=null;this.busy=false;this.message="";this.draft=null;this._error="";this.solarHistory=[];this.socHistory=[];this.pvExtraHistory={};this.historyLoaded=0;this.historyError="";}
+  constructor(){super();this.attachShadow({mode:"open"});this.tab="overview";this.consumptionView="total";this.consumptionHistoryDate=null;this.status=null;this.busy=false;this.message="";this.draft=null;this._error="";this.solarHistory=[];this.socHistory=[];this.pvExtraHistory={};this.benefitWeekOffset=-1;this.benefitCache=new Map();this._benefitLoading=new Set();this.historyLoaded=0;this.historyError="";}
   set hass(value){this._hass=value;if(!this.status && !this._loading)this.refresh();
     if(!this._consumerFrame&&this.isConnected&&this.shadowRoot?.querySelector('.consumer-content')){
       this._consumerFrame=requestAnimationFrame(()=>{this._consumerFrame=null;this.updateConsumers();});
@@ -66,7 +71,7 @@ export class SolarPilotPanel extends HTMLElement {
   async refresh(){
     if(!this._hass||!this._panel||this._loading)return;
     this._loading=true;
-    try{this.status=await this._hass.callWS({type:"solar_pilot/status",entry_id:this._panel.config.entry_id});this.sunsetTime(dateKey(Date.now(),this._hass.config?.time_zone||'Europe/Berlin'),this._hass.config?.time_zone||'Europe/Berlin');this._error="";if(this.tab==="overview")await Promise.all([this.loadSolarHistory(),this.loadHistoricalPV(),this.loadDayWeather(),this.loadPVReferences()]);}
+    try{this.status=await this._hass.callWS({type:"solar_pilot/status",entry_id:this._panel.config.entry_id});this.sunsetTime(dateKey(Date.now(),this._hass.config?.time_zone||'Europe/Berlin'),this._hass.config?.time_zone||'Europe/Berlin');this._error="";if(this.tab==="overview")await Promise.all([this.loadSolarHistory(),this.loadHistoricalPV(),this.loadDayWeather(),this.loadPVReferences(),this.loadBenefitHistory()]);}
     catch(e){this._error=e.message||String(e);}
     finally{this._loading=false;if(!this.shadowRoot.activeElement?.matches("input,select"))this.render();}
   }
@@ -122,6 +127,7 @@ export class SolarPilotPanel extends HTMLElement {
 
       ${this.vehicle(s,c)}
       ${this.consumerCard()}
+      ${pvBenefitCard(this)}
       ${this.solarChart(s,c)}
       ${this.dayForecast()}
       ${this.consumptionForecast()}
@@ -142,6 +148,26 @@ export class SolarPilotPanel extends HTMLElement {
     const forecastId=display.forecast_day_1||e.forecast_day||(e.forecast||"").replace(/prognose_verbleibende_leistung_heute$/,"prognose_heute").replace(/forecast_remaining_today$/,"forecast_today");
     const dailyId=display.pv_daily||e.pv_daily||(e.pv_power||"").replace(/eingangsleistung$/,"tagesertrag");
     return {roofDaily:states[display.roof_daily||'sensor.sum_dach_tagesertrag'],forecastIds:Array.from({length:7},(_,i)=>display['forecast_day_'+(i+1)]||pvDayIds(forecastId)[i]).filter(Boolean),forecastId,dailyId,forecast:states[forecastId],daily:states[dailyId],power:states[e.pv_power],powerId:e.pv_power};
+  }
+  async loadBenefitHistory(){
+    if(this.demo||!this._hass?.callWS)return;
+    this.benefitCache??=new Map();this._benefitLoading??=new Set();
+    const now=Date.now(),zone=this._hass.config?.time_zone||'Europe/Berlin',ids=benefitSources(this.status),week=benefitWeek(now,zone,this.benefitWeekOffset??-1),today=dayBounds(now,zone),sources=ids.join('|')+'|'+zone;
+    if(ids.some(id=>!id))return;
+    const requests=[['today:'+week.today+'|'+sources,today.start,today.end,300000],['week:'+week.days[0]+'|'+sources,week.start,week.end,(this.benefitWeekOffset??-1)<0?86400000:300000]];
+    await Promise.allSettled(requests.map(async([key,start,end,ttl])=>{
+      const cached=this.benefitCache.get(key);
+      if(this._benefitLoading.has(key)||cached&&now-cached.fetched<(cached.error?60000:ttl))return;
+      this._benefitLoading.add(key);
+      try{
+        const statistics=await this._hass.callWS({type:'recorder/statistics_during_period',start_time:new Date(start).toISOString(),end_time:new Date(end).toISOString(),statistic_ids:ids,period:'day',types:['change'],units:{energy:'kWh'}});
+        this.benefitCache.set(key,{statistics,fetched:Date.now()});
+      }catch(e){this.benefitCache.set(key,{statistics:cached?.statistics,fetched:Date.now(),error:'Energiestatistik konnte nicht aktualisiert werden.'});}
+      finally{
+        this._benefitLoading.delete(key);
+        while(this.benefitCache.size>18){const first=this.benefitCache.keys().next().value;if(first.startsWith('today:')&&first.includes(week.today)){const value=this.benefitCache.get(first);this.benefitCache.delete(first);this.benefitCache.set(first,value);}else this.benefitCache.delete(first);}
+      }
+    }));
   }
   async loadDayWeather(){
     if(this.demo||this._weatherLoading)return;
@@ -312,7 +338,7 @@ export class SolarPilotPanel extends HTMLElement {
     ${vehicleSilhouette(s.cable)}
     <div class="vehicle-bottom"><span>${stale?'Letzter bekannter Stand':charging?'Ladevorgang aktiv':'Ladestand'}<small>${s.car_age==null?'Datenalter unbekannt':fmt(s.car_age/60,"Min.",0)+' alt'}</small></span><strong>${fmt(carSoc,"%")}</strong></div><div class="vehicle-progress" role="progressbar" aria-label="Tesla-Akkustand" ${carSoc==null?'aria-valuetext="Unbekannt"':`aria-valuenow="${soc}" aria-valuemin="0" aria-valuemax="100"`}><span style="width:${soc}%"></span></div><div class="vehicle-live-foot"><span>Wallbox · ${fmt(power,"kW",2)}</span><span>${s.car_limit==null?"Mindestziel":"Fahrzeuglimit"} ${fmt(s.car_limit??c.car_min_soc,"%")}</span></div><details class="vehicle-details"><summary>Ladedetails</summary><div class="list"><div class="split"><span>Untergrenze · Netzladung</span><strong>${fmt(c.car_low_soc,"%")}</strong></div><div class="split"><span>Speicherfreigabe / Nachtreserve</span><strong>${fmt(c.storage_release_soc,"%")} / ${fmt(c.reserve_soc,"%")}</strong></div><div class="split"><span>Mindestziel / Fahrzeuglimit</span><strong>${fmt(c.car_min_soc,"%")} / ${fmt(s.car_limit,"%")}</strong></div><div class="split"><span>Ladestrom eingestellt</span><strong>${fmt(s.car_current,"A")}</strong></div><div class="split"><span>Speichergrenze eingestellt</span><strong>${fmt(s.current_discharge_w,"W")}</strong></div></div><p class="note">${s.car_limit!=null&&s.car_limit<=c.car_min_soc?'Für zusätzliches PV-Laden über den Mindeststand das Fahrzeuglimit in der Tesla-App anheben.':'Unter der Tesla-Untergrenze ist Netzladung bis zum Mindestziel erlaubt. Sonst PV-Überschuss oder freigegebener Hausspeicher bis zum Fahrzeuglimit.'}</p></details></section>`;
   }
-  settings(){const settings={...this.status.settings,...this.draft};return `<section class="card"><div class="card-title"><h2>Deine Ladeziele und Reserven</h2><span class="sub">Änderungen gelten nach dem Speichern</span></div><form id="settings"><div class="formgrid">${Object.entries(FIELD_INFO).map(([key,[label,unit,min,max,step]])=>`<label>${esc(label)}<input aria-describedby="help-${key}" type="number" name="${key}" value="${settings[key]}" min="${min}" max="${max}" step="${step}" required><small>${esc(unit)}</small><small class="field-help" id="help-${key}">${esc(FIELD_HELP[key])}</small></label>`).join("")}</div><label class="check"><input name="grid_export_positive" type="checkbox" ${settings.grid_export_positive?"checked":""}>Positive Netzleistung bedeutet Einspeisung</label><small class="field-help check-help">Aktiv: positive Messwerte sind Einspeisung, negative Netzbezug. Ausschalten, wenn dein Zähler umgekehrt zählt.</small><label class="check"><input name="battery_charge_positive" type="checkbox" ${settings.battery_charge_positive?"checked":""}>Positive Batterieleistung bedeutet Laden</label><small class="field-help check-help">Aktiv: positive Messwerte laden den Speicher, negative entladen ihn. Ausschalten bei umgekehrtem Vorzeichen.</small><p class="note">Die Anzahl der Ladephasen muss zur Wallbox passen. Für deine vorgefundene Ladung sind 1 Phase und maximal 16 A voreingestellt. Die Ladeobergrenze des Hausspeichers und das Tesla-Ladelimit werden nicht geändert.</p><div class="actions"><button class="primary" type="submit" ${this.busy?"disabled":""}>Einstellungen speichern</button></div></form></section>`;}
+  settings(){const settings={...this.status.settings,...this.draft};const priceKeys=["feed_in_eur_kwh","purchase_eur_kwh"];const fields=entries=>entries.map(([key,[label,unit,min,max,step]])=>`<label>${esc(label)}<input aria-describedby="help-${key}" type="number" name="${key}" value="${settings[key]}" min="${min}" max="${max}" step="${step}" required><small>${esc(unit)}</small><small class="field-help" id="help-${key}">${esc(FIELD_HELP[key])}</small></label>`).join("");return `<section class="card"><div class="card-title"><h2>Deine Einstellungen</h2><span class="sub">Änderungen gelten nach dem Speichern</span></div><form id="settings"><h3>Strompreise</h3><div class="formgrid">${fields(Object.entries(FIELD_INFO).filter(([key])=>priceKeys.includes(key)))}</div><h3>Ladeziele und Reserven</h3><div class="formgrid">${fields(Object.entries(FIELD_INFO).filter(([key])=>!priceKeys.includes(key)))}</div><label class="check"><input name="grid_export_positive" type="checkbox" ${settings.grid_export_positive?"checked":""}>Positive Netzleistung bedeutet Einspeisung</label><small class="field-help check-help">Aktiv: positive Messwerte sind Einspeisung, negative Netzbezug. Ausschalten, wenn dein Zähler umgekehrt zählt.</small><label class="check"><input name="battery_charge_positive" type="checkbox" ${settings.battery_charge_positive?"checked":""}>Positive Batterieleistung bedeutet Laden</label><small class="field-help check-help">Aktiv: positive Messwerte laden den Speicher, negative entladen ihn. Ausschalten bei umgekehrtem Vorzeichen.</small><p class="note">Die Anzahl der Ladephasen muss zur Wallbox passen. Für deine vorgefundene Ladung sind 1 Phase und maximal 16 A voreingestellt. Die Ladeobergrenze des Hausspeichers und das Tesla-Ladelimit werden nicht geändert.</p><div class="actions"><button class="primary" type="submit" ${this.busy?"disabled":""}>Einstellungen speichern</button></div></form></section>`;}
   teslaHistory(){
     return `<section class="card"><div class="card-title"><h2>Tesla-Historie</h2><span class="badge demo">Vorgesehen</span></div><p class="intro">Hier ist Platz für die Ladehistorie und Auswertungen deines Tesla vorgesehen.</p><div class="list" style="margin-top:24px"><div class="split"><span>Ladevorgänge zu Hause</span><strong>Beginn, Ende, Dauer und Wallbox-Energie</strong></div><div class="split"><span>Ladestand im Verlauf</span><strong>SoC vor und nach dem Laden</strong></div><div class="split"><span>Energieaufteilung</span><strong>PV, Netz und Hausspeicher</strong></div><div class="split"><span>Auswertungen</span><strong>Tages-, Monats- und Jahresübersicht</strong></div></div><p class="note">Der Tab ist vorbereitet. Eine eigene Aufzeichnung einzelner Ladevorgänge ist noch nicht implementiert; deshalb werden hier noch keine Historienwerte angezeigt. Vorhandene Tagesbilanzen bleiben in der Übersicht verfügbar.</p><details class="days-help tesla-history-help"><summary>Geplante Datenquellen und Grenzen</summary><p class="note">Wallbox-Messwerte sollen die Energie der Heimladungen liefern, Tesla Fleet den Fahrzeug-Ladestand. PV-, Netz- und Speicheranteile werden als Bilanzschätzungen gekennzeichnet. Fehlende oder veraltete Fahrzeugdaten bleiben als Datenlücken sichtbar. Detaillierte Fahrten und Routen sind eine spätere Erweiterung mit geeigneter Telemetrie; dieser Tab erhöht keine Tesla-Abfrageintervalle und sendet keine zusätzlichen Fahrzeugbefehle.</p></details></section>`;
   }
@@ -342,7 +368,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.51</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.52</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
@@ -377,6 +403,10 @@ export class SolarPilotPanel extends HTMLElement {
     this.shadowRoot.querySelector("#sidebar")?.addEventListener("click",()=>this.dispatchEvent(new Event("hass-toggle-menu",{bubbles:true,composed:true})));
     this.shadowRoot.querySelectorAll("[data-action]").forEach(el=>el.onclick=()=>this.action(el.dataset.action));
     this.shadowRoot.querySelector("#mode")?.addEventListener("change",e=>{const mode=e.target.value;if(!["observe","paused"].includes(mode)&&["observe","paused"].includes(this.status.mode)){this.action("activate",mode);}else this.service("set_mode",{mode});});
+    this.shadowRoot.querySelectorAll('[data-benefit-week]').forEach(el=>el.onclick=()=>{
+      this.benefitWeekOffset=Math.min(0,(this.benefitWeekOffset??-1)+(el.dataset.benefitWeek==='older'?-1:1));
+      this.render();this.loadBenefitHistory().then(()=>{if(this.isConnected)this.render();});
+    });
     bindSourceSettings(this);
     const form=this.shadowRoot.querySelector("#settings");
     if(form){const read=()=>{const data={};for(const key of Object.keys(FIELD_INFO))data[key]=Number(form.elements.namedItem(key).value);for(const key of ["grid_export_positive","battery_charge_positive"])data[key]=form.elements.namedItem(key).checked;return data;};form.oninput=()=>{this.draft=read();};form.onsubmit=e=>{e.preventDefault();if(form.reportValidity())this.service("configure",{settings:read()});};}
