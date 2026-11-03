@@ -32,9 +32,17 @@ class PlannerInputs(unittest.TestCase):
         c,_,now=self.fixture();c.consumption.result['window_hours'][0]['kwh']=None
         with self.assertRaisesRegex(ValueError,'Haus'):collect(c,now)
         c,_,now=self.fixture();c.grid_forecast.status=lambda *args:{'available':True,'hold':False,'fetched':now,'points':[]}
-        with self.assertRaisesRegex(ValueError,'EE'):collect(c,now)
+        data,_,_=collect(c,now)
+        self.assertTrue(all(p['ee'] is None for p in data))
     def test_numeric_attribute_subclasses_are_supported(self):
         class AttributeFloat(float):pass
         c,rows,now=self.fixture()
         for row in rows:row['pv_estimate']=AttributeFloat(.5)
         self.assertEqual(len(collect(c,now)[0]),96)
+
+    def test_at_or_below_inverter_floor_still_collects_all_24_hours(self):
+        for soc in (5,3,0):
+            c,_,now=self.fixture();c.snapshot.house_soc=soc
+            data,config,_=collect(c,now)
+            self.assertEqual(len(data),96);self.assertEqual(config.initial_soc,soc)
+            self.assertEqual(config.minimum_soc,5)

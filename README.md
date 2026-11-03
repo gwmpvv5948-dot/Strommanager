@@ -286,3 +286,13 @@ zugeordneten Entität „Akku-Mindestladestand“ verwendet: für HiGHS, Fallbac
 Akku-Verbrauchsprognose. Unter Einstellungen erscheint dieser Wert nur lesend.
 Ältere gespeicherte Strommanager-Untergrenzen werden beim Laden entfernt. Fehlt ein
 gültiger Gerätewert, bleibt die Entladung gesperrt; es wird keine Ersatzgrenze angenommen.
+
+
+Ab 0.1.71 bleibt der 24-Stunden-Fahrplan auch bei fehlenden zukünftigen EE-Werten
+verfügbar, sofern PV- und Hausprognose sowie der aktuelle SoC gültig sind. Solche
+Zeitfenster erscheinen grau und werden ohne EE-Gewichtung nach Tarifkosten und
+Akku-Durchsatz bewertet. EE-Werte werden nicht fortgeschrieben oder als null Prozent
+angenommen; die Gesamtsumme nicht erneuerbarer Energie bleibt dann unbekannt.
+Am oder unter dem Wechselrichter-Limit wird trotzdem geplant: zunächst Netz/PV fürs
+Haus, PV-Überschuss zum Wiederaufladen, erst nach Erreichen der Grenze Entladung.
+Fehlende aktuelle Steuerungsdaten aktivieren weiterhin die bisherige Fallback-Regelung.

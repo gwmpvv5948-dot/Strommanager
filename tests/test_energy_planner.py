@@ -74,6 +74,23 @@ class EnergyPlanner(unittest.TestCase):
         r=optimize(slots(hours=8),c)
         self.assertTrue(all(abs(p['soc']-7)<1e-6 for p in r['points']))
         self.assertTrue(all(p['battery_kw']<1e-6 for p in r['points']))
+    def test_empty_battery_and_missing_future_ee_still_produce_24h_plan(self):
+        c=config(initial_soc=0,minimum_soc=3)
+        data=slots()
+        for i,p in enumerate(data):
+            if 32<=i<56:p['pv_kw']=2
+            if i>=64:p['ee']=None
+        r=optimize(data,c)
+        self.assertEqual(len(r['points']),96)
+        self.assertTrue(r['ee_incomplete'])
+        self.assertIsNone(r['totals']['nonrenewable_kwh'])
+        self.assertIsNone(r['delta']['nonrenewable_kwh'])
+        self.assertTrue(all(p['battery_kw']<1e-6 for p in r['points'][:32]))
+        self.assertGreater(max(p['soc'] for p in r['points']),3)
+        self.assertTrue(any(p['battery_kw']>.01 for p in r['points'][56:]))
+        self.assertTrue(all(p['ee'] is None for p in r['points'][64:]))
+        self.assertTrue(all(math.isfinite(p['objective']) for p in r['points']))
+
     def test_zero_load_does_not_invent_self_consumption(self):
         c=config();r=optimize(slots(hours=3,load=0,pv=0),c);self.physical(r,c)
         self.assertAlmostEqual(r['totals']['grid_kwh'],0)

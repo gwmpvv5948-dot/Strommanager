@@ -34,9 +34,9 @@ def validate(slots, c):
         raise ValueError('Prognosedaten fehlen')
     end = slots[0]['start']
     for s in slots:
-        if any(type(s.get(k)) not in (int, float) or not math.isfinite(s[k]) for k in ('start','end','load_kw','pv_kw','ee')):
+        if any(type(s.get(k)) not in (int, float) or not math.isfinite(s[k]) for k in ('start','end','load_kw','pv_kw')):
             raise ValueError('Prognoselücke')
-        if abs(s['start']-end) > .01 or not 0 < s['end']-s['start'] <= 900.01 or min(s['load_kw'],s['pv_kw'],s['ee']) < 0 or s['ee'] > 150:
+        if abs(s['start']-end) > .01 or not 0 < s['end']-s['start'] <= 900.01 or min(s['load_kw'],s['pv_kw']) < 0 or (s.get('ee') is not None and (type(s['ee']) not in (int,float) or not math.isfinite(s['ee']) or not 0 <= s['ee'] <= 150)):
             raise ValueError('Ungültiges Prognoseraster')
         end = s['end']
 
@@ -76,7 +76,7 @@ def reference_plan(slots, c):
     result = []
     for i,s in enumerate(slots):
         _, surplus, need, h = components(s)
-        hold = c.grid_enabled and s['ee'] >= (c.release_share if hold else c.hold_share)
+        hold = c.grid_enabled and s.get('ee') is not None and s['ee'] >= (c.release_share if hold else c.hold_share)
         charge = min(surplus,c.charge_kw,max(0,c.capacity-energy)/h/c.efficiency)
         discharge = 0 if hold else min(need,c.discharge_kw,max(0,energy-required[i+1])*c.efficiency/h)
         energy += charge*h*c.efficiency-discharge*h/c.efficiency
@@ -89,16 +89,16 @@ def flow(s, charge, discharge, energy, c):
     grid = max(0, need-discharge)
     export = max(0, surplus-charge)
     cost = (grid*c.purchase-export*c.feed_in)*h
-    nonrenewable = grid*(1-min(100,s['ee'])/100)*h
+    nonrenewable = grid*(1-min(100,s['ee'])/100)*h if s.get('ee') is not None else None
     throughput = (charge+discharge)*h
     return {**s, 'pv_direct_kw':direct, 'charge_kw':max(0,charge), 'battery_kw':max(0,discharge),
             'grid_kw':grid, 'export_kw':export, 'soc':energy/c.capacity*100,
             'cost':cost, 'nonrenewable_kwh':nonrenewable, 'throughput_kwh':throughput,
-            'objective':cost+c.ee_weight*nonrenewable+c.cycle_cost*throughput}
+            'objective':cost+c.ee_weight*(nonrenewable or 0)+c.cycle_cost*throughput}
 
 
 def totals(points):
-    return {k:sum(p[k] for p in points) for k in ('cost','nonrenewable_kwh','throughput_kwh','objective')} | {
+    return {k:(None if any(p[k] is None for p in points) else sum(p[k] for p in points)) for k in ('cost','nonrenewable_kwh','throughput_kwh','objective')} | {
         'grid_kwh':sum(p['grid_kw']*(p['end']-p['start'])/3600 for p in points),
         'end_soc':points[-1]['soc']}
 
@@ -136,7 +136,7 @@ def optimize(slots, c):
     variables = []
     for i,s in enumerate(slots):
         _, surplus, need, hours = components(s)
-        import_price = c.purchase+c.ee_weight*(1-min(100,s['ee'])/100)
+        import_price = c.purchase+(c.ee_weight*(1-min(100,s['ee'])/100) if s.get('ee') is not None else 0)
         charge = h.addVariable(lb=forced[i],ub=min(surplus,c.charge_kw),obj=(c.feed_in+c.cycle_cost)*hours)
         discharge = h.addVariable(lb=0,ub=min(need,c.discharge_kw),obj=(-import_price+c.cycle_cost)*hours)
         energy = h.addVariable(lb=floors[i],ub=c.capacity)
@@ -153,18 +153,20 @@ def optimize(slots, c):
     for i,p in enumerate(points):
         _,surplus,need,hours = components(p)
         energy = p['soc']/100*c.capacity
-        if (not all(math.isfinite(v) for v in p.values()) or p['charge_kw'] > min(surplus,c.charge_kw)+1e-5
+        if (not all((v is None and key in ('ee','nonrenewable_kwh')) or (isinstance(v,(int,float)) and math.isfinite(v)) for key,v in p.items()) or p['charge_kw'] > min(surplus,c.charge_kw)+1e-5
                 or p['battery_kw'] > min(need,c.discharge_kw)+1e-5
                 or not floors[i]-1e-5 <= energy <= c.capacity+1e-5
                 or abs(energy-previous-p['charge_kw']*hours*c.efficiency+p['battery_kw']*hours/c.efficiency)>1e-5):
             raise ValueError('Fahrplan verletzt die Energiebilanz')
         previous = energy
         p['reason'],p['explanation'] = explain(p,c)
+        if p.get('ee') is None:
+            p['explanation'] += ' EE-Prognose fehlt in diesem Zeitfenster; Planung nur nach Stromkosten, PV und Akku-Grenzen, ohne EE-Gewichtung.'
     plan_totals,base_totals = totals(points),totals(reference)
     if abs(plan_totals['end_soc']-base_totals['end_soc'])>1e-4:
         raise ValueError('Endreserve nicht vergleichbar')
-    return {'available':True,'solver':'HiGHS · LP','mode':'observe','points':points,'reference':base_totals,
+    return {'available':True,'ee_incomplete':any(p.get('ee') is None for p in points),'solver':'HiGHS · LP','mode':'observe','points':points,'reference':base_totals,
             'totals':plan_totals,'initial_soc':c.initial_soc,'minimum_soc':c.minimum_soc,
             'terminal_soc':points[-1]['soc'], 'config':vars(c),
-            'delta':{k:plan_totals[k]-base_totals[k] for k in ('cost','grid_kwh','throughput_kwh','nonrenewable_kwh')},
+            'delta':{k:(None if plan_totals[k] is None or base_totals[k] is None else plan_totals[k]-base_totals[k]) for k in ('cost','grid_kwh','throughput_kwh','nonrenewable_kwh')},
             'start':slots[0]['start'],'end':slots[-1]['end']}

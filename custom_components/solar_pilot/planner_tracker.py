@@ -24,8 +24,6 @@ def collect(controller, now):
     if not finite(house.get('updated')) or not 0 <= now-house['updated'] <= 900:
         raise ValueError('Hausverbrauchsprognose fehlt oder ist veraltet')
     grid = controller.grid_forecast.status(now,c)
-    if not grid['available']:
-        raise ValueError('Aktuelle Energy-Charts-Prognose fehlt')
     if not 0 <= s.forecast_age+max(0,now-s.now) <= c.forecast_max_age_s:
         raise ValueError('Solcast-Prognose ist veraltet')
     sources = display_sources(controller.entities,controller.entry.options.get('display_sources'))
@@ -56,13 +54,13 @@ def collect(controller, now):
         stop = min(end,(int(t)//900+1)*900)
         power = next((p for stamp,p in pv if stamp<=t<stamp+1800),None)
         load = hours.get(int(t)//3600*3600)
-        share = next((p['share'] for p in grid['points'] if p['available'] and p['start']<=t<p['end']),None)
-        if not all(finite(v) for v in (power,load,share)):
-            missing = ', '.join(name for name,value in [('PV',power),('Haus',load),('EE',share)] if not finite(value))
+        share = next((p['share'] for p in grid.get('points',[]) if p['available'] and p['start']<=t<p['end']),None)
+        if not all(finite(v) for v in (power,load)):
+            missing = ', '.join(name for name,value in [('PV',power),('Haus',load)] if not finite(value))
             zone = ZoneInfo(controller.hass.config.time_zone)
             when = datetime.fromtimestamp(t,zone).strftime('%d.%m. %H:%M')
             raise ValueError(f'Prognoselücke ab {when}: {missing}. 24 Stunden nicht vollständig verfügbar.')
-        slots.append({'start':t,'end':stop,'pv_kw':power*c.forecast_factor*.95,'load_kw':float(load),'ee':float(share)})
+        slots.append({'start':t,'end':stop,'pv_kw':power*c.forecast_factor*.95,'load_kw':float(load),'ee':float(share) if finite(share) else None})
         t = stop
     config = PlannerConfig(capacity=c.capacity_kwh,initial_soc=s.house_soc,minimum_soc=floor,
         terminal_soc=c.planner_terminal_soc,charge_kw=c.max_charge_w/1000,discharge_kw=c.normal_discharge_w/1000,
