@@ -79,7 +79,7 @@ export function energyPlanCard(panel) {
     `<rect x="${x(selected.start)}" y="${top}" width="${x(selected.end) - x(selected.start)}" height="${bottom - top}" class="plan-selected"/>`;
   const chart = (type) => {
     const combined=type === "combined";
-    const H = combined ? 310 : 195, top = 28, bottom = H - 27;
+    const H = 195, top = 28, bottom = H - 27;
     const max = combined ? 100 : Math.max(0.5, ...points.map(p=>p.load_kw))*1.12;
     const y = v => bottom - (v/max)*(bottom-top);
     let body=shade(top,bottom);
