@@ -296,3 +296,15 @@ angenommen; die Gesamtsumme nicht erneuerbarer Energie bleibt dann unbekannt.
 Am oder unter dem Wechselrichter-Limit wird trotzdem geplant: zunächst Netz/PV fürs
 Haus, PV-Überschuss zum Wiederaufladen, erst nach Erreichen der Grenze Entladung.
 Fehlende aktuelle Steuerungsdaten aktivieren weiterhin die bisherige Fallback-Regelung.
+
+### Wetterausblick (ab 0.1.75)
+
+Sieben-Tage-Kachel für Dresden unter dem PV-Ausblick: Fläche zwischen prognostiziertem
+Tagesminimum und Tagesmaximum (kein Unsicherheitsband), Diagrammhöhe 230 px.
+Wetterquadrate reichen von Grau bis Gelb anhand des Sonnenanteils am Tageslicht;
+Niederschlag reduziert den Gelbanteil. Ein Tageswetterzeichen ergänzt die Farbe.
+Antippen zeigt Temperaturbereich, Sonnenstunden und Niederschlag, ohne Mouseover.
+Der vorhandene öffentliche Open-Meteo-Stadtabruf liefert zusätzlich Temperaturen.
+Keine zusätzlichen HA-Entitäten oder Änderungen an der Regelung. Aktualisierung beim
+geöffneten Panel höchstens stündlich; Daten nach sechs Stunden ungültig. Fehlende
+Tageswerte bleiben unbekannt und Temperaturflächen verbinden keine Datenlücken.

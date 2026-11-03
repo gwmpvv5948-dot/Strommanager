@@ -2452,3 +2452,24 @@ details summary {
 .plan-legend .plan-ee-key { background: linear-gradient(90deg,#e77976 0 40%,#e5bd52 40% 60%,#5ed9a0 60%); }
 .plan-legend .plan-min-key { height: 0; border-top: 1px dotted #91bfee; border-radius: 0; }
 .plan-combined-legend { margin-top: -4px; }
+
+.weather-outlook-card { --weather-warm: #c77957; --weather-cold: #82ade1; --weather-grey: #8c9797; --weather-yellow: #e7c84d; }
+.weather-outlook-chart { display:block; width:100%; height:230px; }
+.weather-outlook-chart text { font:12px system-ui,sans-serif; fill:var(--ink); }
+.weather-outlook-chart .weather-axis { font-size:11px; fill:var(--muted); }
+.weather-max-line { fill:none; stroke:var(--weather-warm); stroke-width:2; stroke-linejoin:round; }
+.weather-min-line { fill:none; stroke:var(--weather-cold); stroke-width:2; stroke-linejoin:round; }
+.weather-isolated { stroke:var(--weather-cold); stroke-width:6; opacity:.5; }
+.weather-tiles { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); margin:4px 18px 0 48px; justify-items:center; }
+.weather-day { display:grid; place-items:center; width:40px; height:40px; padding:0; border:0; border-radius:5px; color:#263d32; background:color-mix(in srgb,var(--weather-grey) calc(100% - var(--weather-sun)),var(--weather-yellow) var(--weather-sun)); }
+.weather-day ha-icon { --mdc-icon-size:18px; }
+.weather-day[aria-pressed="true"] { outline:2px solid var(--ink); outline-offset:3px; }
+.weather-day.weather-unknown { background:var(--soft); color:var(--muted); }
+.weather-outlook-legend { display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; color:var(--muted); font-size:11px; margin:20px 0 14px; }
+.weather-outlook-legend span { display:flex; align-items:center; gap:6px; }
+.weather-band-key { width:18px; height:10px; border-radius:2px; opacity:.5; background:linear-gradient(var(--weather-warm),var(--weather-cold)); }
+.weather-color-key { width:60px; height:8px; border-radius:2px; background:linear-gradient(90deg,var(--weather-grey),var(--weather-yellow)); }
+.weather-selected { border-top:1px solid var(--line); padding-top:13px; display:flex; flex-wrap:wrap; gap:5px 14px; font-size:12px; color:var(--muted); }
+.weather-selected strong { color:var(--ink); font-weight:500; }
+.weather-outlook-card details { margin-top:12px; font-size:12px; }
+@media(max-width:600px){.weather-tiles{margin-left:36px;margin-right:8px}.weather-day{width:29px;height:32px}.weather-outlook-card .card-title{align-items:baseline;gap:10px}.weather-outlook-card .card-title h2{font-size:19px}}

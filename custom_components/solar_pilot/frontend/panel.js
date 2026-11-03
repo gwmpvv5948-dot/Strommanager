@@ -1,21 +1,22 @@
-import {energyPlanCard,currentEECard} from "./energy-plan-view.js?v=0.1.74";
-import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.74";
-import {solarTimeline} from "./solar-timeline-view.js?v=0.1.74";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.74';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.74';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.74';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.74';
+import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.75";
+import {energyPlanCard,currentEECard} from "./energy-plan-view.js?v=0.1.75";
+import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.75";
+import {solarTimeline} from "./solar-timeline-view.js?v=0.1.75";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.75';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.75';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.75';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.75';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.74';
-import {esc,fmt} from './view-format.js?v=0.1.74';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.74';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.75';
+import {esc,fmt} from './view-format.js?v=0.1.75';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.75';
 import {liveEnergy} from './live-energy.js?v=0.1.40';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
 import {dayAllocation,remainingPV} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.74";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.75";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
 const FIELD_INFO = {
   planner_terminal_soc:["Fahrplan-Endreserve", "% Hausspeicher-SoC", 0, 100, 1],
@@ -82,7 +83,7 @@ export class SolarPilotPanel extends HTMLElement {
       }
     }
     this.render();this._timer=setInterval(()=>this.refresh(),10000);}
-  disconnectedCallback(){clearInterval(this._timer);if(this._consumerFrame)cancelAnimationFrame(this._consumerFrame);this._consumerFrame=null;}
+  disconnectedCallback(){this._weatherObserver?.disconnect();clearInterval(this._timer);if(this._consumerFrame)cancelAnimationFrame(this._consumerFrame);this._consumerFrame=null;}
   async refresh(){
     if(!this._hass||!this._panel||this._loading)return;
     this._loading=true;
@@ -147,6 +148,7 @@ export class SolarPilotPanel extends HTMLElement {
       ${pvBenefitCard(this)}
       ${this.solarChart(s,c)}
       ${this.dayForecast()}
+      ${weatherOutlookCard(this)}
       ${this.consumptionForecast()}
       <section class="card full"><div class="split"><div><h2>Du behältst die Kontrolle</h2><p class="note">Beobachten und Pause senden keine Befehle. Bei Pause bleiben die letzten Geräteeinstellungen bestehen.</p></div></div><div class="actions"><select class="select" id="mode" aria-label="Betriebsmodus" ${this.busy?"disabled":""}>${Object.entries(MODES).map(([k,v])=>`<option value="${k}" ${t.mode===k?"selected":""}>${esc(v)}</option>`).join("")}</select><button class="secondary" data-action="evaluate" ${this.busy?"disabled":""}>Jetzt neu berechnen</button>${t.mode==="observe"||t.mode==="paused"?'<button class="primary" data-action="activate">Steuerung aktivieren</button>':'<button class="secondary" data-action="pause">Regelung pausieren</button>'}</div><details class="mode-help"><summary>Was bedeuten die Betriebsmodi?</summary><dl><dt>Automatik</dt><dd>Unter ${fmt(c.car_low_soc,"%")} Tesla-SoC startet eine Mindestladung bis ${fmt(c.car_min_soc,"%")}, bei Bedarf mit Netzstrom. Der Hausspeicher bleibt dabei geschützt. Sonst lädt Tesla mit genügend PV-Überschuss oder nach Speicherfreigabe über ${fmt(c.storage_release_soc,"%")}. Eine ausgelöste Speicherfreigabe bleibt bis ${fmt(c.reserve_soc,"%")} erhalten. Danach nur PV; reicht sie nicht, pausiert die Ladung. Das Fahrzeuglimit gilt immer.</dd><dt>Speicher bevorzugen</dt><dd>Wie Automatik, aber solange der Hausspeicher unter ${fmt(c.reserve_soc,"%")} liegt, wird das volle eingestellte Speicher-Ladebudget für ihn reserviert. Eine gute PV-Prognose reduziert diese Reservierung hier nicht. Nur darüber hinaus verfügbare PV-Leistung kann zum Tesla gehen. Die Mindestladung unter der Tesla-Untergrenze bleibt erlaubt.</dd><dt>Nur Tesla-Mindeststand</dt><dd>Es gelten dieselben Quellen und Freigaben wie in Automatik; bei ${fmt(c.car_min_soc,"%")} Tesla-SoC endet die Ladung. Zwischen ${fmt(c.car_low_soc,"%")} und ${fmt(c.car_min_soc,"%")} wird ohne bereits ausgelöste Mindestladung nur mit PV oder freigegebenem Speicher geladen.</dd><dt>Beobachten</dt><dd>Berechnet und zeigt Empfehlungen, sendet aber keine Gerätebefehle. Laufende Ladungen und zuletzt gesetzte Gerätewerte werden dadurch nicht verändert.</dd><dt>Pausiert</dt><dd>Strommanager sendet keine Gerätebefehle. Eine bereits laufende Tesla-Ladung wird durch diesen Modus nicht gestoppt; zuletzt gesetzte Lade- und Entladegrenzen bleiben bestehen. Bei Bedarf die Ladung am Fahrzeug oder an der Wallbox stoppen.</dd></dl><p class="note">Aktive Modi brauchen gültige Mess- und Fahrzeugdaten. „Jetzt neu berechnen“ wertet die Daten erneut aus; in aktiven Modi können daraus Gerätebefehle folgen. Aus Beobachten oder Pause wird die Steuerung über „Steuerung aktivieren“ wieder freigegeben.</p></details><p class="note">${fmt(c.reserve_soc,"%")} Abendreserve ist ein Ziel mit verfügbarer Sonne, keine Garantie. Die Tesla-Anbindung arbeitet über die Cloud; kurze Netzbezüge bei Wetterwechseln sind möglich.</p></section>
     </div>`;
@@ -188,7 +190,7 @@ export class SolarPilotPanel extends HTMLElement {
   }
   async loadDayWeather(){
     if(this.demo||this._weatherLoading)return;
-    const zone=this._hass?.config?.time_zone||"Europe/Berlin",now=Date.now(),key="solar-pilot-weather-dresden-v2:"+zone;
+    const zone=this._hass?.config?.time_zone||"Europe/Berlin",now=Date.now(),key="solar-pilot-weather-dresden-v3:"+zone;
     if(!this.dayWeather){try{const cached=JSON.parse(localStorage.getItem(key));if(cached?.data?.daily&&cached.fetched<=now&&now-cached.fetched<21600000)this.dayWeather=cached;}catch(e){/* Storage is optional. */}}
     const today=dateKey(now,zone);
     if(this.dayWeather?.data?.daily?.time?.includes(today)&&now-this.dayWeather.fetched<3600000||now-(this.weatherAttempt||0)<900000)return;
@@ -196,7 +198,7 @@ export class SolarPilotPanel extends HTMLElement {
     const abort=new AbortController(),timeout=setTimeout(()=>abort.abort(),10000);
     try{
       // Public city coordinates, never HA home coordinates or vehicle location.
-      const response=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=51.05&longitude=13.74&daily=weather_code,sunshine_duration,daylight_duration,precipitation_sum&timezone=${encodeURIComponent(zone)}&forecast_days=7`,{signal:abort.signal,credentials:"omit",referrerPolicy:"no-referrer"});
+      const response=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=51.05&longitude=13.74&daily=weather_code,sunshine_duration,daylight_duration,precipitation_sum,temperature_2m_min,temperature_2m_max&timezone=${encodeURIComponent(zone)}&forecast_days=7`,{signal:abort.signal,credentials:"omit",referrerPolicy:"no-referrer"});
       if(!response.ok)throw new Error("Wetterdienst nicht erreichbar");
       const data=await response.json();if(!weatherDays(data)[today])throw new Error("Wetterdaten fehlen");
       this.dayWeather={data,fetched:Date.now()};this.weatherError="";
@@ -364,7 +366,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.74</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.75</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
@@ -406,6 +408,7 @@ export class SolarPilotPanel extends HTMLElement {
       this.render();this.loadBenefitHistory().then(()=>{if(this.isConnected)this.render();});
     });
     bindSourceSettings(this);
+    bindWeatherOutlook(this);
     const form=this.shadowRoot.querySelector("#settings");
     if(form){const read=()=>{const data={};for(const key of Object.keys(FIELD_INFO))data[key]=Number(form.elements.namedItem(key).value);for(const key of ["grid_export_positive","battery_charge_positive","grid_renewable_enabled","planner_control_enabled"])data[key]=form.elements.namedItem(key).checked;return data;};form.oninput=()=>{this.draft=read();};form.onsubmit=e=>{e.preventDefault();if(form.reportValidity())this.service("configure",{settings:read()});};}
   }
