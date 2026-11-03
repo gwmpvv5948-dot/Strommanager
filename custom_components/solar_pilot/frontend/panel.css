@@ -2444,3 +2444,11 @@ details summary {
 .ee-gauge { display: block; width: 180px; max-width: 48%; flex-shrink: 0; overflow: visible; }
 .ee-gauge .ee-scale { fill: var(--muted); font-size: 11px; }
 .ee-gauge .ee-value { font-size: 26px; font-weight: 650; }
+
+.plan-soc-halo { fill: none; stroke: var(--paper); stroke-width: 6; opacity: .9; }
+.plan-combined .plan-soc-line { stroke-width: 3; }
+.plan-min-line { stroke: #91bfee; stroke-width: 1; stroke-dasharray: 2 4; opacity: .75; }
+.plan-legend .plan-soc-key { height: 0; border-top: 3px dashed #91bfee; border-radius: 0; }
+.plan-legend .plan-ee-key { background: linear-gradient(90deg,#e77976 0 40%,#e5bd52 40% 60%,#5ed9a0 60%); }
+.plan-legend .plan-min-key { height: 0; border-top: 1px dotted #91bfee; border-radius: 0; }
+.plan-combined-legend { margin-top: -4px; }
