@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {energyPlanCard,planGroups,currentEECard} from '../custom_components/solar_pilot/frontend/energy-plan-view.js';
+import {energyPlanCard,planGroups,currentEEValue} from '../custom_components/solar_pilot/frontend/energy-plan-view.js';
 test('unavailable observer plan remains honest and never fabricates metrics',()=>{
  const html=energyPlanCard({status:{energy_plan:{available:false,reason:'Prognoselücke'}},_hass:{config:{}}});
  assert.match(html,/Prognoselücke/);assert.match(html,/Keine Gerätebefehle/);assert.doesNotMatch(html,/Stromkosten/);
@@ -15,6 +15,6 @@ test('active plan failure shows fallback instead of observation',()=>{
  assert.match(html,/Fallback: Prognoselücke/);assert.doesNotMatch(html,/Keine Gerätebefehle aus dem Fahrplan/);
 });
 test('current EE uses available share and never shows stale data as live',()=>{
- assert.match(currentEECard({grid_forecast:{available:true,share:85}}),/85 %/);
- assert.doesNotMatch(currentEECard({grid_forecast:{available:false,share:85}}),/85 %/);
+ assert.match(currentEEValue({grid_forecast:{available:true,share:85}}),/85 %/);
+ assert.doesNotMatch(currentEEValue({grid_forecast:{available:false,share:85}}),/85 %/);
 });
