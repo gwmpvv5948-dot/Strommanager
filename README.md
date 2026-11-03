@@ -308,3 +308,52 @@ Der vorhandene öffentliche Open-Meteo-Stadtabruf liefert zusätzlich Temperatur
 Keine zusätzlichen HA-Entitäten oder Änderungen an der Regelung. Aktualisierung beim
 geöffneten Panel höchstens stündlich; Daten nach sechs Stunden ungültig. Fehlende
 Tageswerte bleiben unbekannt und Temperaturflächen verbinden keine Datenlücken.
+
+
+### Gemeinsamer Haus-/Tesla-Fahrplan (ab 0.1.79)
+
+Unter **Einstellungen → Netz, Akku & Tesla** lässt sich die Tesla-Planung zuschalten.
+HiGHS plant dann als MILP Haus, Hausspeicher und den aktuell zu Hause angeschlossenen
+Tesla gemeinsam. Keine feste Abfahrtszeit und keine angenommene Rückkehr: rollierende
+24 Stunden, Fahrzeug-Ladelimit als obere Zielgrenze (im Modus „Nur Tesla-Mindeststand“
+bis zum Mindestziel). Vorläufige nutzbare Fahrzeugkapazität 50 kWh und Ladewirkungsgrad
+0,9 sind konfigurierbare Annahmen, keine Fahrzeugmessungen.
+
+Flexible Tesla-Netzladung wird nur bei vorhandenem EE-Wert ab der konfigurierten
+Schwelle erlaubt (Standard 60 %); ansonsten PV oder freigegebene Speicherenergie.
+Unter der bestehenden Tesla-Untergrenze ausgelöste Mindestladung bleibt vorrangig
+und darf auch weniger erneuerbaren Netzstrom nutzen. Sie schützt den Hausspeicher.
+Im Modus „Speicher bevorzugen“ hat die bis Sonnenuntergang erreichbare Abendreserve
+Planungsvorrang vor zusätzlicher flexibler Fahrzeugladung; in Automatik wird zuerst
+die in den erlaubten Fenstern erreichbare Fahrzeugladung maximiert. Danach werden
+Tarifkosten, EE-Gewichtung, Akku-Durchsatz und eine kleine Modellbewertung von
+Ladestarts minimiert. Kein fiktiver Stromkostenvergleich zu einem Hausplan ohne Tesla.
+
+Ganzzahlige Ampere-Schritte, Start-/Mindeststrom, Ladeobergrenze, Leistungsgrenzen,
+SoC und Ladewirkungsgrade sind Nebenbedingungen. Wegen der gemeinsamen Entladegrenze
+kann auch Hausentladung während Tesla-Ladung erst nach Speicherfreigabe erfolgen;
+sie endet dann an der höheren Tesla-Reserve. Keine Akku-Einspeisung, kein Netzladen
+des Hausspeichers und kein gleichzeitiges Laden/Entladen. PV füllt einen bereits
+unter der Wechselrichter-Grenze liegenden Hausspeicher zunächst wieder auf.
+
+Die Zieloptimierung ist lexikografisch, mit expliziten Toleranzen: beim Tesla ein
+15-Minuten-Startladeblock (bei 1 Phase und 8 A ca. 0,414 kWh im Fahrzeug), 0,001 kWh
+bei der Reserve und 0,001 € im gewichteten Modellziel. Pro Solve-Stufe maximal fünf
+Sekunden, ein Thread. Nur als optimal innerhalb dieser Toleranzen bestätigte und
+anschließend unabhängig physikalisch geprüfte Lösungen werden freigegeben.
+
+Aktuelle Messwerte begrenzen zusätzlich die Anwendung: ohne aktuelles EE-Fenster
+wird kein zusätzlicher flexibler Tesla-Netzbezug freigegeben; aktueller PV-Überschuss
+und freigegebene Speicherleistung begrenzen den tatsächlichen Ladestrom. Neue
+Fahrzeuglimits, mehr als drei Prozentpunkte Tesla- oder fünf Prozentpunkte Hausakku-
+Abweichung lösen eine Neuberechnung/Fallback aus. Bei fehlenden Fahrzeugdaten,
+Abstecken, Schlafzustand, ungültigem oder veraltetem Plan bleibt die bisherige
+Regelung zuständig. Kein automatisches Wecken; ein Schlafzustand kann die Umsetzung
+eines späteren Ladefensters verhindern. Gerätebefehle laufen weiterhin über den
+bestehenden Executor mit Rückmeldeprüfung, Mindestpausen und Cloud-Abständen.
+
+Der Energie-Fahrplan ersetzt die bisherigen großen Entscheidungs-/Reservekacheln.
+Er enthält die Haus-/Tesla-Leistung, Haus- und Tesla-SoC-Kurven, EE-Ampel sowie eine
+kompakte Anzeige der eingestellten Mindest-, Reserve- und Freigabegrenzen. Automatik,
+Speicher bevorzugen, Tesla-Mindeststand, Beobachten, Pause und Neuberechnen bleiben
+als kompakte Bedienleiste erhalten. Beobachten und Pause senden keine Gerätebefehle.

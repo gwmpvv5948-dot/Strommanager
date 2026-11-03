@@ -222,6 +222,25 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         self.assertIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['discharge_limit'],'value':400}),self.calls)
         self.assertFalse(any(domain!='number' for domain,_,_ in self.calls))
 
+    async def test_joint_plan_routes_ev_and_protection_through_existing_executor(self):
+        from dataclasses import replace
+        from unittest.mock import patch
+        self.c.settings=replace(self.c.settings,planner_control_enabled=True,planner_ev_enabled=True)
+        s=sample(now=NOW.timestamp(),house_soc=50,car_soc=39,car_limit=80,pv_w=0,grid_export_w=-500,battery_charge_w=0,wallbox_w=0,charging=False)
+        self.c.read=Mock(return_value=s);self.c.mode="storage_first"
+        self.c.consumption.result={'updated':s.now}
+        self.c.grid_forecast.status=Mock(return_value={'available':True,'share':90})
+        self.c.planner.status=Mock(return_value={'available':True,'joint':True,'updated':s.now,'initial_soc':50,
+            'ev':{'active':True,'initial_soc':39,'limit_soc':80,'target_soc':80,'phases':1},
+            'points':[{'start':s.now,'end':s.now+900,'soc':50,'ev_soc':40,'ev_amps':8,'battery_kw':0}]})
+        self.states['number.batterien_entlade_ende_ladestand']=state(3,"%")
+        with patch.object(sys.modules['pilot_test.controller'],'display_sources',return_value={'battery_min_soc':'number.batterien_entlade_ende_ladestand'}):
+            await self.c.async_update()
+        self.assertEqual(self.c.energy_control['source'],'highs_ev')
+        self.assertIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['discharge_limit'],'value':0}),self.calls)
+        self.assertIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['car_current'],'value':8}),self.calls)
+        self.assertIn(('switch','turn_on',{'entity_id':ENTITY_DEFAULTS['car_charge']}),self.calls)
+
     async def test_status_is_json_safe(self):
         import json
         await self.c.async_start()

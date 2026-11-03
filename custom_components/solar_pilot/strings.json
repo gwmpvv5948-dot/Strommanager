@@ -62,7 +62,11 @@
           "planner_terminal_soc": "Fahrplan-Endreserve (% Hausspeicher-SoC)",
           "planner_ee_weight_eur_kwh": "EE-Gewichtung (€/kWh nicht erneuerbar, nur Modell)",
           "planner_cycle_eur_kwh": "Akku-Durchsatzgewicht (€/kWh, nur Modell)",
-          "planner_control_enabled": "HiGHS steuert den Hausakku (Schwellenregel als Fallback)"
+          "planner_control_enabled": "HiGHS steuert den Hausakku (Schwellenregel als Fallback)",
+          "planner_ev_enabled": "HiGHS plant und steuert auch den Tesla",
+          "planner_ev_capacity_kwh": "Tesla · nutzbare Akkukapazität (kWh)",
+          "planner_ev_efficiency": "Tesla · Ladewirkungsgrad (Faktor)",
+          "planner_ev_grid_share": "Tesla · flexible Netzladung ab EE-Anteil (%)"
         }
       }
     },
@@ -106,7 +110,11 @@
           "planner_terminal_soc": "Fahrplan-Endreserve (% Hausspeicher-SoC)",
           "planner_ee_weight_eur_kwh": "EE-Gewichtung (€/kWh nicht erneuerbar, nur Modell)",
           "planner_cycle_eur_kwh": "Akku-Durchsatzgewicht (€/kWh, nur Modell)",
-          "planner_control_enabled": "HiGHS steuert den Hausakku (Schwellenregel als Fallback)"
+          "planner_control_enabled": "HiGHS steuert den Hausakku (Schwellenregel als Fallback)",
+          "planner_ev_enabled": "HiGHS plant und steuert auch den Tesla",
+          "planner_ev_capacity_kwh": "Tesla · nutzbare Akkukapazität (kWh)",
+          "planner_ev_efficiency": "Tesla · Ladewirkungsgrad (Faktor)",
+          "planner_ev_grid_share": "Tesla · flexible Netzladung ab EE-Anteil (%)"
         }
       }
     },

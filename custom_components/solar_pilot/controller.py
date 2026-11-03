@@ -19,7 +19,7 @@ from .executor import Command, Executor, plan
 from .model import Settings, Snapshot, decide, without_retired_settings, ChargingState, charging_state, consumption_comparison
 from .grid_forecast import GridForecast
 from .planner_tracker import PlannerTracker
-from .planner_control import apply_house_plan
+from .planner_control import apply_house_plan, apply_joint_plan
 from .day_budget import DayBudgetTracker
 from .consumption_tracker import ConsumptionTracker
 
@@ -234,10 +234,18 @@ class Controller:
             increment = step*factor if step is not None and factor else None
             current_grid = self.grid_forecast.status(self.snapshot.now,self.settings)
             house_updated = self.consumption.result.get('updated')
-            inputs_valid = (current_grid['available'] and isinstance(house_updated,(int,float)) and 0<=self.snapshot.now-house_updated<=900
+            forecast_inputs_valid = (isinstance(house_updated,(int,float)) and 0<=self.snapshot.now-house_updated<=900
                 and 0<=self.snapshot.forecast_age<=self.settings.forecast_max_age_s)
-            self.decision,self.energy_control = apply_house_plan(self.snapshot,self.settings,self.decision,self.mode,
-                self.planner.status(self.snapshot.now),device_min_soc=floor,device_max_w=maximum,device_step_w=increment,inputs_valid=inputs_valid)
+            inputs_valid = current_grid['available'] and forecast_inputs_valid
+            energy_plan = self.planner.status(self.snapshot.now)
+            if energy_plan.get('joint') and self.settings.planner_ev_enabled:
+                self.decision,self.energy_control = apply_joint_plan(self.snapshot,self.settings,self.decision,self.mode,
+                    energy_plan,device_min_soc=floor,device_max_w=maximum,device_step_w=increment,
+                    inputs_valid=forecast_inputs_valid,grid_share=current_grid.get('share') if current_grid['available'] else None,
+                    minimum_active=self.charging_state.minimum_active,storage_active=self.charging_state.storage_active)
+            else:
+                self.decision,self.energy_control = apply_house_plan(self.snapshot,self.settings,self.decision,self.mode,
+                    energy_plan,device_min_soc=floor,device_max_w=maximum,device_step_w=increment,inputs_valid=inputs_valid)
             if self.energy_control['replan'] and not self.planner.busy:
                 self.planner.attempted = None
             self.adapter_error = None

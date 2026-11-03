@@ -4,6 +4,8 @@ import math
 from zoneinfo import ZoneInfo
 
 from .energy_planner import PlannerConfig, optimize
+from .ev_planner import optimize_ev
+from .ev_inputs import vehicle_inputs
 from .source_config import display_sources
 
 
@@ -86,7 +88,12 @@ class PlannerTracker:
         self.busy,self.attempted = True,now
         try:
             slots,config,sources = collect(controller,now)
-            result = await controller.hass.async_add_executor_job(optimize,slots,config)
+            ev,ev_status = vehicle_inputs(controller,now)
+            if ev:
+                result = await controller.hass.async_add_executor_job(optimize_ev,slots,config,ev)
+            else:
+                result = await controller.hass.async_add_executor_job(optimize,slots,config)
+                result['ev'] = ev_status
             if not self.stopped:
                 self.result = {**result,'updated':now,'sources':sources}
         except Exception as exc:
