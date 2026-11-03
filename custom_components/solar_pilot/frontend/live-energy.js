@@ -28,3 +28,14 @@ export function liveEnergy(status,states,now=Date.now()){
   const saved=num(status?.last_car_soc),lastSoc=saved!==null&&saved>=0&&saved<=100?saved:null;
   return {pv,grid,battery,house,soc,ev:nonnegative(ev)?ev:null,carSoc:carSoc??lastSoc,carSocStale:!!carSocStale};
 }
+
+// A constant setting may be unchanged for days. Verify the current HA state,
+// connection/status freshness and unit, rather than treating an old change as stale.
+export function dischargeLocked(status, states, now=Date.now()) {
+  const stamp=Date.parse(status?.updated||'');
+  if(!Number.isFinite(stamp)||now-stamp< -60000||now-stamp>120000)return false;
+  const state=states?.[status?.entities?.discharge_limit];
+  if(!state||state.attributes?.restored)return false;
+  const value=num(state.state),unit=state.attributes?.unit_of_measurement;
+  return value===0 && (unit==='W'||unit==='kW');
+}

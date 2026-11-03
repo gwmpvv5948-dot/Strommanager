@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {liveEnergy} from '../custom_components/solar_pilot/frontend/live-energy.js';
+import {liveEnergy,dischargeLocked} from '../custom_components/solar_pilot/frontend/live-energy.js';
 const now=Date.parse('2026-10-30T12:00:00Z');
 function sample(){
  const entities={pv_power:'pv',grid_power:'grid',battery_power:'battery',wallbox_power:'ev',house_soc:'soc'};
@@ -42,3 +42,15 @@ test('last known Tesla SoC is displayed explicitly as stale, not invented as zer
 
 assert.equal(liveEnergy({last_car_soc:38},{}).carSoc,38);
 assert.equal(liveEnergy({last_car_soc:38},{}).carSocStale,true);
+
+test('lock follows verified actual zero setting, independent of requested power or unchanged setting age',()=>{
+ const {status,states}=sample();status.updated=new Date(now).toISOString();status.entities.discharge_limit='limit';
+ states.limit={state:'0',last_updated:'2025-01-01T00:00:00Z',attributes:{unit_of_measurement:'W'}};
+ assert.equal(dischargeLocked(status,states,now),true);
+ states.limit.attributes.unit_of_measurement='kW';assert.equal(dischargeLocked(status,states,now),true);
+ status.decision={discharge_w:0};states.limit.state='2500';assert.equal(dischargeLocked(status,states,now),false);
+ states.limit.state='unavailable';assert.equal(dischargeLocked(status,states,now),false);
+ states.limit.state='0';states.limit.attributes.restored=true;assert.equal(dischargeLocked(status,states,now),false);
+ delete states.limit.attributes.restored;states.limit.attributes.unit_of_measurement='%';assert.equal(dischargeLocked(status,states,now),false);
+ states.limit.attributes.unit_of_measurement='W';status.updated=new Date(now-121000).toISOString();assert.equal(dischargeLocked(status,states,now),false);
+});
