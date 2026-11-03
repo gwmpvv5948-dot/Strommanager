@@ -2498,3 +2498,5 @@ details summary {
 .plan-ev-summary { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); margin:14px 0; }
 .plan-ev-summary strong { color:var(--ink); font-weight:500; font-size:16px; }
 @media(max-width:700px){.plan-thresholds{grid-template-columns:1fr;gap:16px}.plan-controls .select{max-width:100%}}
+
+.price-segment{fill:none;stroke:var(--primary-text-color,#fff);stroke-width:2}.price-predicted{stroke-dasharray:3 2}.price-plan{margin-top:18px}.price-chart{min-height:150px}#price-key{margin-top:28px}#price-key input{width:100%;box-sizing:border-box}

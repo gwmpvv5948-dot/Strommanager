@@ -357,3 +357,33 @@ Er enthält die Haus-/Tesla-Leistung, Haus- und Tesla-SoC-Kurven, EE-Ampel sowie
 kompakte Anzeige der eingestellten Mindest-, Reserve- und Freigabegrenzen. Automatik,
 Speicher bevorzugen, Tesla-Mindeststand, Beobachten, Pause und Neuberechnen bleiben
 als kompakte Bedienleiste erhalten. Beobachten und Pause senden keine Gerätebefehle.
+
+### Börsenpreis als Planungssignal (ab 0.1.80)
+
+Unter **Einstellungen → Energyforecast-Zugang** einen eigenen API-Key speichern.
+Der kostenlose Energyforecast-Zugang liefert heute und zwei weitere Kalendertage;
+der öffentliche Demo-Key nur heute und ist daher kein Ersatz für den laufenden 24-h-Fahrplan.
+Direktzugriff auf `https://www.energyforecast.de/api/v2/forecast`, Marktzone DE-LU,
+stündlich (auch bei Fehlern), Viertelstundenwerte. Keine zusätzliche HA-Integration nötig.
+Der Key liegt in den HA-Integrationsoptionen, wird nicht im Status zurückgegeben
+und ausschließlich an Energyforecast übertragen; HA-Backups enthalten die Optionen.
+
+Der **rohe Börsenpreis** (`price_ct_kwh`, einschließlich negativer Werte) ersetzt bei
+vorhandenen Daten das bisherige EE-Modellgewicht. Modellziel je Netz-kWh:
+`eingestellter Stromtarif + Börsenpreis / 100 × Spotpreis-Gewicht`.
+Das Spotpreis-Gewicht ist standardmäßig 1, konfigurierbar und keine tatsächliche Gebühr.
+Preis ist weder EE-Prozent noch CO₂-Messwert. Die Kosten-/Vorteilsberechnungen verwenden
+weiterhin den eingestellten echten Stromtarif und die Einspeisevergütung.
+Bei fehlenden, veralteten oder ungültigen Preisen gilt je Zeitfenster das EE-Modellgewicht;
+fehlen beide Signale, wird ohne zusätzliches Gewicht geplant. Keine erfundenen Nullwerte.
+
+Flexible Tesla-Netzladung ist bis zur konfigurierten **Börsenpreisgrenze** erlaubt
+(standardmäßig 10 ct/kWh, ohne Steuern/Netzentgelte). Fehlt der Preis, gilt die bisherige
+EE-Freigabeschwelle. Die aktuelle Freigabe wird vor Befehlen erneut geprüft; bei geändertem
+Preis wird auf tatsächlichen PV-Überschuss/freigegebenen Speicher begrenzt.
+Mindestladung und sämtliche Speicher-/Gerätegrenzen bleiben vorrangig.
+
+Im Fahrplan: farbige Preisintervalle (Drittel des verfügbaren Preisbereichs nach Rang:
+günstig/mittel/teuer), veröffentlichte Preise durchgezogen, Prognosen gestrichelt,
+fehlende Intervalle grau. Der echte EE-Anteil bleibt separat sichtbar.
+Börsenpreisquelle: Bundesnetzagentur / SMARD.de, CC BY 4.0; Prognosen: Energyforecast.

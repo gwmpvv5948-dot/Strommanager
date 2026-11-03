@@ -20,6 +20,8 @@ class PlannerConfig:
     release_share: float
     grid_enabled: bool
     initial_hold: bool = False
+    price_weight: float = 0
+    ev_price_ct: float = 10
 
 
 def validate(slots, c):
@@ -38,7 +40,22 @@ def validate(slots, c):
             raise ValueError('Prognoselücke')
         if abs(s['start']-end) > .01 or not 0 < s['end']-s['start'] <= 900.01 or min(s['load_kw'],s['pv_kw']) < 0 or (s.get('ee') is not None and (type(s['ee']) not in (int,float) or not math.isfinite(s['ee']) or not 0 <= s['ee'] <= 150)):
             raise ValueError('Ungültiges Prognoseraster')
+        if s.get('spot_ct') is not None and (type(s['spot_ct']) not in (int,float) or not math.isfinite(s['spot_ct']) or not -100<=s['spot_ct']<=500):
+            raise ValueError('Ungültiger Spotpreis')
         end = s['end']
+
+
+def signal_cost(s, c):
+    """Planning preference only. Never change the actual tariff in cost totals."""
+    if s.get("spot_ct") is not None:
+        return c.price_weight*s["spot_ct"]/100
+    return c.ee_weight*(1-min(100,s["ee"])/100) if s.get("ee") is not None else 0
+
+
+def ev_grid_allowed(s, c, share):
+    if s.get("spot_ct") is not None:
+        return s["spot_ct"] <= c.ev_price_ct
+    return s.get("ee") is not None and s["ee"] >= share
 
 
 def components(s):
@@ -94,7 +111,7 @@ def flow(s, charge, discharge, energy, c):
     return {**s, 'pv_direct_kw':direct, 'charge_kw':max(0,charge), 'battery_kw':max(0,discharge),
             'grid_kw':grid, 'export_kw':export, 'soc':energy/c.capacity*100,
             'cost':cost, 'nonrenewable_kwh':nonrenewable, 'throughput_kwh':throughput,
-            'objective':cost+c.ee_weight*(nonrenewable or 0)+c.cycle_cost*throughput}
+            'objective':cost+grid*signal_cost(s,c)*h+c.cycle_cost*throughput}
 
 
 def totals(points):
@@ -136,7 +153,7 @@ def optimize(slots, c):
     variables = []
     for i,s in enumerate(slots):
         _, surplus, need, hours = components(s)
-        import_price = c.purchase+(c.ee_weight*(1-min(100,s['ee'])/100) if s.get('ee') is not None else 0)
+        import_price = c.purchase+signal_cost(s,c)
         charge = h.addVariable(lb=forced[i],ub=min(surplus,c.charge_kw),obj=(c.feed_in+c.cycle_cost)*hours)
         discharge = h.addVariable(lb=0,ub=min(need,c.discharge_kw),obj=(-import_price+c.cycle_cost)*hours)
         energy = h.addVariable(lb=floors[i],ub=c.capacity)
@@ -153,14 +170,16 @@ def optimize(slots, c):
     for i,p in enumerate(points):
         _,surplus,need,hours = components(p)
         energy = p['soc']/100*c.capacity
-        if (not all((v is None and key in ('ee','nonrenewable_kwh')) or (isinstance(v,(int,float)) and math.isfinite(v)) for key,v in p.items()) or p['charge_kw'] > min(surplus,c.charge_kw)+1e-5
+        if (not all((v is None and key in ('ee','nonrenewable_kwh','spot_ct')) or (isinstance(v,(int,float)) and math.isfinite(v)) for key,v in p.items()) or p['charge_kw'] > min(surplus,c.charge_kw)+1e-5
                 or p['battery_kw'] > min(need,c.discharge_kw)+1e-5
                 or not floors[i]-1e-5 <= energy <= c.capacity+1e-5
                 or abs(energy-previous-p['charge_kw']*hours*c.efficiency+p['battery_kw']*hours/c.efficiency)>1e-5):
             raise ValueError('Fahrplan verletzt die Energiebilanz')
         previous = energy
         p['reason'],p['explanation'] = explain(p,c)
-        if p.get('ee') is None:
+        if p.get('spot_ct') is not None:
+            p['explanation'] += f' Spotpreis {p["spot_ct"]:.2f} ct/kWh als Planungssignal; Kosten weiterhin zum eingestellten Tarif.'
+        elif p.get('ee') is None:
             p['explanation'] += ' EE-Prognose fehlt in diesem Zeitfenster; Planung nur nach Stromkosten, PV und Akku-Grenzen, ohne EE-Gewichtung.'
     plan_totals,base_totals = totals(points),totals(reference)
     if abs(plan_totals['end_soc']-base_totals['end_soc'])>1e-4:

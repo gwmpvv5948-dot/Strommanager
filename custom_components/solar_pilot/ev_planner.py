@@ -1,7 +1,7 @@
 """Joint house/storage/Tesla MILP. No device access; all flows independently checked."""
 from dataclasses import dataclass, asdict
 import math
-from .energy_planner import validate, components, recovery_bounds, totals
+from .energy_planner import validate, components, recovery_bounds, totals, signal_cost, ev_grid_allowed
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,7 @@ def optimize_ev(slots, c, ev):
         h.addConstr(previous<=reserve+c.capacity*(1-at_reserve))
         h.addConstr(released>=previous_release-at_reserve)
         h.addConstr(previous>=reserve-c.capacity*(1-released))
-        clean=s.get('ee') is not None and s['ee']>=ev.grid_share
+        clean=ev_grid_allowed(s,c,ev.grid_share)
         if not clean:
             if ev.urgent:
                 below_min=binary()
@@ -103,7 +103,7 @@ def optimize_ev(slots, c, ev):
             before_min=binary()
             h.addConstr(previous_ev>=urgent_goal-ev.capacity*(1-before_min))
             h.addConstr(dis<=c.discharge_kw*(1-on+before_min))
-        price=c.purchase+(c.ee_weight*(1-min(100,s['ee'])/100) if s.get('ee') is not None else 0)
+        price=c.purchase+signal_cost(s,c)
         grid=need-b_house+g_ev
         cost+=grid*price*hours-export*c.feed_in*hours+c.cycle_cost*(charge+dis)*hours+.002*started
         rows.append(dict(amps=amps,on=on,started=started,energy=energy,energy_ev=energy_ev,pv_ev=pv_ev,
@@ -133,7 +133,7 @@ def optimize_ev(slots, c, ev):
         _,surplus,need,hours=components(s)
         recovery=forced[i]
         reserve_charge=min(surplus,c.charge_kw,max(0,reserve-seed_house)/hours/c.efficiency) if ev.storage_first and i<=reserve_index else recovery
-        clean=s.get('ee') is not None and s['ee']>=ev.grid_share
+        clean=ev_grid_allowed(s,c,ev.grid_share)
         mandatory=ev.urgent and seed_ev<urgent_goal-1e-5
         available=max(0,surplus-max(recovery,reserve_charge))
         amps=ev.max_amps if clean or mandatory else min(ev.max_amps,math.floor(available/kw_per_amp+1e-8))
@@ -185,26 +185,26 @@ def optimize_ev(slots, c, ev):
                 or values['export']>tolerance and dis>tolerance
                 or amps>0 and dis>tolerance and min(previous,energy)<reserve-tolerance):
             raise ValueError('Tesla-Fahrplan verletzt Energie- oder Schutzgrenzen')
-        clean=s.get('ee') is not None and s['ee']>=ev.grid_share
+        clean=ev_grid_allowed(s,c,ev.grid_share)
         if values['g_ev']>tolerance and not clean and (not ev.urgent or previous_ev>urgent_goal+tolerance):
             raise ValueError('Tesla-Netzladung ohne EE- oder Mindestfreigabe')
         nonrenewable=grid*(1-min(100,s['ee'])/100)*hours if s.get('ee') is not None else None
         reason=('Tesla lädt · Mindestladung' if amps and ev.urgent and previous_ev<urgent_goal-1e-5 else
                 'Tesla lädt · PV / Speicher' if amps and values['g_ev']<.02 else
-                'Tesla lädt · hoher EE-Anteil' if amps else
+                ('Tesla lädt · günstiger Spotpreis' if s.get('spot_ct') is not None else 'Tesla lädt · hoher EE-Anteil') if amps else
                 'PV lädt den Akku' if charge>.02 else 'Akku versorgt das Haus' if dis>.02 else
                 'PV versorgt das Haus' if grid<.02 else 'Netz versorgt das Haus')
         explanation=(f'Tesla: {amps} A, {ev_kw:.2f} kW; Ziel ist das Fahrzeug-Ladelimit ohne feste Abfahrtszeit. '
-            +'Netzladung nur bei freigegebenem EE-Anteil oder für die ausgelöste Mindestladung. '
+            +'Netzladung nur im freigegebenen Preisfenster, bei fehlendem Preis über den EE-Fallback oder für die ausgelöste Mindestladung. '
             +'Haus- und Tesla-Reservegrenzen bleiben verbindlich.')
-        if s.get('ee') is None:explanation+=' EE-Prognose fehlt: keine zusätzliche flexible Tesla-Netzladung in diesem Zeitfenster.'
+        if s.get('ee') is None and s.get('spot_ct') is None:explanation+=' EE-Prognose fehlt: keine zusätzliche flexible Tesla-Netzladung in diesem Zeitfenster.'
         points.append({**s,'pv_direct_kw':direct,'charge_kw':charge,'battery_kw':dis,'grid_kw':grid,
             'house_grid_kw':max(0,need-values['b_house']),'house_battery_kw':max(0,values['b_house']),
             'ev_pv_kw':max(0,values['pv_ev']),'ev_battery_kw':max(0,values['b_ev']),'ev_grid_kw':max(0,values['g_ev']),
             'ev_kw':ev_kw,'ev_amps':amps,'ev_soc':energy_ev/ev.capacity*100,
             'export_kw':max(0,values['export']),'soc':energy/c.capacity*100,
             'cost':(grid*c.purchase-values['export']*c.feed_in)*hours,'nonrenewable_kwh':nonrenewable,
-            'throughput_kwh':(charge+dis)*hours,'objective':grid*c.purchase*hours-values['export']*c.feed_in*hours+c.ee_weight*(nonrenewable or 0)+c.cycle_cost*(charge+dis)*hours+.002*values['started'],
+            'throughput_kwh':(charge+dis)*hours,'objective':grid*c.purchase*hours-values['export']*c.feed_in*hours+grid*signal_cost(s,c)*hours+c.cycle_cost*(charge+dis)*hours+.002*values['started'],
             'reason':reason,'explanation':explanation})
         previous,previous_ev=energy,energy_ev
     if abs(sum(p['objective'] for p in points)-h.getObjectiveValue())>1e-4:raise ValueError('Tesla-Fahrplan verletzt die Zielbilanz')

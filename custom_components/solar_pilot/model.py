@@ -7,6 +7,9 @@ from math import floor, isfinite
 
 @dataclass(frozen=True)
 class Settings:
+    planner_price_enabled: bool = True
+    planner_price_weight: float = 1.0
+    planner_ev_price_ct: float = 10.0
     planner_ev_enabled: bool = False
     planner_ev_capacity_kwh: float = 50
     planner_ev_efficiency: float = .9
@@ -49,7 +52,7 @@ class Settings:
     def __post_init__(self):
         for f in fields(self):
             value = getattr(self, f.name)
-            if f.name not in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled", "planner_control_enabled", "planner_ev_enabled") and (type(value) not in (int, float)):
+            if f.name not in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled", "planner_control_enabled", "planner_ev_enabled", "planner_price_enabled") and (type(value) not in (int, float)):
                 raise ValueError(f.name)
             if isinstance(value, (int, float)) and not isfinite(value):
                 raise ValueError(f.name)
@@ -57,10 +60,11 @@ class Settings:
                      "meter_max_age_s", "car_max_age_s", "forecast_max_age_s", "minimum_pause_s"):
             if type(getattr(self, name)) is not int:
                 raise ValueError(name)
-        for name in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled", "planner_control_enabled", "planner_ev_enabled"):
+        for name in ("grid_export_positive", "battery_charge_positive", "grid_renewable_enabled", "planner_control_enabled", "planner_ev_enabled", "planner_price_enabled"):
             if type(getattr(self, name)) is not bool:
                 raise ValueError(name)
         ranges = {
+            "planner_price_weight": (0, 10), "planner_ev_price_ct": (-100, 500),
             "planner_ev_capacity_kwh": (1, 200), "planner_ev_efficiency": (.5, 1), "planner_ev_grid_share": (0, 100),
             "planner_terminal_soc": (0, 100), "planner_ee_weight_eur_kwh": (0, 5), "planner_cycle_eur_kwh": (0, 5),
             "grid_hold_share": (0, 100), "grid_release_share": (0, 100),

@@ -35,6 +35,7 @@ def collect(controller, now):
     floor = float(minimum.state)
     if not math.isfinite(floor) or not 0 <= floor <= 100:
         raise ValueError('Geräte-Mindeststand ungültig')
+    prices = controller.price_forecast.status(now,c) if hasattr(controller,'price_forecast') else {'points':[], 'fetched':None}
     pv = {}
     for i in range(1,8):
         state = controller.hass.states.get(sources[f'forecast_day_{i}'])
@@ -62,14 +63,15 @@ def collect(controller, now):
             zone = ZoneInfo(controller.hass.config.time_zone)
             when = datetime.fromtimestamp(t,zone).strftime('%d.%m. %H:%M')
             raise ValueError(f'Prognoselücke ab {when}: {missing}. 24 Stunden nicht vollständig verfügbar.')
-        slots.append({'start':t,'end':stop,'pv_kw':power*c.forecast_factor*.95,'load_kw':float(load),'ee':float(share) if finite(share) else None})
+        price = next((p for p in prices['points'] if p['start']<=t and p['end']>=stop),None)
+        slots.append({'spot_ct':price['spot_ct'] if price else None,'price_forecast':bool(price and price['forecast']),'start':t,'end':stop,'pv_kw':power*c.forecast_factor*.95,'load_kw':float(load),'ee':float(share) if finite(share) else None})
         t = stop
     config = PlannerConfig(capacity=c.capacity_kwh,initial_soc=s.house_soc,minimum_soc=floor,
         terminal_soc=c.planner_terminal_soc,charge_kw=c.max_charge_w/1000,discharge_kw=c.normal_discharge_w/1000,
         efficiency=c.efficiency,purchase=c.purchase_eur_kwh,feed_in=c.feed_in_eur_kwh,
         ee_weight=c.planner_ee_weight_eur_kwh,cycle_cost=c.planner_cycle_eur_kwh,
-        hold_share=c.grid_hold_share,release_share=c.grid_release_share,grid_enabled=c.grid_renewable_enabled,initial_hold=grid['hold'])
-    return slots,config,{'house_updated':house['updated'],'ee_fetched':grid['fetched'],'pv_age_s':s.forecast_age,
+        hold_share=c.grid_hold_share,release_share=c.grid_release_share,grid_enabled=c.grid_renewable_enabled,initial_hold=grid['hold'],price_weight=c.planner_price_weight,ev_price_ct=c.planner_ev_price_ct)
+    return slots,config,{'price_fetched':prices['fetched'],'house_updated':house['updated'],'ee_fetched':grid['fetched'],'pv_age_s':s.forecast_age,
         'pv_factor':c.forecast_factor,'pv_source':'Solcast Hauptanlage · ohne Garage/Schuppen-Prognose'}
 
 

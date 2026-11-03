@@ -16,6 +16,7 @@ from .model import Settings, without_retired_settings
 ENERGY = tuple(k for k in ENTITY_DEFAULTS if not k.startswith("car_"))
 CAR = tuple(k for k in ENTITY_DEFAULTS if k.startswith("car_"))
 SETTINGS_FIELDS = (
+    "planner_price_enabled", "planner_price_weight", "planner_ev_price_ct",
     "planner_ev_enabled", "planner_ev_capacity_kwh", "planner_ev_efficiency", "planner_ev_grid_share",
     "planner_control_enabled",
     "planner_terminal_soc", "planner_ee_weight_eur_kwh", "planner_cycle_eur_kwh",
@@ -45,7 +46,7 @@ def settings_schema(defaults):
         elif key == "phases":
             field = vol.All(vol.Coerce(int), vol.In((1, 3)))
         else:
-            field = vol.Coerce(int if isinstance(value, int) and key not in ("feed_in_eur_kwh", "purchase_eur_kwh", "benefit_initial_savings_eur", "planner_ee_weight_eur_kwh", "planner_cycle_eur_kwh") else float)
+            field = vol.Coerce(int if isinstance(value, int) and key not in ("feed_in_eur_kwh", "purchase_eur_kwh", "benefit_initial_savings_eur", "planner_ee_weight_eur_kwh", "planner_cycle_eur_kwh", "planner_price_weight", "planner_ev_price_ct") else float)
         schema[vol.Required(key, default=value)] = field
     return vol.Schema(schema)
 

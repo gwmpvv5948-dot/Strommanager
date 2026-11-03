@@ -64,3 +64,17 @@ configure_sources:
       required: true
       selector:
         object:
+
+configure_price:
+  name: Energyforecast-Zugang speichern
+  description: Speichert den API-Key lokal in den Integrationsoptionen und lädt die Integration neu. Der Status gibt den Key nicht zurück.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text:
+    token:
+      required: true
+      selector:
+        text:
+          type: password

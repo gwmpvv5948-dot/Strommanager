@@ -18,6 +18,7 @@ from .const import DOMAIN, ENTITY_DEFAULTS, ENTITY_LABELS, MODES
 from .executor import Command, Executor, plan
 from .model import Settings, Snapshot, decide, without_retired_settings, ChargingState, charging_state, consumption_comparison
 from .grid_forecast import GridForecast
+from .price_forecast import PriceForecast
 from .planner_tracker import PlannerTracker
 from .planner_control import apply_house_plan, apply_joint_plan
 from .day_budget import DayBudgetTracker
@@ -31,6 +32,7 @@ class Controller:
         self.entities = {k:v for k,v in config["entities"].items() if k != "legacy_automation"}
         self.settings = Settings(**without_retired_settings(config.get("settings", {})))
         self.grid_forecast = GridForecast()
+        self.price_forecast = PriceForecast(config.get("energyforecast_token", ""))
         self.planner = PlannerTracker()
         self.energy_control = None
         self.charging_state = ChargingState()
@@ -208,6 +210,8 @@ class Controller:
             return
         if not self.grid_forecast.busy and (self.grid_forecast.attempted is None or dt_util.utcnow().timestamp()-self.grid_forecast.attempted >= 900) and hasattr(self.hass, "config"):
             self.entry.async_create_background_task(self.hass, self.grid_forecast.refresh(self.hass, dt_util.utcnow().timestamp()), "Strommanager Energy-Charts")
+        if self.settings.planner_price_enabled and self.price_forecast.token and not self.price_forecast.busy and (self.price_forecast.attempted is None or dt_util.utcnow().timestamp()-self.price_forecast.attempted>=3600):
+            self.entry.async_create_background_task(self.hass,self.price_forecast.refresh(self.hass,dt_util.utcnow().timestamp()),"Strommanager Energyforecast")
         async with self.lock:
             self.snapshot = self.read()
             if self.snapshot.car_soc is not None:
@@ -236,13 +240,14 @@ class Controller:
             house_updated = self.consumption.result.get('updated')
             forecast_inputs_valid = (isinstance(house_updated,(int,float)) and 0<=self.snapshot.now-house_updated<=900
                 and 0<=self.snapshot.forecast_age<=self.settings.forecast_max_age_s)
-            inputs_valid = current_grid['available'] and forecast_inputs_valid
+            current_price = self.price_forecast.status(self.snapshot.now,self.settings)
+            inputs_valid = (current_grid['available'] or current_price['available']) and forecast_inputs_valid
             energy_plan = self.planner.status(self.snapshot.now)
             if energy_plan.get('joint') and self.settings.planner_ev_enabled:
                 self.decision,self.energy_control = apply_joint_plan(self.snapshot,self.settings,self.decision,self.mode,
                     energy_plan,device_min_soc=floor,device_max_w=maximum,device_step_w=increment,
                     inputs_valid=forecast_inputs_valid,grid_share=current_grid.get('share') if current_grid['available'] else None,
-                    minimum_active=self.charging_state.minimum_active,storage_active=self.charging_state.storage_active)
+                    spot_ct=current_price['spot_ct'],minimum_active=self.charging_state.minimum_active,storage_active=self.charging_state.storage_active)
             else:
                 self.decision,self.energy_control = apply_house_plan(self.snapshot,self.settings,self.decision,self.mode,
                     energy_plan,device_min_soc=floor,device_max_w=maximum,device_step_w=increment,inputs_valid=inputs_valid)
@@ -312,6 +317,11 @@ class Controller:
         if payload != self._saved_payload:
             await self.store.async_save(payload)
             self._saved_payload = payload
+
+    async def async_configure_price(self, token):
+        if not isinstance(token,str) or len(token)>512 or any(ch.isspace() for ch in token):
+            raise ServiceValidationError("Ungültiger API-Key")
+        self.hass.config_entries.async_update_entry(self.entry,options={**self.entry.options,"energyforecast_token":token})
 
     async def async_configure(self, changes):
         try:
@@ -443,6 +453,7 @@ class Controller:
             "energy_control": self.energy_control,
             "energy_plan": self.planner.status(dt_util.utcnow().timestamp()),
             "grid_forecast": self.grid_forecast.status(dt_util.utcnow().timestamp(), self.settings),
+            "price_forecast": self.price_forecast.status(dt_util.utcnow().timestamp(), self.settings),
             "source_reports": source_reports,
             "last_car_soc": self.last_car_soc,
             "entry_id": self.entry.entry_id, "mode": self.mode,

@@ -67,3 +67,10 @@ class JointPlanning(unittest.TestCase):
         c=config(initial_soc=70);ev=vehicle();data=slots(ee=90);data[0]['start']=173
         r=optimize_ev(data,c,ev);self.verify(r,c,ev)
         self.assertGreater(r['ev']['planned_soc'],79)
+    def test_prices_select_network_windows_without_claiming_ee_and_keep_tariff(self):
+        data=slots(hours=8,load=.2);c=config(initial_soc=3,minimum_soc=3,price_weight=1,ev_price_ct=10);ev=vehicle(target_soc=45)
+        for i,p in enumerate(data):p.update(ee=0 if i<16 else 100,spot_ct=-5 if i<16 else 30,price_forecast=i>=16)
+        r=optimize_ev(data,c,ev);self.verify(r,c,ev)
+        self.assertGreater(sum(p['ev_grid_kw'] for p in r['points'][:16]),0)
+        self.assertAlmostEqual(sum(p['ev_grid_kw'] for p in r['points'][16:]),0)
+        self.assertAlmostEqual(r['totals']['cost'],sum((p['grid_kw']*c.purchase-p['export_kw']*c.feed_in)*(p['end']-p['start'])/3600 for p in r['points']))
