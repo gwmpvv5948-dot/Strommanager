@@ -1,5 +1,5 @@
 import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.80";
-import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.80-price2";
+import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.80-collapse";
 import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.80";
 import {solarTimeline} from "./solar-timeline-view.js?v=0.1.80";
 import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.80';
