@@ -12,7 +12,7 @@ test('missing SoC does not claim minimum SoC reached',()=>{
 });
 
 test('traffic colours have fixed thresholds independent of control',()=>{
- for(const [value,color] of [[null,'neutral'],[NaN,'neutral'],[0,'red'],[39.9,'red'],[40,'yellow'],[60,'yellow'],[80,'yellow'],[80.1,'green'],[110,'green']])assert.equal(renewableColor(value),color);
+ for(const [value,color] of [[null,'neutral'],[NaN,'neutral'],[0,'red'],[39.9,'red'],[40,'yellow'],[60,'yellow'],[60.1,'green'],[80,'green'],[80.1,'green'],[110,'green']])assert.equal(renewableColor(value),color);
 });
 test('local day bands mark today, tomorrow and DST midnight',()=>{
  const now=Date.parse('2026-10-24T20:00:00+02:00')/1000;

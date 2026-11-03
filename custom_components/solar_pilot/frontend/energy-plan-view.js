@@ -21,19 +21,19 @@ export function planGroups(points) {
 export function currentEECard(status) {
   const g=status?.grid_forecast, share=g?.available ? g.share : null;
   const valid=typeof share === "number" && Number.isFinite(share) && share>=0;
-  const color=valid ? (share>80 ? "#65dba5" : share<40 ? "#f07878" : "#e4c65c") : "var(--muted)";
+  const color=valid ? (share>60 ? "#65dba5" : share<40 ? "#f07878" : "#e4c65c") : "var(--muted)";
   const point=(v,r=70)=>({x:100-r*Math.cos(Math.PI*v/100),y:92-r*Math.sin(Math.PI*v/100)});
   const arc=(from,to,color)=>{
     const a=point(from),b=point(to);
     return `<path d="M${a.x},${a.y} A70,70 0 0 1 ${b.x},${b.y}" fill="none" stroke="${color}" stroke-width="8"/>`;
   };
-  const labels=[0,40,80,100].map(v=>{
+  const labels=[0,40,60,100].map(v=>{
     const p=v===0?{x:24,y:111}:v===100?{x:176,y:111}:point(v,89);
     return `<text x="${p.x}" y="${p.y}" text-anchor="middle" class="ee-scale">${v}</text>`;
   }).join("");
   const value=fmt(valid?share:null,"%"),v=Math.min(100,Math.max(0,share??0)),a=point(v,59),b=point(v,81);
   const indicator=valid?`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>`:"";
-  return `<section class="card full current-ee-card"><div class="ee-layout"><span>Erneuerbare im Netzstrom · jetzt</span><svg class="ee-gauge" viewBox="0 -8 200 128" role="img" aria-label="EE-Anteil im Netzstrom: ${esc(value)}. Skala 0 bis 100 Prozent. Rot unter 40, Gelb 40 bis 80, Grün über 80 Prozent.">${arc(0,40,"#f07878")}${arc(40,80,"#e4c65c")}${arc(80,100,"#65dba5")}${labels}${indicator}<text x="100" y="79" text-anchor="middle" class="ee-value" fill="${color}">${esc(value)}</text></svg></div></section>`;
+  return `<section class="card full current-ee-card"><div class="ee-layout"><span>Erneuerbare im Netzstrom · jetzt</span><svg class="ee-gauge" viewBox="0 -8 200 128" role="img" aria-label="EE-Anteil im Netzstrom: ${esc(value)}. Skala 0 bis 100 Prozent. Rot unter 40, Gelb 40 bis 60, Grün über 60 Prozent.">${arc(0,40,"#f07878")}${arc(40,60,"#e4c65c")}${arc(60,100,"#65dba5")}${labels}${indicator}<text x="100" y="79" text-anchor="middle" class="ee-value" fill="${color}">${esc(value)}</text></svg></div></section>`;
 }
 export function energyPlanCard(panel) {
   const plan = panel.status?.energy_plan,
@@ -92,7 +92,7 @@ export function energyPlanCard(panel) {
         ? [0, max / 2, max]
         : type === "soc"
           ? [plan.minimum_soc, 50, 100]
-          : [40, 80];
+          : [40, 60];
     for (const v of ticks)
       body += `<line x1="${left}" x2="${right}" y1="${y(v)}" y2="${y(v)}" class="chart-grid"/><text x="${left - 7}" y="${y(v) + 4}" text-anchor="end">${fmt(v, "", type === "supply" ? 1 : 0)}${type === "supply" ? "" : "%"}</text>`;
     if (type === "soc") {
@@ -112,7 +112,7 @@ export function energyPlanCard(panel) {
         if (type === "ee" && p.ee == null)
           body += `<rect x="${x(p.start)}" y="${top}" width="${width}" height="${bottom-top}" class="grid-neutral" opacity="0.22"/>`;
         else if (type === "ee")
-          body += `<rect x="${x(p.start)}" y="${y(Math.min(100, p.ee))}" width="${width}" height="${bottom - y(Math.min(100, p.ee))}" class="grid-${p.ee > 80 ? "green" : p.ee < 40 ? "red" : "yellow"}"/>`;
+          body += `<rect x="${x(p.start)}" y="${y(Math.min(100, p.ee))}" width="${width}" height="${bottom - y(Math.min(100, p.ee))}" class="grid-${p.ee > 60 ? "green" : p.ee < 40 ? "red" : "yellow"}"/>`;
         else {
           let base = bottom;
           for (const [key, cls] of [

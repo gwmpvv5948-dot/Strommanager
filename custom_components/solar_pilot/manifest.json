@@ -1,7 +1,7 @@
 {
   "domain": "solar_pilot",
   "name": "Strommanager",
-  "version": "0.1.71",
+  "version": "0.1.72",
   "config_flow": true,
   "integration_type": "service",
   "iot_class": "calculated",
