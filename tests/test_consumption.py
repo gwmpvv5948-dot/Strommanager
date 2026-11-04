@@ -26,6 +26,20 @@ class Forecast(unittest.TestCase):
         self.assertAlmostEqual(result["remaining_kwh"],sum(p["kwh"]*p["remaining_fraction"] for p in result["hours"]))
         self.assertLessEqual(result["window_observed"][0]["stamp"],self.now-12*3600)
 
+    def test_reopening_existing_database_preserves_learning_and_forecasts(self):
+        self.db.put(self.seed(days=14))
+        self.db.meta("import_cursor", "existing-history")
+        self.db.forecast(self.now, 10.)
+        with self.db.connect() as db:
+            before = {table: db.execute("SELECT * FROM " + table + " ORDER BY 1").fetchall()
+                      for table in ("hours", "predictions", "metadata")}
+        reopened = ConsumptionDB(self.db.path)
+        with reopened.connect() as db:
+            self.assertEqual(db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
+            for table, rows in before.items():
+                self.assertEqual(db.execute("SELECT * FROM " + table + " ORDER BY 1").fetchall(), rows)
+        self.assertEqual(reopened.meta("import_cursor"), "existing-history")
+
     def seed(self,days=60):
         start=self.now//86400*86400-days*86400
         return [(t,.4,10.,1.,'influx') for t in range(start,self.now//3600*3600,3600)]

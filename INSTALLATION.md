@@ -1,6 +1,6 @@
 # Strommanager in Home Assistant installieren
 
-Direktinstallation aus diesem GitHub-Repository, ohne HACS. Der interne
+Installation über HACS oder alternativ direkt aus diesem GitHub-Repository. Der interne
 Integrationsordner heißt weiterhin `solar_pilot`.
 
 ## Voraussetzungen
@@ -124,3 +124,25 @@ Die derzeit installierte Fassung wird ebenfalls behalten:
 Nach erfolgreicher Prüfung erneut `ha core restart` ausführen.
 Dies stellt nur die Integrationsdateien wieder her. Für eine vollständige
 Wiederherstellung von HA-Konfiguration und Daten das vollständige HA-Backup verwenden.
+
+
+## Installation und Updates mit HACS
+
+1. Vorhandene Installation und Daten sichern (siehe unten).
+2. HACS öffnen → Menü ⋮ → Benutzerdefinierte Repositories.
+3. `https://github.com/gwmpvv5948-dot/Strommanager` mit Typ **Integration** hinzufügen.
+4. **Strommanager** öffnen und herunterladen. Anschließend Home Assistant neu starten.
+5. Bei einer bestehenden Installation die vorhandene Integration weiterverwenden. **Nicht löschen und nicht erneut hinzufügen.** Nur bei einer Erstinstallation unter Geräte & Dienste hinzufügen.
+
+HACS verwaltet ausschließlich `custom_components/solar_pilot`. Domain `solar_pilot`, Config-Entry-ID, Speicherschlüssel und SQLite-Schema bleiben in 0.1.83 unverändert. Laufzeitdaten befinden sich außerhalb des ausgetauschten Codeordners:
+
+- `.storage/core.config_entries`: bestehende Zuordnungen und Einstellungen (kann Zugangsdaten enthalten; nicht veröffentlichen).
+- `.storage/solar_pilot.<entry_id>`: Betriebsmodus, Befehlszustand und Abstände.
+- `.storage/solar_pilot.budget.<entry_id>`: Tagesbilanz und Archiv.
+- `.storage/solar_pilot.consumption.<entry_id>.sqlite`: gelernte Verbrauchsstunden, Prognosen, Metadaten und aktuelle Stundenakkumulation.
+
+Vor der Übernahme ein HA-Backup einschließlich Konfiguration erstellen. Eine zusätzliche Kopie einer laufenden SQLite-Datenbank muss mit der SQLite-Backup-Funktion erstellt werden, damit offene Transaktionen konsistent berücksichtigt werden. Eine bloße Dateikopie bei laufendem HA ist dafür ungeeignet.
+
+Nach der Übernahme dieselbe Integrations-ID, Einstellungen, Datenbank-Integrität (`PRAGMA integrity_check`) und die vorhandenen historischen Lernstunden prüfen. Neue Messungen dürfen währenddessen hinzukommen. Kein Reset und kein neuer Datenimport sind für HACS nötig. InfluxDB und die HA-Recorder-Historie werden durch die Übernahme nicht verändert.
+
+Künftige Aktualisierungen erfolgen über HACS. Bei einer Rückkehr zur vorherigen Codeversion denselben Config Entry und die Datendateien beibehalten. Sicherungen mit Zugangsdaten ausschließlich lokal aufbewahren.

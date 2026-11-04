@@ -2,7 +2,7 @@
 
 Eigene Home-Assistant-Integration mit einem Panel in der Seitenleiste für PV, Hausspeicher und Tesla. Interner Integrationsname: `solar_pilot`.
 
-**Entwicklungsstand 0.1.3.** Eigenes HA-Panel, persistente Tagesbilanz und einstellbare Tesla-/Speicher-Ladehysterese. 73 Python- und 20 JavaScript-Tests prüfen Berechnung, Befehlsplanung und Adapter-Verträge. Die neue Grenzwertsteuerung ist noch nicht durch einen vollständigen echten Ladezyklus live abgenommen.
+**Version 0.1.83.** Installation und Updates über HACS als benutzerdefiniertes Repository. Vorhandene Einstellungen und lokale Lerndaten werden weiterverwendet.
 
 ## Was die erste Version enthält
 
@@ -39,7 +39,7 @@ Wiederherstellung des vorherigen Integrationsordners.
 6. Ist- und Sollwerte, Einheiten, Vorzeichen, Anzahl der Ladephasen und Gerätegrenzen prüfen.
 7. Erst nach Prüfung **Steuerung aktivieren** wählen. Strommanager verändert keine anderen HA-Automationen.
 
-HACS-Veröffentlichung oder automatisches Update sind noch nicht eingerichtet. Keine Anmeldung, Tokens oder privaten Fahrzeugschlüssel in dieses Repository legen.
+HACS ist als benutzerdefiniertes Integrations-Repository eingerichtet; siehe [Installation und sichere Übernahme](INSTALLATION.md#installation-und-updates-mit-hacs). Keine Anmeldung, Tokens oder privaten Fahrzeugschlüssel in dieses Repository legen.
 
 ### Pausieren und Deinstallation
 
