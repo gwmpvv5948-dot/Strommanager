@@ -2,19 +2,20 @@ import {liveEnergy,dischargeLocked} from './live-energy.js';
 import {esc,fmt} from './view-format.js';
 import {dayBounds,number} from './solar-chart.js';
 import {dailyEnergy} from './energy-budget.js';
-import {currentEEValue} from './energy-plan-view.js?v=0.1.99';
+import {currentEEValue} from './energy-plan-view.js?v=0.1.100';
 
 // Site balance, shared proportionally by house and Tesla. No claim to trace
 // individual electrons, and no inference about the origin of stored energy.
 export function energyMix(v){
-  if([v.house,v.ev,v.grid,v.battery].some(x=>typeof x!=='number'||!Number.isFinite(x)))return null;
+  if([v.pv,v.house,v.ev,v.grid,v.battery].some(x=>typeof x!=='number'||!Number.isFinite(x)))return null;
   const load=v.house+v.ev;
   if(load<=1)return null;
   const grid=Math.max(0,-v.grid);
   const storage=Math.max(0,-v.battery),pv=load+Math.max(0,v.battery)-grid-storage;
   if(pv< -100)return null;
-  const total=Math.max(0,pv)+grid+storage;
-  return {pv:Math.max(0,pv)/total*100,storage:storage/total*100,grid:grid/total*100,autarky:(1-grid/total)*100};
+  const direct=Math.min(Math.max(0,pv),Math.max(0,v.pv)),total=direct+grid+storage;
+  if(total<=1)return null;
+  return {pv:direct/total*100,storage:storage/total*100,grid:grid/total*100,autarky:(1-grid/total)*100};
 }
 export function energyToday(status,states,now,zone){
   const d=status?.source_entities?.display||{},start=dayBounds(now,zone).start;
