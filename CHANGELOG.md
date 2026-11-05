@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.91
+
+- Akku- und Tesla-Angaben aus „Energie jetzt“ entfernt.
+- Hausspeicher und Tesla als eigene Kacheln direkt unter dem Energie-Fahrplan.
+
 ## 0.1.90
 
 - Akku-Grenzwerte rechts neben dem Akku statt als Fußlegende; große Ladestandsanzeige darüber.

@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/gwmpvv5948-dot/Strommanager/main/custom_components/solar_pilot/brand/icon%402x.png" alt="Strommanager" width="96" height="96">
 
-**Version 0.1.90** · Home-Assistant-Integration für Photovoltaik, Hausspeicher und Tesla – mit eigener Übersicht in der Seitenleiste.
+**Version 0.1.91** · Home-Assistant-Integration für Photovoltaik, Hausspeicher und Tesla – mit eigener Übersicht in der Seitenleiste.
 
 ## Funktionen
 

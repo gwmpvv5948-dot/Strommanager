@@ -1,22 +1,23 @@
-import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.90";
-import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.90-collapse";
-import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.90";
-import {solarTimeline} from "./solar-timeline-view.js?v=0.1.90";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.90';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.90';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.90';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.90';
+import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.91";
+import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.91-collapse";
+import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.91";
+import {solarTimeline} from "./solar-timeline-view.js?v=0.1.91";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.91';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.91';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.91';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.91';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.90-price2';
-import {esc,fmt} from './view-format.js?v=0.1.90';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.90';
-import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.90';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.91-price2';
+import {esc,fmt} from './view-format.js?v=0.1.91';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.91';
+import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.91';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
+import {planThresholds} from './plan-thresholds.js?v=0.1.91';
 import {plannedDayAllocation} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.90";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.91";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
 const FIELD_INFO = {
   planner_price_weight:["Spotpreis · Gewicht im Fahrplan", "Modellgewicht · keine Stromgebühr", 0, 10, .1],
@@ -112,13 +113,7 @@ export class SolarPilotPanel extends HTMLElement {
     const station=(name,value,label,cls='',extra='')=>`<div class="live-station">${icon(name,cls)}<strong class="live-value">${power(value)}</strong><span class="sub">${label}</span><span class="live-ee-slot">${extra}</span></div>`;
     const gridLabel=v.grid==null?'Netz':v.grid>10?'Einspeisung':v.grid< -10?'Netzbezug':'Netz · ausgeglichen';
     const gridArrow=v.grid==null||Math.abs(v.grid)<=10?'minus':v.grid>0?'arrow-right':'arrow-left';
-    const carKey='solar_pilot.last_car_soc.'+(this.status?.entry_id||'default')+'.'+(this.status?.entities?.car_soc||'unknown');
-    if(v.carSoc!=null){this._lastCarSoc=v.carSoc;try{localStorage.setItem(carKey,String(v.carSoc));}catch(e){/* Display cache is optional. */}}
-    if(this._lastCarSoc==null){try{const saved=localStorage.getItem(carKey),value=saved===null?null:numeric(saved);if(value!==null&&value>=0&&value<=100)this._lastCarSoc=value;}catch(e){/* No cached value. */}}
-    const carSoc=v.carSoc??this._lastCarSoc,carLast=v.carSoc==null||v.carSocStale;
-    const locked=!this._error&&dischargeLocked(this.status,this._hass?.states);
-    const batteryLabel=v.battery==null?'Akkuleistung unbekannt':v.battery>10?'Akku lädt':v.battery< -10?'Akku entlädt':'Akku ruht';
-    return `<section class="card full live-energy-card" aria-label="Aktuelle Energieübersicht"><div class="card-title"><h2>Energie jetzt</h2></div><div class="live-energy-body"><div class="live-flow">${station('white-balance-sunny',v.pv,'PV gesamt','solar')}<ha-icon class="live-arrow" icon="mdi:${v.pv>10?'arrow-right':'minus'}" aria-hidden="true"></ha-icon>${station('home-lightning-bolt-outline',v.house,'Haus')}<ha-icon class="live-arrow" icon="mdi:${gridArrow}" aria-hidden="true"></ha-icon>${station('transmission-tower',v.grid,gridLabel,'grid-icon',currentEEValue(this._error?null:this.status))}</div><div class="live-bottom"><div class="live-battery">${icon('battery-charging-outline','battery')}<div><strong>${fmt(v.soc,'%')}</strong><span class="sub">${batteryLabel}${v.battery==null?'':' · '+fmt(Math.abs(v.battery),'W')}</span>${locked?'<span class="live-discharge-lock"><ha-icon icon="mdi:lock-outline" aria-hidden="true"></ha-icon>Entladung gesperrt</span>':''}${v.soc==null?'':`<div class="live-soc" role="meter" aria-label="Akkustand" aria-valuenow="${v.soc}" aria-valuemin="0" aria-valuemax="100"><span style="width:${v.soc}%"></span></div>`}</div></div><div class="live-ev">${icon('car-electric-outline')}<div><strong>${fmt(carSoc,'%')}${carSoc!=null&&carLast?'<small class="live-last">zuletzt</small>':''}</strong><span class="sub">${v.ev==null?'Tesla · Leistung unbekannt':(v.ev>10?'Tesla lädt':'Tesla pausiert')+' · '+fmt(v.ev,'W')}</span></div></div></div></div></section>`;
+    return `<section class="card full live-energy-card" aria-label="Aktuelle Energieübersicht"><div class="card-title"><h2>Energie jetzt</h2></div><div class="live-energy-body"><div class="live-flow">${station('white-balance-sunny',v.pv,'PV gesamt','solar')}<ha-icon class="live-arrow" icon="mdi:${v.pv>10?'arrow-right':'minus'}" aria-hidden="true"></ha-icon>${station('home-lightning-bolt-outline',v.house,'Haus')}<ha-icon class="live-arrow" icon="mdi:${gridArrow}" aria-hidden="true"></ha-icon>${station('transmission-tower',v.grid,gridLabel,'grid-icon',currentEEValue(this._error?null:this.status))}</div></div></section>`;
   }
   consumerCard(){
     return `<section class="card consumer-card" aria-label="Verbraucher jetzt"><div class="consumer-title"><h2>Verbraucher jetzt</h2><span class="sub">Ganz Home Assistant</span></div><div class="consumer-content">${consumerHeatmap(this._hass?.states,this.status,{unavailable:!!this._error})}</div></section>`;
@@ -138,6 +133,7 @@ export class SolarPilotPanel extends HTMLElement {
     return `<div class="grid">
       ${this.liveEnergyCard()}
       ${energyPlanCard(this)}
+      ${planThresholds(this)}
       ${this.budgetCard(s,c)}
       ${this.consumerCard()}
       <div class="status-pair benefit-weather-pair full">${pvBenefitCard(this)}${weatherOutlookCard(this)}</div>
@@ -359,7 +355,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><img class="logo" src="/solar_pilot_frontend/strommanager-icon.png?v=0.1.90" alt="" width="38" height="38"><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.90</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><img class="logo" src="/solar_pilot_frontend/strommanager-icon.png?v=0.1.91" alt="" width="38" height="38"><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.91</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});

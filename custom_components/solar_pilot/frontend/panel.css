@@ -2543,3 +2543,5 @@ details summary {
 .vehicle-minimum{margin-top:10px;font-size:12px}
 @media(max-width:1050px) and (min-width:701px){.storage-vehicle article{padding:18px}.storage-side-label{font-size:12px}.storage-stage{height:225px}.vehicle-targets span{font-size:12px}}
 @media(max-width:700px){.storage-vehicle article{min-height:0;padding:20px}.storage-stage{height:240px;max-width:350px}.storage-percent{font-size:48px}.vehicle-visual .tesla-art{height:170px}.vehicle-targets{margin-top:12px}.storage-side-label{font-size:13px}}
+
+.storage-vehicle.full{margin:0}.storage-vehicle.full article{margin:0}

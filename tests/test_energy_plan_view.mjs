@@ -31,7 +31,7 @@ test('joint plan renders EV without a misleading house-only cost comparison',()=
  assert.match(disclosure[1],/EE-Anteil &amp; Börsenpreis/);
  assert.match(disclosure[1],/price-chart/);
  assert.equal((html.match(/price-chart/g)||[]).length,1);
- assert.match(html,/Haus \+ Tesla/);assert.match(html,/Tesla-SoC/);assert.match(html,/Reserven|WR-Minimum/);
+ assert.match(html,/Haus \+ Tesla/);assert.match(html,/Tesla-SoC/);assert.doesNotMatch(html,/storage-visual|vehicle-visual/);
  assert.doesNotMatch(html,/Gegenüber Schwellenregel · simuliert/);assert.match(html,/id="mode"/);
 });
 
