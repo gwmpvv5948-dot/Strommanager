@@ -35,3 +35,20 @@ Planung und Verbrauchslernen laufen lokal in Home Assistant. Die Lerndaten liege
 Die aktuelle Wechselrichter-Untergrenze und die konfigurierten Gerätegrenzen bleiben maßgeblich. Bei ungültigen oder veralteten Planungsdaten greift die hinterlegte Rückfallregelung. **Beobachten** und **Pause** senden keine Gerätebefehle; zuletzt gesetzte Gerätewerte bleiben bestehen. Schlafende Tesla-Fahrzeuge werden nicht automatisch geweckt. Prognosen und Einsparungen sind Schätzungen.
 
 Weitere technische Informationen: [Architektur](docs/ARCHITECTURE.md) · [Änderungen](CHANGELOG.md) · [Releases](https://github.com/gwmpvv5948-dot/Strommanager/releases).
+
+### Lokales Icon in HACS 2.0.5
+
+Das Icon liegt bereits in `custom_components/solar_pilot/brand/`. HACS 2.0.5
+verwendet in seinem Frontend und seiner Update-Entität noch den externen
+Brands-Server. Für `solar_pilot` existiert dort kein Bild. Reparaturen verwenden
+dagegen die lokale HA-Brands-API.
+
+Der optionale, lokale Kompatibilitätsfix `tools/fix_hacs_brand.py` ersetzt für
+**ausschließlich `solar_pilot`** diese URL durch
+`/solar_pilot_frontend/strommanager-icon.png`. Er verändert HACS-Dateien nur bei
+explizitem Aufruf mit `--apply`, sichert alle Änderungen unter `/config/backups`
+und prüft die erwartete HACS-Codeform. Ohne `--apply` ist der Aufruf lesend.
+Andere Integrationen und das Updateverhalten bleiben unverändert. Nach Anwendung
+HA neu starten und die Oberfläche neu laden. Ein späteres HACS-Update kann den
+Fix überschreiben; dann erneut prüfen/anwenden. Bei Marketplace mit nativer
+Unterstützung lokaler Markenbilder wird dieser Fix nicht benötigt.
