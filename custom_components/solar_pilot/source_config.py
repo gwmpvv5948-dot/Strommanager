@@ -10,6 +10,7 @@ LEARNING_DEFAULTS = {
     "weather": "weather.dresden_stadt",
 }
 DISPLAY_LABELS = {
+    "garage_daily":"Energie jetzt · Garage Tagesertrag", "shed_daily":"Energie jetzt · Schuppen Tagesertrag", "grid_import_daily":"Energie jetzt · Netzbezug heute",
     "pv_daily": "WR-Tagesertrag · Monatsreferenz", "roof_daily": "Dach-Tagesertrag",
     "benefit_garage_energy": "PV-Vorteil · Garage Energiezähler",
     "benefit_shed_energy": "PV-Vorteil · Schuppen Energiezähler",
@@ -29,6 +30,7 @@ def display_sources(entities, overrides=None):
         "benefit_garage_energy":"sensor.garage_pv_sonoff_energy_total",
         "benefit_shed_energy":"sensor.schuppen_pv_sonoff_energy_total",
         "benefit_export_energy":"sensor.power_meter_exportierte_energie",
+        "garage_daily":"sensor.garage_pv_sonoff_energy_today", "shed_daily":"sensor.schuppen_pv_sonoff_energy_today", "grid_import_daily":"sensor.tagesimport",
         "roof_daily":"sensor.sum_dach_tagesertrag", "total_consumption":"sensor.real_tagesverbrauch",
         "battery_min_soc":"number.batterien_entlade_ende_ladestand",
         **{f"forecast_day_{i}":value for i,value in enumerate(days,1)}, **(overrides or {})}
@@ -48,7 +50,7 @@ def validate_mapping(hass, values, current, defaults):
         units = {"house_soc":("%",),"car_soc":("%",),"car_limit":("%",),"battery_min_soc":("%",),
             "car_current":("A",),"temperature":("°C",),
             **{k:("W","kW") for k in ("pv_power","battery_power","grid_power","wallbox_power","discharge_limit","inverter","garage","shed")},
-            **{k:("Wh","kWh") for k in ("forecast","pv_daily","roof_daily","total_consumption","benefit_garage_energy","benefit_shed_energy","benefit_export_energy",*[f"forecast_day_{i}" for i in range(1,8)])}}
+            **{k:("Wh","kWh") for k in ("garage_daily","shed_daily","grid_import_daily","forecast","pv_daily","roof_daily","total_consumption","benefit_garage_energy","benefit_shed_energy","benefit_export_energy",*[f"forecast_day_{i}" for i in range(1,8)])}}
         state=hass.states.get(value)
         if key in units and state.attributes.get("unit_of_measurement") not in units[key]:
             raise ValueError(f"{key}: Einheit muss {' / '.join(units[key])} sein")
