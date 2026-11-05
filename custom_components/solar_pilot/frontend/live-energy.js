@@ -39,3 +39,17 @@ export function dischargeLocked(status, states, now=Date.now()) {
   const value=num(state.state),unit=state.attributes?.unit_of_measurement;
   return value===0 && (unit==='W'||unit==='kW');
 }
+
+// Site balance, shared proportionally by house and Tesla. No claim to trace
+// individual electrons, and no inference about the origin of stored energy.
+export function energyMix(v){
+  if([v.pv,v.house,v.ev,v.grid,v.battery].some(x=>typeof x!=='number'||!Number.isFinite(x)))return null;
+  const load=v.house+v.ev;
+  if(load<=1)return null;
+  const grid=Math.max(0,-v.grid);
+  const storage=Math.max(0,-v.battery),pv=load+Math.max(0,v.battery)-grid-storage;
+  if(pv< -100||pv>Math.max(0,v.pv)+Math.max(100,load*.15))return null;
+  const direct=Math.min(Math.max(0,pv),Math.max(0,v.pv)),total=direct+grid+storage;
+  if(total<=1)return null;
+  return {pv:direct/total*100,storage:storage/total*100,grid:grid/total*100,autarky:(1-grid/total)*100};
+}

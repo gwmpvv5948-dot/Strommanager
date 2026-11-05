@@ -83,6 +83,23 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
             async_on_unload=Mock(),async_create_background_task=Mock())
         self.c=Controller(self.hass,self.entry)
 
+    async def test_car_display_cache_survives_unavailable_state_and_restart(self):
+        await self.c.async_update()
+        expected = self.c.last_car_soc
+        self.assertIsNotNone(expected)
+        self.assertEqual(self.c.last_car_seen, (NOW-timedelta(seconds=10)).timestamp())
+        self.assertIsNotNone(self.c.last_car_limit)
+        saved = dict(self.c.store.payload)
+        self.values["car_soc"].state = "unavailable"
+        self.values["car_limit"].state = "unavailable"
+        await self.c.async_update()
+        self.assertEqual(self.c.last_car_soc, expected)
+        self.assertEqual(self.c.last_car_seen, saved["last_car_seen"])
+        self.c.last_car_soc = self.c.last_car_seen = self.c.last_car_limit = None
+        await self.c.async_start()
+        self.assertEqual(self.c.last_car_soc, expected)
+        self.assertEqual(self.c.last_car_seen, saved["last_car_seen"])
+
     async def test_immediate_mode_saves_previous_mode_and_protects_storage(self):
         from dataclasses import replace
         self.c.mode="auto"

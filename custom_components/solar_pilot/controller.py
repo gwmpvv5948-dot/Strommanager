@@ -51,6 +51,8 @@ class Controller:
         self._stopping = False
         self._saved_payload = None
         self.last_car_soc = None
+        self.last_car_seen = None
+        self.last_car_limit = None
         self.consumption = ConsumptionTracker(hass, entry, self.entities, self.settings, self.publish)
         self.day_budget = DayBudgetTracker(hass, entry, self.entities, self.settings, self.publish)
 
@@ -146,6 +148,8 @@ class Controller:
             self.immediate_return_mode = "observe"
         self.immediate_stop_requested = saved.get("immediate_stop_requested") is True
         self.last_car_soc = saved.get("last_car_soc")
+        self.last_car_seen = saved.get("last_car_seen")
+        self.last_car_limit = saved.get("last_car_limit")
         self.mode = saved.get("mode", "observe")
         if self.mode not in MODES:
             self.mode = "observe"
@@ -179,7 +183,7 @@ class Controller:
 
     async def restore_car_soc(self, _event=None):
         """Recover display-only last known SoC; never feed it into decisions."""
-        if self.last_car_soc is not None:
+        if self.last_car_soc is not None and self.last_car_seen is not None:
             return
         try:
             from homeassistant.components.recorder import get_instance, history
@@ -195,11 +199,11 @@ class Controller:
                     except (ValueError, TypeError):
                         continue
                     if math.isfinite(value) and 0 <= value <= 100 and state.attributes.get("unit_of_measurement") == "%":
-                        return value
+                        return value, state.last_updated.timestamp()
                 return None
             value = await get_instance(self.hass).async_add_executor_job(read_history)
-            if self.last_car_soc is None and value is not None:
-                self.last_car_soc = value
+            if value is not None and (self.last_car_soc is None or self.last_car_seen is None):
+                self.last_car_soc, self.last_car_seen = value
                 await self.persist()
                 self.publish()
         except Exception:
@@ -220,8 +224,13 @@ class Controller:
             self.entry.async_create_background_task(self.hass,self.price_forecast.refresh(self.hass,dt_util.utcnow().timestamp()),"Strommanager Energyforecast")
         async with self.lock:
             self.snapshot = self.read()
-            if self.snapshot.car_soc is not None:
+            if self.snapshot.car_soc is not None and 0 <= self.snapshot.car_soc <= 100:
                 self.last_car_soc = self.snapshot.car_soc
+                source = self.state("car_soc")
+                reported = getattr(source, "last_reported", None) or getattr(source, "last_updated", None)
+                self.last_car_seen = reported.timestamp() if reported else self.last_car_seen
+            if self.snapshot.car_limit is not None and 0 <= self.snapshot.car_limit <= 100:
+                self.last_car_limit = self.snapshot.car_limit
             await self.persist()
             if self.consumption.db and not self.consumption.sampling and self.snapshot.now-self.consumption.last_sample>=30:
                 self.entry.async_create_background_task(self.hass, self.consumption.sample(self.snapshot.now), "Strommanager consumption learning")
@@ -335,6 +344,8 @@ class Controller:
             "immediate_return_mode": self.immediate_return_mode,
             "immediate_stop_requested": self.immediate_stop_requested,
             "last_car_soc": self.last_car_soc,
+            "last_car_seen": self.last_car_seen,
+            "last_car_limit": self.last_car_limit,
             "charging_state": asdict(self.charging_state),
             "baselines": self.executor.baselines, "owned": self.executor.owned,
             "cloud_last": self.executor.cloud_last if math.isfinite(self.executor.cloud_last) else 0,
@@ -396,6 +407,10 @@ class Controller:
             await self.persist()
         if entities.get("car_soc")!=self.entities.get("car_soc"):
             self.last_car_soc=None
+            self.last_car_seen=None
+            await self.persist()
+        if entities.get("car_limit")!=self.entities.get("car_limit"):
+            self.last_car_limit=None
             await self.persist()
         if options!=self.entry.options:
             self.hass.config_entries.async_update_entry(self.entry,options=options)
@@ -495,6 +510,8 @@ class Controller:
             "price_forecast": self.price_forecast.status(dt_util.utcnow().timestamp(), self.settings),
             "source_reports": source_reports,
             "last_car_soc": self.last_car_soc,
+            "last_car_seen": self.last_car_seen,
+            "last_car_limit": self.last_car_limit,
             "entry_id": self.entry.entry_id, "mode": self.mode, "immediate_return_mode": self.immediate_return_mode,
             "updated": self.updated,
             "error": self.adapter_error or self.executor.error,

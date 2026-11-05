@@ -52,3 +52,24 @@ Andere Integrationen und das Updateverhalten bleiben unverändert. Nach Anwendun
 HA neu starten und die Oberfläche neu laden. Ein späteres HACS-Update kann den
 Fix überschreiben; dann erneut prüfen/anwenden. Bei Marketplace mit nativer
 Unterstützung lokaler Markenbilder wird dieser Fix nicht benötigt.
+
+
+### Kompakte Tesla-Kachel (0.1.102)
+
+Der Tesla-Ladestand steht im Mittelpunkt. Veraltete oder aus der lokalen Historie
+wiederhergestellte Werte werden mit `~`, Schraffur und Alter dargestellt. SoC und
+Meldezeit bleiben über Neustarts gespeichert und werden ausschließlich angezeigt,
+nicht als aktuelle Werte zur Steuerung verwendet. Ohne gespeicherten gültigen
+Stand wird kein Beispielwert eingesetzt. Zeitangaben beruhen auf der HA-Meldung.
+
+Mindestladegrenze (rot), Mindestziel (amber) und Fahrzeuglimit liegen als Marken
+im Balken. Mindestziel und Fahrzeuglimit lassen sich per Button gezielt bearbeiten;
+ein Speichern löst die entsprechende Einstellungsänderung aus.
+
+Beim bestätigten Laden zuhause erscheinen Leistung, rechnerischer momentaner
+PV-Anteil und der Tesla-Sitzungszähler. Zielzeiten sind Näherungen bei konstantem
+Ladestrom mit konfigurierter Kapazität und Ladewirkungsgrad; Ladepausen und
+Abregelung sind nicht vorhersehbar. Reichweite und Sitzungsenergie kommen aus
+konfigurierbaren Tesla-Sensoren unter Verwendete Entitäten. Fehlende/veraltete
+Sensordaten bleiben offen; es werden keine zusätzlichen Tesla-Cloud-Abrufe oder
+Wake-up-Befehle ausgelöst.

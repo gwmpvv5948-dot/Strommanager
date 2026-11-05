@@ -10,6 +10,7 @@ LEARNING_DEFAULTS = {
     "weather": "weather.dresden_stadt",
 }
 DISPLAY_LABELS = {
+    "car_range":"Tesla · gemeldete Reichweite", "car_session_energy":"Tesla · hinzugefügte Ladeenergie dieser Sitzung",
     "garage_daily":"Energie jetzt · Garage Tagesertrag", "shed_daily":"Energie jetzt · Schuppen Tagesertrag", "grid_import_daily":"Energie jetzt · Netzbezug heute",
     "pv_daily": "WR-Tagesertrag · Monatsreferenz", "roof_daily": "Dach-Tagesertrag",
     "benefit_garage_energy": "PV-Vorteil · Garage Energiezähler",
@@ -26,7 +27,7 @@ def display_sources(entities, overrides=None):
     forecast = entities.get("forecast_day") or entities.get("forecast", "").replace("prognose_verbleibende_leistung_heute", "prognose_heute").replace("forecast_remaining_today", "forecast_today")
     suffixes = ["prognose_heute","prognose_morgen",*[f"prognose_tag_{i}" for i in range(3,8)]] if forecast.endswith("prognose_heute") else ["forecast_today","forecast_tomorrow",*[f"forecast_day_{i}" for i in range(3,8)]]
     days = [forecast.removesuffix(suffixes[0])+suffix if forecast.endswith(suffixes[0]) else forecast for suffix in suffixes]
-    return {"pv_daily":entities.get("pv_daily") or entities.get("pv_power", "").replace("eingangsleistung","tagesertrag"),
+    return {"car_range":"sensor.schorschi_batteriereichweite", "car_session_energy":"sensor.schorschi_ladeenergie_hinzugefugt", "pv_daily":entities.get("pv_daily") or entities.get("pv_power", "").replace("eingangsleistung","tagesertrag"),
         "benefit_garage_energy":"sensor.garage_pv_sonoff_energy_total",
         "benefit_shed_energy":"sensor.schuppen_pv_sonoff_energy_total",
         "benefit_export_energy":"sensor.power_meter_exportierte_energie",
@@ -47,7 +48,7 @@ def validate_mapping(hass, values, current, defaults):
         if value.split('.')[0] != domain or hass.states.get(value) is None:
             raise ValueError(f"{key}: vorhandene Entität aus {domain} erforderlich")
 
-        units = {"house_soc":("%",),"car_soc":("%",),"car_limit":("%",),"battery_min_soc":("%",),
+        units = {"car_range":("km","mi"),"car_session_energy":("kWh","Wh"),"house_soc":("%",),"car_soc":("%",),"car_limit":("%",),"battery_min_soc":("%",),
             "car_current":("A",),"temperature":("°C",),
             **{k:("W","kW") for k in ("pv_power","battery_power","grid_power","wallbox_power","discharge_limit","inverter","garage","shed")},
             **{k:("Wh","kWh") for k in ("garage_daily","shed_daily","grid_import_daily","forecast","pv_daily","roof_daily","total_consumption","benefit_garage_energy","benefit_shed_energy","benefit_export_energy",*[f"forecast_day_{i}" for i in range(1,8)])}}
