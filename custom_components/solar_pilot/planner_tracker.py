@@ -107,5 +107,5 @@ class PlannerTracker:
 
     def status(self, now):
         if self.result.get('available') and now-self.result['updated']>600:
-            return {'available':False,'mode':'observe','reason':'Fahrplan veraltet · Neuberechnung ausstehend'}
+            return {'available':False,'mode':'observe','reason':'Fahrplan veraltet · Neuberechnung ausstehend','calculating':self.busy}
         return {**self.result,'calculating':self.busy}

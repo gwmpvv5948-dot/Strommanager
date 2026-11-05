@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.87
+
+- Animiertes Zahnrad mit „Wird berechnet …“ während der Fahrplanberechnung, auch bei Neuberechnung eines vorhandenen Plans.
+- Konkrete Fehler bleiben nach Ende der Berechnung sichtbar; reduzierte Bewegung des Betriebssystems wird berücksichtigt.
+
 ## 0.1.86
 
 - Einfarbige Sonne-Haus-Blitz-Variante als eigenes Icon in der HA-Seitenleiste. Verwendet die vom HA-Theme vorgegebene Iconfarbe.

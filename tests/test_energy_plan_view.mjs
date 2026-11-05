@@ -34,3 +34,12 @@ test('joint plan renders EV without a misleading house-only cost comparison',()=
  assert.match(html,/Haus \+ Tesla/);assert.match(html,/Tesla-SoC/);assert.match(html,/Reserven|WR-Minimum/);
  assert.doesNotMatch(html,/Gegenüber Schwellenregel · simuliert/);assert.match(html,/id="mode"/);
 });
+
+ test('calculation indicator appears only while waiting or solving, never masks a finished failure',()=>{
+  const html=energyPlanCard({status:{energy_plan:{available:false,calculating:true,reason:'Alter Fehler'}}});
+  assert.match(html,/role="status"/);assert.match(html,/mdi:cog/);assert.match(html,/Wird berechnet/);
+  assert.doesNotMatch(html,/Alter Fehler/);
+  const failed=energyPlanCard({status:{energy_plan:{available:false,calculating:false,reason:'Prognoselücke'}}});
+  assert.match(failed,/Prognoselücke/);assert.doesNotMatch(failed,/plan-calculating/);
+  assert.match(energyPlanCard({status:{}}),/Wird berechnet/);
+ });
