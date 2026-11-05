@@ -2,7 +2,7 @@ import {liveEnergy,dischargeLocked} from './live-energy.js';
 import {esc,fmt} from './view-format.js';
 import {dayBounds,number} from './solar-chart.js';
 import {dailyEnergy} from './energy-budget.js';
-import {currentEEValue} from './energy-plan-view.js?v=0.1.100';
+import {currentEEValue} from './energy-plan-view.js?v=0.1.101';
 
 // Site balance, shared proportionally by house and Tesla. No claim to trace
 // individual electrons, and no inference about the origin of stored energy.
@@ -12,7 +12,7 @@ export function energyMix(v){
   if(load<=1)return null;
   const grid=Math.max(0,-v.grid);
   const storage=Math.max(0,-v.battery),pv=load+Math.max(0,v.battery)-grid-storage;
-  if(pv< -100)return null;
+  if(pv< -100||pv>Math.max(0,v.pv)+Math.max(100,load*.15))return null;
   const direct=Math.min(Math.max(0,pv),Math.max(0,v.pv)),total=direct+grid+storage;
   if(total<=1)return null;
   return {pv:direct/total*100,storage:storage/total*100,grid:grid/total*100,autarky:(1-grid/total)*100};

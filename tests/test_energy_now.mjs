@@ -4,6 +4,7 @@ import {energyMix,energyToday,observedPeak} from '../custom_components/solar_pil
 test('house/Tesla balance and autarky share storage without double counting PV',()=>{
  const m=energyMix({pv:1000,house:630,ev:0,grid:-252,battery:-220.5});assert.equal(m.autarky,60);assert.equal(m.grid,40);assert.equal(m.storage,35);assert.equal(m.pv,25);
  assert.equal(energyMix({pv:1000,house:100,ev:100,grid:300,battery:500}).autarky,100);
+ assert.equal(energyMix({pv:3,house:390,ev:0,grid:10,battery:0}),null);
  assert.equal(energyMix({pv:1000,house:100,ev:0,grid:null,battery:0}),null);
  assert.equal(energyMix({pv:1000,house:0,ev:0,grid:0,battery:0}),null);
  assert.equal(energyMix({pv:1000,house:100,ev:0,grid:-1000,battery:0}),null);
