@@ -73,3 +73,22 @@ Abregelung sind nicht vorhersehbar. Reichweite und Sitzungsenergie kommen aus
 konfigurierbaren Tesla-Sensoren unter Verwendete Entitäten. Fehlende/veraltete
 Sensordaten bleiben offen; es werden keine zusätzlichen Tesla-Cloud-Abrufe oder
 Wake-up-Befehle ausgelöst.
+
+
+### Kompakte Hausspeicher-Kachel (0.1.104)
+
+Waagerechter SoC-Balken mit Endreserve (rot), Abendreserve (amber) und
+Tesla-Speicherfreigabe (blau). Die Wechselrichter-Untergrenze steht als Fußnote.
+Die Endreserve ist ein Ziel für das Ende des Optimierungsfahrplans und keine
+zusätzliche feste Entladegrenze fürs Haus.
+
+Energie und Zeiten beruhen auf der eingestellten nutzbaren Kapazität und der
+aktuellen gemeldeten Hausspeicherleistung. Nutzbar bis Endreserve berücksichtigt
+eine gegebenenfalls höhere Wechselrichter-Untergrenze. Die nächste Schwelle,
+Restdauer und Voll-Zeit sind Näherungen bei konstanter Leistung, keine Zusagen
+des Optimierers. Fehlende/veraltete SoC- und Leistungsdaten bleiben offen.
+
+Der Tagesverlauf nutzt die bereits geladene HA-SoC-Historie ab lokaler Mitternacht.
+Explizite Messlücken unterbrechen die Linie; Min/Max beziehen sich auf die
+verfügbaren Tagesmesspunkte. Keine zusätzlichen Gerätebefehle und keine
+Änderung von Betriebsart, Schwellen oder Regelung.

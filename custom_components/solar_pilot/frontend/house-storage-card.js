@@ -1,0 +1,43 @@
+import {esc,fmt} from './view-format.js';
+import {liveEnergy,dischargeLocked} from './live-energy.js';
+import {dayBounds} from './solar-chart.js';
+import {batteryHistory} from './battery-history.js';
+const percent=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=100?v:null;
+const finite=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
+export function storageDisplay(panel,now=Date.now()){
+ const t=panel.status||{},s=t.snapshot||{},c=t.settings||{},live=liveEnergy(t,panel._hass?.states||{},now),elapsed=Number.isFinite(s.now)?(now/1000-s.now):Infinity;
+ const freshAge=age=>Number.isFinite(age)&&age>=0&&elapsed>=-60&&elapsed<=120&&age+Math.max(0,elapsed)<=(c.meter_max_age_s??300)&&!panel._error;
+ const soc=panel._error?null:live.soc??(freshAge(s.house_soc_age)?percent(s.house_soc):null),power=panel._error?null:live.battery??(freshAge(s.meter_age)?finite(s.battery_charge_w):null);
+ const capacity=finite(c.capacity_kwh)>0?c.capacity_kwh:null,min=percent(s.battery_min_soc),terminal=percent(c.planner_terminal_soc),reserve=percent(c.reserve_soc),release=percent(c.storage_release_soc);
+ const stored=soc!==null&&capacity!==null?soc/100*capacity:null,floor=min!==null&&terminal!==null?Math.max(min,terminal):null;
+ const usable=stored!==null&&floor!==null?Math.max(0,soc-floor)/100*capacity:null,discharging=power< -10,charging=power>10;
+ const runtime=discharging&&usable!==null?usable/(-power/1000):null,fullHours=charging&&stored!==null?(capacity-stored)/(power/1000):null;
+ const marks=[{key:'terminal',label:'Endreserve',soc:terminal,meaning:'Planungsziel für das Ende des 24-h-Fahrplans; keine feste Entladesperre fürs Haus.'},{key:'reserve',label:'Abendreserve',soc:reserve,meaning:'Darunter keine Hausspeicherenergie für Tesla. Die Hausversorgung folgt weiter dem Fahrplan.'},{key:'release',label:'Tesla frei',soc:release,meaning:'Oberhalb darf Speicherenergie für Tesla freigegeben werden. Ladeziele und weitere Schutzregeln gelten weiterhin.'}];
+ const candidates=[...marks,{key:'floor',label:'Wechselrichter-Minimum',soc:min,meaning:'Technische Entladeuntergrenze des Wechselrichters.'}].filter(m=>m.soc!==null&&(soc!==null)&&(min===null||m.soc>=min)&&(discharging?m.soc<=soc:charging?m.soc>=soc:false)).sort((a,b)=>discharging?b.soc-a.soc:a.soc-b.soc);
+ const next=candidates[0]||null,nextHours=next&&capacity!==null&&power!==null?Math.abs(next.soc-soc)/100*capacity/(Math.abs(power)/1000):null;
+ return {soc,power,capacity,min,terminal,reserve,release,stored,floor,usable,runtime,fullHours,charging,discharging,marks,next,nextHours,locked:dischargeLocked(t,panel._hass?.states||{},now)};
+}
+export function storageSparkline(panel,v,now=Date.now()){
+ const zone=panel._hass?.config?.time_zone||'Europe/Berlin',start=dayBounds(now,zone).start/1000,end=now/1000,id=panel.status?.entities?.house_soc;
+ const history=id&&panel.socHistoryId===id?panel.socHistory||[]:[];
+ const snapshot={now:end,house_soc:v.soc,house_soc_age:v.soc===null?null:0};
+ const segments=batteryHistory(history,{start,now:end,unit:'%',snapshot,settings:panel.status?.settings||{}});
+ const points=segments.flat(),values=points.map(p=>p.soc),W=420,H=108,bottom=86,x=t=>Math.max(0,Math.min(W,(t-start)/Math.max(1,end-start)*W)),y=soc=>bottom-soc/100*76;
+ const path=segment=>segment.map((p,i)=>`${i?'L':'M'}${x(p.t).toFixed(2)},${y(p.soc).toFixed(2)}`).join(' ');
+ const lines=segments.map(seg=>`<path class="hs-history-fill" d="${path(seg)} L${x(seg.at(-1).t)},${bottom} L${x(seg[0].t)},${bottom}Z"/><path class="hs-history-line" d="${path(seg)}"/>`).join('');
+ const last=points.at(-1),ticks=[['0 Uhr',0,'start'],['jetzt',W,'end']];
+ const twelve=start+12*3600,hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:zone,hour:'numeric',hourCycle:'h23'}).format(twelve*1000)),noon=twelve+(12-hour)*3600;
+ if(noon<end-1800)ticks.splice(1,0,['12',x(noon),'middle']);
+ return `<div class="hs-history"><div class="hs-history-title"><span>Verlauf heute</span><span>${values.length?`max ${fmt(Math.max(...values),'%',0)} · min ${fmt(Math.min(...values),'%',0)}`:'Keine Verlaufsdaten'}</span></div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hausspeicher-Ladestand seit Mitternacht. Rot: Endreserve, Amber: Abendreserve. Messlücken bleiben offen.">${lines}${[['terminal',v.terminal],['reserve',v.reserve]].filter(([,soc])=>soc!==null).map(([kind,soc])=>`<line class="hs-history-threshold ${kind}" x1="0" x2="${W}" y1="${y(soc)}" y2="${y(soc)}"/>`).join('')}${last?`<circle class="hs-history-dot" cx="${x(last.t)}" cy="${y(last.soc)}" r="3.5"/>`:''}${ticks.map(([label,pos,anchor])=>`<text x="${pos}" y="104" text-anchor="${anchor}">${label}</text>`).join('')}</svg></div>`;
+}
+export function houseStorageCard(panel,now=Date.now()){
+ const v=storageDisplay(panel,now),zone=panel._hass?.config?.time_zone||'Europe/Berlin',status=v.power===null?'Leistung unbekannt':v.charging?'Lädt':v.discharging?'Entlädt':v.locked?'Entladung gesperrt':'Ruht',kind=v.charging?'charging':v.discharging?'discharging':'idle';
+ const duration=h=>h===null||!Number.isFinite(h)?'—':h<1?`${Math.max(1,Math.round(h*60))} min`:`${fmt(h,'h',1)}`;
+ const fullTime=v.fullHours!==null&&v.fullHours<=72?now+v.fullHours*3600000:null;
+ const clock=t=>new Date(t).toLocaleString('de-DE',{timeZone:zone,...(new Date(t).toLocaleDateString('de-DE',{timeZone:zone})!==new Date(now).toLocaleDateString('de-DE',{timeZone:zone})?{weekday:'short'}:{}),hour:'2-digit',minute:'2-digit'});
+ const positions=v.marks.map(m=>m.soc).filter(x=>x!==null).sort((a,b)=>a-b),compressed=positions.some((n,i)=>i>0&&n-positions[i-1]<18);
+ const zones=[0,...[v.terminal,v.reserve,v.release].filter(x=>x!==null),100].sort((a,b)=>a-b);
+ const hint=v.next&&v.nextHours!==null?`${v.next.label} ${v.nextHours<1/120?'erreicht':`erreicht in ca. ${duration(v.nextHours)}`}`:v.soc===null?'Kein aktueller Hausspeicher-Ladestand':v.locked&&!v.charging?'Entladung ist gesperrt':v.power===null?'Keine aktuelle Leistung verfügbar':v.discharging?'Hausspeicher entlädt':v.charging?'Hausspeicher lädt':'Hausspeicher ruht';
+ const explanation=v.next?v.next.meaning:v.locked?'Eine Entladegrenze von 0 W ist am Wechselrichter eingestellt.':v.soc===null||v.power===null?'Ohne aktuelle Messwerte keine Zeitabschätzung.':'Zeitabschätzung erst bei Ladung oder Entladung.';
+ return `<article class="card hs-compact" aria-label="Hausspeicher"><header><h3><ha-icon icon="mdi:battery-outline"></ha-icon>Hausspeicher</h3><span class="hs-chip ${kind}">${status}${v.power!==null&&Math.abs(v.power)>10?` · ${fmt(Math.abs(v.power)/1000,'kW',2)}`:''}</span></header><div class="hs-soc"><strong>${fmt(v.soc,'%',0)}</strong><span>${fmt(v.stored,'',1)} von ${fmt(v.capacity,'kWh',1)}</span></div><div class="hs-bar" role="img" aria-label="Hausspeicher-Ladestand ${fmt(v.soc,'%')}. ${v.marks.map(m=>`${m.label} ${fmt(m.soc,'%')}`).join(', ')}"><div class="hs-zones">${zones.slice(0,-1).map((z,i)=>`<i class="hs-zone zone-${i}" style="left:${z}%;width:${zones[i+1]-z}%"></i>`).join('')}</div><span class="hs-fill" style="width:${v.soc??0}%"></span>${v.marks.filter(m=>m.soc!==null).map(m=>`<i class="hs-mark ${m.key}" style="left:${m.soc}%" title="${esc(m.meaning)}"></i>`).join('')}</div><div class="hs-threshold-labels ${compressed?'compressed':''}">${v.marks.map(m=>`<div class="${m.key}" style="left:${m.soc===null?50:Math.max(10,Math.min(90,m.soc))}%" title="${esc(m.meaning)}"><span>${m.label==='Abendreserve'?'Abend':m.label}</span><b>${fmt(m.soc,'%',0)}</b></div>`).join('')}</div><div class="hs-next" title="Näherung bei gleichbleibender gemeldeter Hausspeicherleistung. Keine Zusage des Optimierungsfahrplans."><ha-icon icon="mdi:${v.charging?'battery-charging-outline':v.locked?'lock-outline':'clock-outline'}"></ha-icon><div><strong>${esc(hint)}</strong><span>${esc(explanation)}</span></div></div><div class="hs-metrics"><div title="Gespeicherte Energie oberhalb des höheren Werts aus Endreserve und Wechselrichter-Minimum; Planungswert, keine zusätzliche Entladefreigabe."><span>Nutzbar bis ${fmt(v.floor,'%',0)}</span><strong>${fmt(v.usable,'kWh',1)}</strong></div><div title="Bei unveränderter aktueller Hausspeicher-Entladeleistung bis zur angezeigten Reserve"><span>Reicht noch</span><strong>${v.runtime===null?'—':`≈ ${duration(v.runtime)}`}</strong></div><div title="Schätzung bei unveränderter Ladeleistung; Abregelung und Ladeverluste können den Zeitpunkt verschieben"><span>Voll um</span><strong>${fullTime===null?'—':`≈ ${clock(fullTime)}`}</strong></div></div>${storageSparkline(panel,v,now)}<footer>Wechselrichter-Minimum ${fmt(v.min,'%',0)} · ${v.min===null?'unbekannt':'nicht nutzbar'}</footer></article>`;
+}
