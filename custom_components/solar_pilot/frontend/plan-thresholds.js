@@ -1,4 +1,4 @@
-import {teslaCard} from './tesla-card.js?v=0.1.102';
+import {teslaCard} from './tesla-card.js?v=0.1.103';
 import {esc,fmt} from './view-format.js';
 const numeric=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=100?v:null;
 export function planThresholds(panel) {
