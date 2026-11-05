@@ -51,12 +51,41 @@ def main():
             if Path(str(p)+'.br').exists():
                 raise ValueError('Brotli asset detected; no changes applied')
     if not matched:raise ValueError('HACS frontend brand function not found; no changes applied')
+    # HACS serves immutable chunk names. Give the patched frontend a separate
+    # directory, so browsers do not reuse cached JavaScript from before the fix.
+    front=root/'hacs_frontend'
+    replacements={name:name+'_strommanager1' for name in ('frontend_latest','frontend_es5')}
+    for name,target_name in replacements.items():
+        source=front/name;target=front/target_name
+        if target.exists():continue
+        for original in source.rglob('*'):
+            if not original.is_file():continue
+            relative=original.relative_to(source);dest=target/relative
+            if original.name.endswith('.js.gz'):continue
+            data=changes.get(original,original.read_bytes())
+            if original.suffix=='.js':
+                text=data.decode()
+                for old,new in replacements.items():text=text.replace(old+'/',new+'/')
+                data=text.encode()
+                if Path(str(original)+'.gz').exists():changes[Path(str(dest)+'.gz')]=gzip.compress(data,mtime=0)
+            changes[dest]=data
+    entry=front/'entrypoint.js';text=entry.read_text()
+    for old,new in replacements.items():text=text.replace(old+'/',new+'/')
+    if text!=entry.read_text():
+        changes[entry]=text.encode()
+        if Path(str(entry)+'.gz').exists():changes[Path(str(entry)+'.gz')]=gzip.compress(text.encode(),mtime=0)
+    version=front/'version.py';text=version.read_text()
+    if 'strommanager1' not in text:
+        text=re.sub(r'(VERSION\s*=\s*["\'])([^"\']+)',r'\1\2-strommanager1',text)
+        ast.parse(text);changes[version]=text.encode()
     print('HACS brand files matched:',matched,'files to change:',len(changes))
     if not args.apply:return
     backup=Path('/config/backups')/('hacs-before-strommanager-brand-'+datetime.now().strftime('%Y%m%d-%H%M%S'))
     for p,data in changes.items():
-        target=backup/p.relative_to(root);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,target)
-    for p,data in changes.items():p.write_bytes(data)
+        if p.exists():
+            target=backup/p.relative_to(root);target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,target)
+    for p,data in changes.items():
+        p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
     print('APPLIED · backup:',backup)
 
 
