@@ -9,3 +9,12 @@ test('no history stays unknown and idle is never green',()=>{const p={status:{sn
 test('session is not reused after unplugging, stale SoC never enables ETA',()=>{const p=sample();p._hass.states.cable.state='off';let v=teslaDisplay(p,now);assert.equal(v.charging,false);assert.equal(v.session,null);p._hass.states.cable.state='on';p._hass.states.soc.last_updated=new Date(now-86400000).toISOString();v=teslaDisplay(p,now);assert.equal(v.fresh,false);assert.equal(v.limitAt,null);});
 
 test('only the two displayed targets are marked, including equal targets',()=>{const p=sample();p._hass.states.limit.state='50';p.teslaEditor='minimum';const h=teslaCard(p,now);assert.doesNotMatch(h,/tesla-mark low/);assert.match(h,/tesla-mark minimum coincident" style="left:50%/);assert.match(h,/tesla-mark limit coincident" style="left:50%/);assert.match(h,/name="target" type="number" min="26"/);assert.match(h,/Startschwelle für Mindestladung/);});
+test('entered limit survives redraw and sends the draft, awaiting real confirmation',async()=>{
+ const {bindTeslaCard}=await import('../custom_components/solar_pilot/frontend/tesla-card.js');
+ const p=sample();p.status.entities.car_limit='number.limit';p._hass.states['number.limit']=p._hass.states.limit;p.teslaEditor='limit';p.busy=false;
+ const input={value:'65',setCustomValidity(){}},form={elements:{target:input},reportValidity:()=>true};
+ p.shadowRoot={querySelectorAll:()=>[],querySelector:selector=>selector==='.tesla-editor'?form:null};p.render=()=>{};p.refresh=async()=>{};
+ let sent;p._hass.callService=async(domain,service,data)=>{sent={domain,service,data};};
+ bindTeslaCard(p);input.oninput();assert.equal(p.teslaDraft,'65');assert.match(teslaCard(p,now),/value="65"/);
+ await form.onsubmit({preventDefault(){}});assert.deepEqual(sent,{domain:'number',service:'set_value',data:{entity_id:'number.limit',value:65}});assert.equal(p.teslaDraft,'65');assert.equal(p.teslaEditor,'limit');assert.match(p.message,/Bestätigung.*steht noch aus/);
+});
