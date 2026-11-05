@@ -98,3 +98,8 @@ test("rejects control recommendations, whole-house meters and cycle averages fou
     ["sensor.stove"],
   );
 });
+
+test("Schorschi charger is hidden while other chargers remain visible",()=>{
+ const rows=powerConsumers({"sensor.charger":sensor("40","Schorschi Ladegerät-Leistung"),"sensor.other":sensor("50","Anderes Ladegerät-Leistung")});
+ assert.deepEqual(rows.map(r=>r.id),["sensor.other"]);
+});

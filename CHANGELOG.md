@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.92
+
+- Tesla-Optimierung: Zeitlimit je Solve-Stufe von 5 auf 15 Sekunden erhöht. Prüfungen und Fallback bleiben erhalten.
+- „Schorschi Ladegerät-Leistung“ aus der Verbraucheranzeige ausgeschlossen.
+
 ## 0.1.91
 
 - Akku- und Tesla-Angaben aus „Energie jetzt“ entfernt.

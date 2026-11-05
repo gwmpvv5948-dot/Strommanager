@@ -36,7 +36,7 @@ def optimize_ev(slots, c, ev):
         raise ValueError('Ungültige Tesla-Planungsparameter')
     import highspy
     h=highspy.Highs()
-    for name,value in [('output_flag',False),('time_limit',5.),('threads',1),('mip_rel_gap',0.)]:h.setOptionValue(name,value)
+    for name,value in [('output_flag',False),('time_limit',15.),('threads',1),('mip_rel_gap',0.)]:h.setOptionValue(name,value)
     integer=highspy.HighsVarType.kInteger
     binary=lambda:h.addVariable(lb=0,ub=1,type=integer)
     initial=c.capacity*c.initial_soc/100

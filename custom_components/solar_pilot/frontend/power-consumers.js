@@ -35,6 +35,7 @@ export function powerConsumers(states, status = {}) {
     if (state.state == null || String(state.state).trim() === "") continue;
     const watts = Number(state.state) * (unit === "kW" ? 1000 : 1);
     if (!Number.isFinite(watts) || watts < 0) continue;
+    if (/^schorschi[\s_-]+ladeger[aä]t[\s_-]*leistung$/i.test(a.friendly_name || "")) continue;
     const name = a.friendly_name || id,
       text = id + " " + name;
     // The configured wallbox is a known load even if its name contains "solar".
