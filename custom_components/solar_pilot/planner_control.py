@@ -25,7 +25,7 @@ def apply_house_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device
             or not all(valid(v) for v in (s.pv_w,s.grid_export_w,s.battery_charge_w,s.wallbox_w))):
         return result('protection','Entladung gesperrt · Messwerte fehlen oder sind veraltet',0)
     if s.house_soc<=minimum:
-        return result('protection','Akku am oder unter dem Wechselrichter-Mindeststand · Entladung gesperrt',0)
+        return result('protection','Hausspeicher am oder unter dem Wechselrichter-Mindeststand · Entladung gesperrt',0)
     if s.grid_charge_enabled is True:
         return result('protection','Entladung gesperrt · Netzladung muss zuerst ausgeschaltet sein',0)
     ceiling = min(c.normal_discharge_w,device_max_w)
@@ -47,16 +47,16 @@ def apply_house_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device
         return result('fallback','Fallback: ungültiger HiGHS-Sollwert',rounded(decision.discharge_w),True)
     previous=plan.get('initial_soc') if index==0 else points[index-1].get('soc')
     if not valid(previous):
-        return result('fallback','Fallback: Akku-Prognose unvollständig',rounded(decision.discharge_w),True)
+        return result('fallback','Fallback: Hausspeicher-Prognose unvollständig',rounded(decision.discharge_w),True)
     expected=previous+(point['soc']-previous)*(s.now-point['start'])/(point['end']-point['start'])
     if abs(s.house_soc-expected)>5:
-        return result('fallback','Fallback: Akku weicht vom Plan ab · Neuberechnung',rounded(decision.discharge_w),True)
+        return result('fallback','Fallback: Hausspeicher weicht vom Plan ab · Neuberechnung',rounded(decision.discharge_w),True)
     # Prevent consumption of the remaining minimum reserve before this interval ends.
     available=(s.house_soc-minimum)*c.capacity_kwh/100*c.efficiency
     remaining=max(30,point['end']-s.now)/3600
     watts=rounded(min(point['battery_kw']*1000,available/remaining*1000))
     if watts<10:watts=0
-    return result('highs','HiGHS aktiv · '+('Akku fürs Haus' if watts else 'Akku bewahren / PV nutzen'),watts)
+    return result('highs','HiGHS aktiv · '+('Hausspeicher fürs Haus' if watts else 'Hausspeicher bewahren / PV nutzen'),watts)
 
 
 def apply_joint_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device_step_w,
@@ -98,7 +98,7 @@ def apply_joint_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device
     before=plan['initial_soc'] if i==0 else rows[i-1]['soc']
     car_before=ev['initial_soc'] if i==0 else rows[i-1]['ev_soc']
     if abs(s.house_soc-(before+(point['soc']-before)*fraction))>5 or abs(s.car_soc-(car_before+(point['ev_soc']-car_before)*fraction))>3:
-        return result('Fallback: Akku-/Tesla-SoC weicht ab · Neuberechnung',replan=True)
+        return result('Fallback: Hausspeicher-/Tesla-SoC weicht ab · Neuberechnung',replan=True)
     amps=point.get('ev_amps');battery_kw=point.get('battery_kw')
     if type(amps) is not int or amps not in (0,*range(max(10,c.min_amps),min(16,c.max_amps)+1)) or not valid(battery_kw) or battery_kw<0:
         return result('Fallback: ungültiger Tesla-Sollwert',replan=True)

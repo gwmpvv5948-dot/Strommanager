@@ -275,11 +275,11 @@ export function consumptionBarChart(panel, b, zone) {
   const socMarkup = socActual
     .map(
       (segment) =>
-        `<g class="battery-actual" aria-label="Gemessener Akku-SoC"><path d="${segment.map((p, i) => `${i ? "L" : "M"}${bx(p.t).toFixed(2)},${by(p.soc).toFixed(2)}`).join(" ")}" fill="none" stroke="#91bfee" stroke-width="2.7" pointer-events="none"/>${segment.length === 1 ? `<circle cx="${bx(segment[0].t)}" cy="${by(segment[0].soc)}" r="3" fill="#91bfee"/>` : ""}</g>`,
+        `<g class="battery-actual" aria-label="Gemessener Hausspeicher-SoC"><path d="${segment.map((p, i) => `${i ? "L" : "M"}${bx(p.t).toFixed(2)},${by(p.soc).toFixed(2)}`).join(" ")}" fill="none" stroke="#91bfee" stroke-width="2.7" pointer-events="none"/>${segment.length === 1 ? `<circle cx="${bx(segment[0].t)}" cy="${by(segment[0].soc)}" r="3" fill="#91bfee"/>` : ""}</g>`,
     )
     .join("");
   const socAxis = showSocAxis
-    ? `<g class="battery-soc-axis"><text x="946" y="17" text-anchor="end" style="fill:#91bfee">Akku %</text>${[0, 25, 50, 75, 100].map((v) => `<text x="891" y="${by(v) + 4}" style="fill:#91bfee">${v}</text>`).join("")}</g>`
+    ? `<g class="battery-soc-axis"><text x="946" y="17" text-anchor="end" style="fill:#91bfee">Hausspeicher %</text>${[0, 25, 50, 75, 100].map((v) => `<text x="891" y="${by(v) + 4}" style="fill:#91bfee">${v}</text>`).join("")}</g>`
     : "";
   const batteryOverlay = renderBatteryOverlay(battery, {
     bx,
@@ -293,7 +293,7 @@ export function consumptionBarChart(panel, b, zone) {
         class="solar-chart consumption-bars"
         viewBox="0 0 960 ${battery.available ? 265 : 245}"
         role="img"
-        aria-label="Stündlicher Hausverbrauch zwölf Stunden vor und nach jetzt ohne Tesla: volle Balken für bilanzierte Messwerte, Schraffur für verbleibende Prognose, Fragezeichen für Messlücken. Gelbe durchgezogene PV-Ist-Gesamtkurve aus Hauptanlage, Garage und Schuppen bis zum Datenstand, gestrichelte Solcast-Prognose nur der Hauptanlage danach. Linke Y-Achse Kilowattstunden je Stunde; blauer durchgezogener Akku-Ist-Verlauf bis jetzt und gestrichelte Akkuprognose danach auf rechter Prozentachse; grünes Abdeckungsband, rot ab erster Deckungslücke; X-Achse Uhrzeit."
+        aria-label="Stündlicher Hausverbrauch zwölf Stunden vor und nach jetzt ohne Tesla: volle Balken für bilanzierte Messwerte, Schraffur für verbleibende Prognose, Fragezeichen für Messlücken. Gelbe durchgezogene PV-Ist-Gesamtkurve aus Hauptanlage, Garage und Schuppen bis zum Datenstand, gestrichelte Solcast-Prognose nur der Hauptanlage danach. Linke Y-Achse Kilowattstunden je Stunde; blauer durchgezogener Hausspeicher-Ist-Verlauf bis jetzt und gestrichelte Hausspeicherprognose danach auf rechter Prozentachse; grünes Abdeckungsband, rot ab erster Deckungslücke; X-Achse Uhrzeit."
       >
         <defs>
           <clipPath id="rolling-plot-clip">

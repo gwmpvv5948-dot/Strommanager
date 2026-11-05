@@ -214,7 +214,7 @@ def optimize_ev(slots, c, ev):
         reason=('Tesla lädt · Mindestladung' if amps and ev.urgent and previous_ev<urgent_goal-1e-5 else
                 'Tesla lädt · PV / Speicher' if amps and values['g_ev']<.02 else
                 'Tesla lädt · hoher EE-Anteil' if amps else
-                'PV lädt den Akku' if charge>.02 else 'Akku versorgt das Haus' if dis>.02 else
+                'PV lädt den Hausspeicher' if charge>.02 else 'Hausspeicher versorgt das Haus' if dis>.02 else
                 'PV versorgt das Haus' if grid<.02 else 'Netz versorgt das Haus')
         explanation=(f'Tesla: {amps} A, {ev_kw:.2f} kW; Ziel ist das Fahrzeug-Ladelimit ohne feste Abfahrtszeit. '
             +'Flexible Netzladung nach EE-Freigabe oder für die ausgelöste Mindestladung; Festtarif, kein Spotpreiseinfluss. '

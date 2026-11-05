@@ -6,7 +6,7 @@ test('unavailable observer plan remains honest and never fabricates metrics',()=
  assert.match(html,/Prognoselücke/);assert.match(html,/Keine Gerätebefehle/);assert.doesNotMatch(html,/Stromkosten/);
 });
 test('adjacent reasons combine but gaps and different decisions stay separate',()=>{
- const groups=planGroups([{start:0,end:900,reason:'Akku'},{start:900,end:1800,reason:'Akku'},{start:2700,end:3600,reason:'Akku'},{start:3600,end:4500,reason:'Netz'}]);
+ const groups=planGroups([{start:0,end:900,reason:'Hausspeicher'},{start:900,end:1800,reason:'Hausspeicher'},{start:2700,end:3600,reason:'Hausspeicher'},{start:3600,end:4500,reason:'Netz'}]);
  assert.equal(groups.length,3);assert.equal(groups[0].end,1800);assert.equal(groups[1].start,2700);
 });
 

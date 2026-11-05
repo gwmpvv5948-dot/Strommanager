@@ -14,7 +14,7 @@ DISPLAY_LABELS = {
     "benefit_garage_energy": "PV-Vorteil · Garage Energiezähler",
     "benefit_shed_energy": "PV-Vorteil · Schuppen Energiezähler",
     "benefit_export_energy": "PV-Vorteil · Einspeisezähler",
-    "total_consumption": "Tagesverbrauch · Haus + Tesla", "battery_min_soc": "Akku · Entladeuntergrenze",
+    "total_consumption": "Tagesverbrauch · Haus + Tesla", "battery_min_soc": "Hausspeicher · Entladeuntergrenze",
     **{f"forecast_day_{i}": f"PV-Prognose Tag {i}" for i in range(1, 8)},
 }
 LEARNING_LABELS = {"inverter":"AC-Wechselrichterleistung", "garage":"PV Garage", "shed":"PV Schuppen", "temperature":"Außentemperatur", "weather":"HA-Wetterquelle"}

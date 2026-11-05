@@ -96,7 +96,7 @@ class GridForecast:
         valid = share is not None
         reason = ('Regelung ausgeschaltet' if not settings.grid_renewable_enabled else
                   'Prognose fehlt oder ist veraltet · Eigenverbrauch' if not valid else
-                  'Netz bevorzugt · Akku bewahren' if self.hold else 'Akku fürs Haus freigegeben')
+                  'Netz bevorzugt · Hausspeicher bewahren' if self.hold else 'Hausspeicher fürs Haus freigegeben')
         previous = self.hold
         plan = []
         for point in self.points:

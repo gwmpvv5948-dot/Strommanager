@@ -31,7 +31,7 @@ def validate(slots, c):
     if not (c.capacity > 0 and 0 <= c.minimum_soc <= 100 and 0 <= c.initial_soc <= 100 and 0 <= c.terminal_soc <= 100
             and .5 <= c.efficiency <= 1 and c.charge_kw >= 0 and c.discharge_kw >= 0
             and min(c.purchase, c.feed_in, c.ee_weight, c.cycle_cost) >= 0):
-        raise ValueError('Ungültige Akku- oder Preisgrenzen')
+        raise ValueError('Ungültige Hausspeicher- oder Preisgrenzen')
     if not slots:
         raise ValueError('Prognosedaten fehlen')
     end = slots[0]['start']
@@ -118,15 +118,15 @@ def totals(points):
 
 def explain(point, c):
     if point['charge_kw'] > .02:
-        return 'PV lädt den Akku', 'PV deckt das Haus; der Überschuss wird gespeichert.'
+        return 'PV lädt den Hausspeicher', 'PV deckt das Haus; der Überschuss wird gespeichert.'
     if point['battery_kw'] > .02 and point['grid_kw'] <= .02:
-        return 'Akku versorgt das Haus', 'Akkuenergie wird in diesem Zeitfenster eingesetzt; Endreserve und spätere Netzfenster sind berücksichtigt.'
+        return 'Hausspeicher versorgt das Haus', 'Hausspeicherenergie wird in diesem Zeitfenster eingesetzt; Endreserve und spätere Netzfenster sind berücksichtigt.'
     if point['battery_kw'] > .02:
-        return 'Akku und Netz versorgen das Haus', 'Der Akku deckt einen Teil des Bedarfs; das Netz ergänzt die Leistung.'
+        return 'Hausspeicher und Netz versorgen das Haus', 'Der Hausspeicher deckt einen Teil des Bedarfs; das Netz ergänzt die Leistung.'
     if point['grid_kw'] > .02:
         if point['soc'] <= c.minimum_soc+.1:
-            return 'Netz versorgt das Haus', 'Der Akku liegt am oder unter dem Wechselrichter-Mindeststand. Entladung bleibt gesperrt, bis PV-Überschuss ihn wieder aufgefüllt hat.'
-        return 'Netz bevorzugt · Akku bewahren', 'Die Gesamtplanung bewahrt Akkuenergie für andere Zeitfenster oder die Endreserve.'
+            return 'Netz versorgt das Haus', 'Der Hausspeicher liegt am oder unter dem Wechselrichter-Mindeststand. Entladung bleibt gesperrt, bis PV-Überschuss ihn wieder aufgefüllt hat.'
+        return 'Netz bevorzugt · Hausspeicher bewahren', 'Die Gesamtplanung bewahrt Hausspeicherenergie für andere Zeitfenster oder die Endreserve.'
     return 'PV versorgt das Haus', 'Die prognostizierte PV-Leistung deckt den Hausbedarf.'
 
 
@@ -174,7 +174,7 @@ def optimize(slots, c):
         previous = energy
         p['reason'],p['explanation'] = explain(p,c)
         if p.get('ee') is None:
-            p['explanation'] += ' EE-Prognose fehlt in diesem Zeitfenster; Planung nur nach Stromkosten, PV und Akku-Grenzen, ohne EE-Gewichtung.'
+            p['explanation'] += ' EE-Prognose fehlt in diesem Zeitfenster; Planung nur nach Stromkosten, PV und Hausspeicher-Grenzen, ohne EE-Gewichtung.'
     plan_totals,base_totals = totals(points),totals(reference)
     if abs(plan_totals['end_soc']-base_totals['end_soc'])>1e-4:
         raise ValueError('Endreserve nicht vergleichbar')

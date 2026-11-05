@@ -7,7 +7,7 @@ export function renderBatteryOverlay(battery, { bx, by, time, end }) {
       class="battery-forecast"
       role="img"
       aria-label="${esc(
-        `Akku-Prognose: ${fmt(battery.sunsetSoc, "%", 0)} bei Sonnenuntergang; Mindeststand ${fmt(battery.minSoc, "%")}; ${battery.completeCoverage ? "Hausbedarf bis Mitternacht gedeckt" : "erste Deckungslücke um " + time(battery.exhaustedAt)}`,
+        `Hausspeicher-Prognose: ${fmt(battery.sunsetSoc, "%", 0)} bei Sonnenuntergang; Mindeststand ${fmt(battery.minSoc, "%")}; ${battery.completeCoverage ? "Hausbedarf bis Mitternacht gedeckt" : "erste Deckungslücke um " + time(battery.exhaustedAt)}`,
       )}"
     >
       <path

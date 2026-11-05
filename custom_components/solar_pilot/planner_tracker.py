@@ -21,7 +21,7 @@ def finite(value):
 def collect(controller, now):
     s,c = controller.snapshot,controller.settings
     if not s or s.house_soc is None or s.house_soc_age+max(0,now-s.now)>c.meter_max_age_s:
-        raise ValueError('Aktueller Akku-Ladestand fehlt oder ist veraltet')
+        raise ValueError('Aktueller Hausspeicher-Ladestand fehlt oder ist veraltet')
     house = controller.consumption.result
     if not finite(house.get('updated')) or not 0 <= now-house['updated'] <= 900:
         raise ValueError('Hausverbrauchsprognose fehlt oder ist veraltet')
@@ -31,7 +31,7 @@ def collect(controller, now):
     sources = display_sources(controller.entities,controller.entry.options.get('display_sources'))
     minimum = controller.hass.states.get(sources['battery_min_soc'])
     if not minimum or minimum.state in ('unknown','unavailable') or minimum.attributes.get('restored') or minimum.attributes.get('unit_of_measurement') != '%':
-        raise ValueError('Geräte-Mindeststand des Akkus fehlt')
+        raise ValueError('Geräte-Mindeststand des Hausspeichers fehlt')
     floor = float(minimum.state)
     if not math.isfinite(floor) or not 0 <= floor <= 100:
         raise ValueError('Geräte-Mindeststand ungültig')

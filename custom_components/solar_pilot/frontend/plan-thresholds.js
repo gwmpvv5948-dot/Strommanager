@@ -9,7 +9,7 @@ export function planThresholds(panel) {
   const carEnergy=car!==null&&positive(c.planner_ev_capacity_kwh)?car*c.planner_ev_capacity_kwh/100:null;
   const fresh=Number.isFinite(s.now)&&Date.now()/1000-s.now>=-60&&Date.now()/1000-s.now<=120;
   const power=fresh&&Number.isFinite(s.battery_charge_w)?s.battery_charge_w:null;
-  const batteryState=power===null?'Leistung nicht verfügbar':power>10?'Lädt':power< -10?'Entlädt':'Akku ruht';
+  const batteryState=power===null?'Leistung nicht verfügbar':power>10?'Lädt':power< -10?'Entlädt':'Hausspeicher ruht';
   const wallbox=fresh&&Number.isFinite(s.wallbox_w)?s.wallbox_w:null;
   const marks=[['WR-Minimum',numeric(s.battery_min_soc),'floor'],['Endreserve',numeric(c.planner_terminal_soc),'terminal'],['Abendreserve',numeric(c.reserve_soc),'reserve'],['Tesla-Freigabe',numeric(c.storage_release_soc),'release']];
   const sideMarks=marks.filter(([,v,key])=>v!==null&&key!=='floor').map(([label,value,key])=>({label,value,key,top:100-value})).sort((a,b)=>a.top-b.top);
