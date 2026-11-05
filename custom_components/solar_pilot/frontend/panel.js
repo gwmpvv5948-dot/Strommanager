@@ -139,7 +139,6 @@ export class SolarPilotPanel extends HTMLElement {
       ${this.liveEnergyCard()}
       ${energyPlanCard(this)}
       ${this.budgetCard(s,c)}
-      ${this.vehicle(s,c)}
       ${this.consumerCard()}
       <div class="status-pair benefit-weather-pair full">${pvBenefitCard(this)}${weatherOutlookCard(this)}</div>
       ${this.solarChart(s,c)}

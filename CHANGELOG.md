@@ -2,6 +2,8 @@
 
 ## 0.1.89
 
+- Separate Kachel „Dein Fahrzeug“ entfernt; die Fahrzeugdarstellung steht zentral im Energie-Fahrplan.
+
 - Hausspeicher als gefüllter Akku mit Grenzmarkierungen und Tesla als Fahrzeugvisualisierung im Energie-Fahrplan.
 - Ladezustand, Leistung, Ziele und modellierter Energieinhalt aus bestehenden HA-Daten; keine Mockup-Beispielwerte im Betrieb.
 
