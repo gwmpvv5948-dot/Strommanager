@@ -74,7 +74,7 @@ async def async_setup_entry(hass, entry):
             if name == "set_mode":
                 fields[vol.Required("mode")] = vol.In(MODES)
             elif name == "activate":
-                fields[vol.Optional("mode", default="auto")] = vol.In(("auto", "storage_first", "charge_minimum"))
+                fields[vol.Optional("mode", default="auto")] = vol.In(("auto", "storage_first", "charge_minimum", "charge_now"))
             elif name == "configure_sources":
                 fields[vol.Required("sources")] = dict
             elif name == "configure_price":

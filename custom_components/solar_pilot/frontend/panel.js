@@ -1,24 +1,24 @@
-import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.94";
-import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.94-collapse";
-import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.94";
-import {solarTimeline} from "./solar-timeline-view.js?v=0.1.94";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.94';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.94';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.94';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.94';
+import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.95";
+import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.95-collapse";
+import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.95";
+import {solarTimeline} from "./solar-timeline-view.js?v=0.1.95";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.95';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.95';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.95';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.95';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.94-price2';
-import {esc,fmt} from './view-format.js?v=0.1.94';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.94';
-import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.94';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.95-price2';
+import {esc,fmt} from './view-format.js?v=0.1.95';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.95';
+import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.95';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
-import {planThresholds} from './plan-thresholds.js?v=0.1.94';
+import {planThresholds} from './plan-thresholds.js?v=0.1.95';
 import {plannedDayAllocation} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.94";
-const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.95";
+const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",charge_now:"Tesla-Sofortladen",paused:"Pausiert"};
 const FIELD_INFO = {
   planner_price_weight:["Spotpreis · Gewicht im Fahrplan", "Modellgewicht · keine Stromgebühr", 0, 10, .1],
   planner_ev_price_ct:["Tesla · flexible Netzladung bis Börsenpreis", "ct/kWh · ohne Steuern und Netzentgelte", -100, 500, .1],
@@ -355,7 +355,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><img class="logo" src="/solar_pilot_frontend/strommanager-icon.png?v=0.1.94" alt="" width="38" height="38"><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.94</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><img class="logo" src="/solar_pilot_frontend/strommanager-icon.png?v=0.1.95" alt="" width="38" height="38"><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.95</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
@@ -403,6 +403,8 @@ export class SolarPilotPanel extends HTMLElement {
     if(form){const read=()=>{const data={};for(const key of Object.keys(FIELD_INFO))data[key]=Number(form.elements.namedItem(key).value);for(const key of ["grid_export_positive","battery_charge_positive","grid_renewable_enabled","planner_control_enabled","planner_ev_enabled","planner_price_enabled"])data[key]=form.elements.namedItem(key).checked;return data;};form.oninput=()=>{this.draft=read();};form.onsubmit=e=>{e.preventDefault();if(form.reportValidity())this.service("configure",{settings:read()});};}
   }
   action(name,mode="auto"){
+    if(name==="immediate")return this.service("activate",{mode:"charge_now"});
+    if(name==="end_immediate")return this.service("set_mode",{mode:this.status.immediate_return_mode||"observe"});
     if(name==="activate"&&!confirm("Strommanager-Steuerung aktivieren? Dabei können Gerätebefehle gesendet werden."))return;
     if(name==="pause")return this.service("set_mode",{mode:"paused"});
     this.service(name,name==="activate"?{mode}:{});

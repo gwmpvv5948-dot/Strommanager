@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import timedelta
 from zoneinfo import ZoneInfo
 import math
@@ -37,6 +37,8 @@ class Controller:
         self.energy_control = None
         self.charging_state = ChargingState()
         self.mode = "observe"
+        self.immediate_return_mode = "observe"
+        self.immediate_stop_requested = False
         self.executor = Executor(self._send)
         self.store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
         self.lock = asyncio.Lock()
@@ -139,6 +141,10 @@ class Controller:
 
     async def async_start(self):
         saved = await self.store.async_load() or {}
+        self.immediate_return_mode = saved.get("immediate_return_mode", "observe")
+        if self.immediate_return_mode not in MODES or self.immediate_return_mode == "charge_now":
+            self.immediate_return_mode = "observe"
+        self.immediate_stop_requested = saved.get("immediate_stop_requested") is True
         self.last_car_soc = saved.get("last_car_soc")
         self.mode = saved.get("mode", "observe")
         if self.mode not in MODES:
@@ -221,7 +227,26 @@ class Controller:
                 self.entry.async_create_background_task(self.hass, self.consumption.sample(self.snapshot.now), "Strommanager consumption learning")
             if self.mode not in ("observe", "paused"):
                 self.charging_state = charging_state(self.snapshot, self.settings, self.charging_state)
-            self.decision = decide(self.snapshot, self.settings, self.mode, self.charging_state)
+            if self.mode == "charge_now":
+                s=self.snapshot
+                reached=(s.car_soc is not None and s.car_limit is not None and 0<=s.car_age<=self.settings.car_max_age_s and s.car_soc>=s.car_limit)
+                if (self.immediate_stop_requested or reached) and s.charging is False:
+                    self.mode=self.immediate_return_mode
+                    self.immediate_stop_requested=False
+                    await self.persist()
+            decision_settings=self.settings
+            if self.mode == "charge_now":
+                current=self.state("car_current")
+                maximum=current.attributes.get("max") if current else None
+                try:
+                    maximum=min(16,self.settings.max_amps,int(maximum))
+                    if maximum<self.settings.min_amps:maximum=0
+                except (TypeError,ValueError):maximum=0
+                if maximum:
+                    decision_settings=replace(self.settings,max_amps=maximum)
+            self.decision = decide(self.snapshot, decision_settings, self.mode, self.charging_state)
+            if self.mode == "charge_now" and (self.immediate_stop_requested or not maximum):
+                self.decision=replace(self.decision,target_amps=0,reason="Tesla-Sofortladen wird beendet" if self.immediate_stop_requested else "Tesla-Sofortladen wartet auf gültige Ladestromgrenzen")
             display = display_sources(self.entities,self.entry.options.get("display_sources"))
             def attribute_number(state,key=None):
                 try:
@@ -243,7 +268,9 @@ class Controller:
             current_price = self.price_forecast.status(self.snapshot.now,self.settings)
             inputs_valid = (current_grid['available'] or current_price['available']) and forecast_inputs_valid
             energy_plan = self.planner.status(self.snapshot.now)
-            if energy_plan.get('joint') and self.settings.planner_ev_enabled:
+            if self.mode == "charge_now":
+                self.energy_control={'enabled':True,'source':'charge_now','reason':self.decision.reason,'discharge_w':0,'replan':False}
+            elif energy_plan.get('joint') and self.settings.planner_ev_enabled:
                 self.decision,self.energy_control = apply_joint_plan(self.snapshot,self.settings,self.decision,self.mode,
                     energy_plan,device_min_soc=floor,device_max_w=maximum,device_step_w=increment,
                     inputs_valid=forecast_inputs_valid,grid_share=current_grid.get('share') if current_grid['available'] else None,
@@ -305,6 +332,8 @@ class Controller:
     async def persist(self):
         payload = {
             "mode": self.mode,
+            "immediate_return_mode": self.immediate_return_mode,
+            "immediate_stop_requested": self.immediate_stop_requested,
             "last_car_soc": self.last_car_soc,
             "charging_state": asdict(self.charging_state),
             "baselines": self.executor.baselines, "owned": self.executor.owned,
@@ -377,14 +406,21 @@ class Controller:
         if mode not in ("observe", "paused") and self.mode in ("observe", "paused"):
             raise ServiceValidationError("Aktive Steuerung zuerst mit 'Aktivieren' freigeben")
         async with self.lock:
-            self.mode = mode
+            if self.mode == "charge_now" and mode != "charge_now":
+                self.immediate_return_mode=mode
+                self.immediate_stop_requested=True
+            else:
+                if mode == "charge_now" and self.mode != "charge_now":
+                    self.immediate_return_mode=self.mode
+                    self.immediate_stop_requested=False
+                self.mode = mode
             await self.persist()
         await self.async_update()
 
     async def async_activate(self, mode="auto"):
         """Explicit activation; no automatic activation at setup."""
         async with self.lock:
-            if mode not in ("auto", "storage_first", "charge_minimum"):
+            if mode not in ("auto", "storage_first", "charge_minimum", "charge_now"):
                 raise ServiceValidationError("Ungültiger Modus für Aktivierung")
             s = self.read()
             if (s.current_discharge_w is None or s.grid_charge_enabled is None
@@ -393,6 +429,9 @@ class Controller:
             actuator = self.state("discharge_limit")
             if actuator.attributes.get("min", 1) > 0:
                 raise ServiceValidationError("Entladebegrenzung auf 0 W wird vom Gerät nicht unterstützt")
+            if mode == "charge_now" and self.mode != "charge_now":
+                self.immediate_return_mode=self.mode
+                self.immediate_stop_requested=False
             self.mode = mode
             await self.persist()
         await self.async_update()
@@ -456,7 +495,7 @@ class Controller:
             "price_forecast": self.price_forecast.status(dt_util.utcnow().timestamp(), self.settings),
             "source_reports": source_reports,
             "last_car_soc": self.last_car_soc,
-            "entry_id": self.entry.entry_id, "mode": self.mode,
+            "entry_id": self.entry.entry_id, "mode": self.mode, "immediate_return_mode": self.immediate_return_mode,
             "updated": self.updated,
             "error": self.adapter_error or self.executor.error,
             "decision": asdict(self.decision) if self.decision else None,

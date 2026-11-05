@@ -32,7 +32,7 @@ export function energyPlanCard(panel) {
   const control=panel.status?.energy_control;
   const active=panel.status?.settings?.planner_control_enabled && !["observe","paused"].includes(panel.status?.mode);
   const head = `<div class="card-title"><h2>Energie-Fahrplan</h2><span class="plan-observe">${active ? "HiGHS" : "Beobachtung"} · ${plan?.joint?"Haus, Speicher & Tesla":"Haus & Speicher"}</span></div>`;
-  const state=active ? `<p class="note plan-control-state"><strong>${esc(control?.reason || "Steuerung wird vorbereitet")}</strong><br>Entladegrenze: ${fmt(control?.discharge_w,"W")} · eingestellt: ${fmt(panel.status?.snapshot?.current_discharge_w,"W")}</p>` : "";
+  const state=panel.status?.mode==='charge_now' ? `<p class="note plan-control-state"><strong>Tesla-Sofortladen · Hausspeicherentladung gesperrt</strong><br>PV und Netz erlaubt · Energie-Fahrplan wird für die Steuerung übergangen.</p>` : active ? `<p class="note plan-control-state"><strong>${esc(control?.reason || "Steuerung wird vorbereitet")}</strong><br>Entladegrenze: ${fmt(control?.discharge_w,"W")} · eingestellt: ${fmt(panel.status?.snapshot?.current_discharge_w,"W")}</p>` : "";
   const calculating = plan?.calculating === true || !plan;
   const progress = calculating ? `<div class="plan-calculating" role="status" aria-live="polite"><ha-icon icon="mdi:cog" class="plan-calculating-icon" aria-hidden="true"></ha-icon><div><strong>Wird berechnet …</strong><span>Der Energie-Fahrplan für die nächsten 24 Stunden wird erstellt.</span></div></div>` : "";
   if (!plan?.available)

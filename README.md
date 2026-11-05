@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/gwmpvv5948-dot/Strommanager/main/custom_components/solar_pilot/brand/icon%402x.png" alt="Strommanager" width="96" height="96">
 
-**Version 0.1.94** · Home-Assistant-Integration für Photovoltaik, Hausspeicher und Tesla – mit eigener Übersicht in der Seitenleiste.
+**Version 0.1.95** · Home-Assistant-Integration für Photovoltaik, Hausspeicher und Tesla – mit eigener Übersicht in der Seitenleiste.
 
 ## Funktionen
 
@@ -13,6 +13,8 @@
 - **PV und Wetter:** Solcast-Prognosen mit P50/P10, gemessener PV-Verlauf und Sieben-Tage-Ausblick für Ertrag und Wetter in Dresden.
 - **Bilanz und Vorteil:** Tagesbilanz der PV-Nutzung für Haus, Speicher und Tesla sowie geschätzte Ersparnis und Einspeisevergütung im Wochenvergleich.
 - **Konfiguration und Diagnose:** Entitäten, Reserven, Ladegrenzen, Tarife und Planungsgewichte direkt im Panel einstellen. Betriebsarten: Automatik, Speicher bevorzugen, nur Tesla-Mindeststand, Beobachten und Pause.
+
+**Tesla-Sofortladen:** Lädt unabhängig vom Fahrplan mit dem zulässigen Maximalstrom bis 16 A. Die Hausspeicherentladung bleibt gesperrt; fehlende Leistung kommt aus dem Netz. Nach Fahrzeuglimit oder manuellem Beenden geht es nach bestätigtem Ladestopp in den vorherigen Modus zurück. In der Tesla-Kachel steht der eingestellte Ladestrom.
 
 ## Installation und Updates
 

@@ -10,7 +10,7 @@ activate:
       default: auto
       selector:
         select:
-          options: [auto, storage_first, charge_minimum]
+          options: [auto, storage_first, charge_minimum, charge_now]
 evaluate:
   name: Neu berechnen
   description: Berechnet neu. Im aktiven Modus werden bei Bedarf Gerätebefehle gesendet.
@@ -30,7 +30,7 @@ set_mode:
       required: true
       selector:
         select:
-          options: [observe, auto, storage_first, charge_minimum, paused]
+          options: [observe, auto, storage_first, charge_minimum, charge_now, paused]
 configure:
   name: Einstellungen ändern
   fields:

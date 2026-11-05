@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.1.95
+
+- Schnellbedienung „Tesla-Sofortladen“ mit maximal zulässigem Strom bis 16 A und gesperrter Hausspeicherentladung. Preis-/PV-Planung wird übergangen, technische Schutzprüfung bleibt erhalten.
+- Nach Fahrzeuglimit oder Beenden: Rückkehr zum vorherigen Modus nach bestätigtem Ladestopp; Zustand bleibt über Neustarts erhalten.
+- Eingestellten Ladestrom in der Tesla-Kachel anzeigen.
+
 ## 0.1.94
 
 - Zusammenhängende Tesla-Ladeblöcke durch höheres Startgewicht (0,05 € Modellgewicht/Start) bevorzugt; keine zusätzliche Netzfreigabe bei Wolken.

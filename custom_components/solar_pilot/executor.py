@@ -31,7 +31,7 @@ def plan(s: Snapshot, d: Decision, c: Settings) -> list[Command]:
         if s.current_discharge_w is None or s.grid_charge_enabled is None or s.car_current is None:
             return commands
         difference = s.car_current - d.target_amps
-        if difference > 0 or difference <= -2 or (difference != 0 and s.charging is False):
+        if difference > 0 or difference <= -2 or (difference != 0 and (s.charging is False or d.code == "charge_now")):
             commands.append(Command("car_current", d.target_amps, True))
         if s.charging is False and s.charge_changed_age >= c.minimum_pause_s:
             commands.append(Command("car_charge", True, True))

@@ -83,6 +83,55 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
             async_on_unload=Mock(),async_create_background_task=Mock())
         self.c=Controller(self.hass,self.entry)
 
+    async def test_immediate_mode_saves_previous_mode_and_protects_storage(self):
+        from dataclasses import replace
+        self.c.mode="auto"
+        self.c.read=Mock(return_value=sample(now=NOW.timestamp(),house_soc=99,car_soc=30,car_limit=50,car_current=15,charging=True,current_discharge_w=2500,grid_charge_enabled=False))
+        await self.c.async_activate("charge_now")
+        self.assertEqual(self.c.mode,"charge_now")
+        self.assertEqual(self.c.immediate_return_mode,"auto")
+        self.assertEqual(self.c.energy_control['source'],'charge_now')
+        self.assertEqual(self.c.decision.discharge_w,0)
+        self.assertEqual(self.c.decision.target_amps,16)
+        self.assertEqual(self.c.store.payload['immediate_return_mode'],'auto')
+
+    async def test_immediate_stop_waits_for_confirmation_then_restores_observation(self):
+        from dataclasses import replace
+        self.c.mode="charge_now";self.c.immediate_return_mode="observe"
+        s=sample(now=NOW.timestamp(),car_soc=30,car_limit=50,charging=True,car_current=16,current_discharge_w=0,grid_charge_enabled=False)
+        self.c.read=Mock(return_value=s)
+        await self.c.async_set_mode("observe")
+        self.assertEqual(self.c.mode,"charge_now")
+        self.assertTrue(self.c.immediate_stop_requested)
+        self.assertEqual(self.c.decision.target_amps,0)
+        self.c.read.return_value=replace(s,charging=False)
+        await self.c.async_update()
+        self.assertEqual(self.c.mode,"observe")
+        self.assertFalse(self.c.immediate_stop_requested)
+
+    async def test_immediate_limit_reached_restores_previous_mode_only_after_stop(self):
+        from dataclasses import replace
+        self.c.mode="charge_now";self.c.immediate_return_mode="paused"
+        s=sample(now=NOW.timestamp(),car_soc=50,car_limit=50,charging=True)
+        self.c.read=Mock(return_value=s)
+        await self.c.async_update()
+        self.assertEqual(self.c.mode,"charge_now")
+        self.assertEqual(self.c.decision.target_amps,0)
+        self.c.read.return_value=replace(s,charging=False)
+        await self.c.async_update()
+        self.assertEqual(self.c.mode,"paused")
+
+    async def test_immediate_mode_and_return_mode_survive_reload(self):
+        self.c.mode="charge_now";self.c.immediate_return_mode="storage_first"
+        await self.c.persist()
+        saved=self.c.store.payload
+        self.c.mode="observe";self.c.immediate_return_mode="observe"
+        self.c.store.async_load=AsyncMock(return_value=saved)
+        await self.c.async_start()
+        self.assertEqual(self.c.mode,"charge_now")
+        self.assertEqual(self.c.immediate_return_mode,"storage_first")
+        self.assertEqual(self.c.decision.discharge_w,0)
+
     async def test_source_mapping_persists_options_without_commands(self):
         self.entry.options={"settings":{"reserve_soc":60},"custom":"keep"}
         self.states["sensor.custom_pv"]=state(123,"W")

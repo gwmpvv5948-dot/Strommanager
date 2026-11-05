@@ -28,6 +28,17 @@ def sample(**changes):
         grid_charge_enabled=False,battery_min_soc=1), **changes)
 
 
+class ImmediateCharging(unittest.TestCase):
+    def test_ignores_price_weather_and_reserve_but_never_discharges_storage(self):
+        s=sample(house_soc=99,car_soc=30,car_limit=50,forecast_kwh=None,forecast_age=99999,daylight=False)
+        d=decide(s,Settings(),"charge_now")
+        self.assertEqual(d.target_amps,16);self.assertEqual(d.discharge_w,0)
+    def test_obeys_car_limit_presence_freshness_and_configured_current(self):
+        s=sample(car_soc=30,car_limit=50)
+        self.assertEqual(decide(s,replace(Settings(),max_amps=12),"charge_now").target_amps,12)
+        for changed in (replace(s,car_soc=50),replace(s,cable=False),replace(s,car_age=999999)):
+            self.assertEqual(decide(changed,Settings(),"charge_now").target_amps,0)
+
 class Decisions(unittest.TestCase):
     def setUp(self): self.c=Settings()
     def test_minimum_never_allows_grid_charge(self):

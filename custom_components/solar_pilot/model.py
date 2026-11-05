@@ -172,6 +172,12 @@ def charging_state(s: Snapshot, c: Settings, previous: ChargingState) -> Chargin
 
 def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | None = None) -> Decision:
     """Compute intent. Executor alone decides whether commands are allowed."""
+    if mode == "charge_now":
+        car_ok=(valid(s.car_soc,0,100) and valid(s.car_limit,0,100) and 0<=s.car_age<=c.car_max_age_s)
+        eligible=s.at_home and s.cable and s.wallbox_enabled and 0<=s.location_age<=c.car_max_age_s
+        amps=min(16,c.max_amps) if car_ok and eligible and s.car_soc<s.car_limit else 0
+        reason="Tesla-Sofortladen · maximaler Ladestrom · Hausspeicher gesperrt" if amps else "Tesla-Sofortladen wartet auf Fahrzeug oder Ladelimit erreicht"
+        return Decision("charge_now",reason,amps,0,eligible and s.online,0,amps*230*c.phases,None,None,())
     state = charging_state(s, c, state or ChargingState())
     problems: list[str] = []
     storage_ok = valid(s.house_soc, 0, 100) and 0 <= s.house_soc_age <= c.meter_max_age_s
