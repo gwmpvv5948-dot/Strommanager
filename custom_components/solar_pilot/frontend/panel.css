@@ -199,12 +199,8 @@ a {
 .logo {
   width: 38px;
   height: 38px;
-  background: var(--green);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  font-size: 23px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .brand strong {
   display: block;

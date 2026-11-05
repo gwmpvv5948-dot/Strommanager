@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.85
+
+- Eigenes Strommanager-Icon im Panel, in der HACS-Beschreibung und als lokale Home-Assistant-Markenbilder (256/512 Pixel).
+- Das Listen-Icon hängt von der Unterstützung lokaler Markenbilder in der verwendeten HACS-Version ab.
+
 ## 0.1.84
 
 - „Dein PV-Vorteil“ zeigt nach dem Neuladen die aktuelle Kalenderwoche. Frühere Wochen bleiben per Pfeil wählbar.
