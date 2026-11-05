@@ -2,19 +2,21 @@
 
 <img src="https://raw.githubusercontent.com/gwmpvv5948-dot/Strommanager/main/custom_components/solar_pilot/brand/icon%402x.png" alt="Strommanager" width="96" height="96">
 
-**Version 0.1.95** · Home-Assistant-Integration für Photovoltaik, Hausspeicher und Tesla – mit eigener Übersicht in der Seitenleiste.
+**Version 0.1.96** · Home-Assistant-Integration für Photovoltaik, Hausspeicher und Tesla – mit eigener Übersicht in der Seitenleiste.
 
 ## Funktionen
 
 - **Energie jetzt:** PV-Leistung, Hausverbrauch, Netzbezug, Akku- und Tesla-Ladestand sowie aktive Verbraucher auf einen Blick.
 - **Energie-Fahrplan:** Lokale Planung mit HiGHS für die nächsten 24 Stunden im Viertelstundenraster. Haus und Speicher werden gemeinsam optimiert; die Tesla-Planung lässt sich zuschalten. Leistung, Ladestände, Börsenpreise und Erneuerbaren-Anteil werden nachvollziehbar dargestellt.
 - **Lernende Verbrauchsprognose:** Lernt lokal aus Verbrauchsstunden, Uhrzeit, Wochentag und Außentemperatur. Unterstützt den Import vorhandener InfluxDB-v1-Historie und zeigt Messwerte, Prognosen und historische Vergleiche.
-- **Tesla-Ladesteuerung:** PV-Überschussladen, einstellbare Mindestladung, Speicherfreigabe und flexible Netzladung nach Preisgrenze beziehungsweise Erneuerbaren-Anteil. Fahrzeuglimit, Speicherreserve und Befehlsabstände werden berücksichtigt.
+- **Tesla-Ladesteuerung:** PV-Überschussladen, einstellbare Mindestladung, Speicherfreigabe und flexible Netzladung nach Erneuerbaren-Anteil. Fahrzeuglimit, Speicherreserve und Befehlsabstände werden berücksichtigt.
 - **PV und Wetter:** Solcast-Prognosen mit P50/P10, gemessener PV-Verlauf und Sieben-Tage-Ausblick für Ertrag und Wetter in Dresden.
 - **Bilanz und Vorteil:** Tagesbilanz der PV-Nutzung für Haus, Speicher und Tesla sowie geschätzte Ersparnis und Einspeisevergütung im Wochenvergleich.
 - **Konfiguration und Diagnose:** Entitäten, Reserven, Ladegrenzen, Tarife und Planungsgewichte direkt im Panel einstellen. Betriebsarten: Automatik, Speicher bevorzugen, nur Tesla-Mindeststand, Beobachten und Pause.
 
 **Tesla-Sofortladen:** Lädt unabhängig vom Fahrplan mit dem zulässigen Maximalstrom bis 16 A. Die Hausspeicherentladung bleibt gesperrt; fehlende Leistung kommt aus dem Netz. Nach Fahrzeuglimit oder manuellem Beenden geht es nach bestätigtem Ladestopp in den vorherigen Modus zurück. In der Tesla-Kachel steht der eingestellte Ladestrom.
+
+Die Planung verwendet den eingestellten Festtarif. Börsenpreise sind reine Information; der Erneuerbaren-Anteil wirkt mit 25 % des eingestellten EE-Modellgewichts.
 
 ## Installation und Updates
 

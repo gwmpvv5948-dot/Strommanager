@@ -114,8 +114,7 @@ def apply_joint_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device
         return max(0,math.floor(value/device_step_w+1e-9)*device_step_w)
     active=amps>=c.min_amps or s.wallbox_w>10
     watts=watts_for(active)
-    planned_price=point.get('spot_ct') is not None
-    clean=(valid(spot_ct) and spot_ct<=c.planner_ev_price_ct) if planned_price else (valid(grid_share) and grid_share>=c.planner_ev_grid_share)
+    clean=valid(grid_share) and grid_share>=c.planner_ev_grid_share
     if amps and not clean:
         # No extra EV grid import when weather/EE differs from the plan. Remove
         # current battery output first; add only the newly authorised shared ceiling.
@@ -127,6 +126,6 @@ def apply_joint_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device
     # Actual EV power still keeps protection active until a stop is confirmed.
     watts=watts_for(amps>=c.min_amps or s.wallbox_w>10)
     reason=('HiGHS · Tesla lädt mit PV / freigegebenem Speicher' if amps and not clean else
-            ('HiGHS · Tesla-Ladung im günstigen Preisfenster' if planned_price else 'HiGHS · Tesla-Ladung bei hohem EE-Anteil') if amps else
+            'HiGHS · Tesla-Ladung bei hohem EE-Anteil' if amps else
             'HiGHS · Tesla wartet auf PV / freigegebenes Netzfenster')
     return result(reason,'highs_ev',watts,amps)

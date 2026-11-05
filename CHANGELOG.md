@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.1.96
+
+- Festtarifplanung: Börsenpreis beeinflusst weder HiGHS-Ziel noch Tesla-Netzfreigabe oder laufende Steuerung. Preis bleibt reine Anzeige.
+- EE-Modellgewicht auf 25 % des bisherigen Gewichts reduziert; EE-Freigabeschwelle für flexible Tesla-Netzladung bleibt erhalten.
+- Preisgrenzen-Einstellungen und irreführende Ladegründe entfernt.
+
 ## 0.1.95
 
 - Schnellbedienung „Tesla-Sofortladen“ mit maximal zulässigem Strom bis 16 A und gesperrter Hausspeicherentladung. Preis-/PV-Planung wird übergangen, technische Schutzprüfung bleibt erhalten.

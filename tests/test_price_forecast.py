@@ -31,19 +31,19 @@ class PriceData(unittest.TestCase):
     def test_gaps_remain_explicit_and_do_not_become_zero(self):
         d=payload();del d['data'][2];p=parse_prices(d,NOW);f=PriceForecast('key');f.points=p;f.fetched=NOW
         self.assertFalse(f.status(NOW,Settings())['complete']);self.assertIsNone(f.status(NOW+1800,Settings())['spot_ct'])
-    def test_price_replaces_ee_weight_but_never_actual_tariff(self):
+    def test_spot_price_is_display_only_and_ee_weight_is_reduced(self):
         c=config(initial_soc=80,terminal_soc=10,cycle_cost=0,price_weight=1,ee_weight=100)
         data=slots(hours=8,load=.4)
         for p in data:p.update(spot_ct=-5 if p['start']<14400 else 30,price_forecast=p['start']>=14400,ee=0 if p['start']<14400 else 100)
         r=optimize(data,c)
-        self.assertGreater(sum(p['battery_kw'] for p in r['points'][16:]),sum(p['battery_kw'] for p in r['points'][:16]))
+        self.assertGreater(sum(p['battery_kw'] for p in r['points'][:16]),sum(p['battery_kw'] for p in r['points'][16:]))
         expected=sum((p['grid_kw']*c.purchase-p['export_kw']*c.feed_in)*(p['end']-p['start'])/3600 for p in r['points'])
         self.assertAlmostEqual(r['totals']['cost'],expected)
-        self.assertEqual(signal_cost({'spot_ct':-5,'ee':0},c),-.05)
-        self.assertEqual(signal_cost({'spot_ct':None,'ee':50},c),50)
-    def test_ev_price_gate_overrides_ee_then_falls_back(self):
+        self.assertEqual(signal_cost({'spot_ct':-5,'ee':0},c),25)
+        self.assertEqual(signal_cost({'spot_ct':None,'ee':50},c),12.5)
+    def test_ev_grid_permission_uses_ee_and_ignores_spot_prices(self):
         c=config(ev_price_ct=10)
-        self.assertTrue(ev_grid_allowed({'spot_ct':-5,'ee':0},c,60))
-        self.assertFalse(ev_grid_allowed({'spot_ct':11,'ee':100},c,60))
+        self.assertFalse(ev_grid_allowed({'spot_ct':-5,'ee':0},c,60))
+        self.assertTrue(ev_grid_allowed({'spot_ct':11,'ee':100},c,60))
         self.assertTrue(ev_grid_allowed({'spot_ct':None,'ee':80},c,60))
         self.assertFalse(ev_grid_allowed({'spot_ct':None,'ee':None},c,60))

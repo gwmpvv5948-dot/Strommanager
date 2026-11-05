@@ -74,6 +74,16 @@ class JointPlanning(unittest.TestCase):
         starts=sum(a>0 and (i==0 or amps[i-1]==0) for i,a in enumerate(amps))
         self.assertEqual(starts,1)
 
+    def test_spot_prices_cannot_change_fixed_tariff_plan_or_reason(self):
+        data=slots(hours=4,load=.2,ee=90);c=config(initial_soc=3,minimum_soc=3,price_weight=10);ev=vehicle(target_soc=45)
+        for p in data:p['spot_ct']=-50
+        cheap=optimize_ev(data,c,ev)
+        for p in data:p['spot_ct']=400
+        expensive=optimize_ev(data,c,ev)
+        self.assertEqual([p['ev_amps'] for p in cheap['points']],[p['ev_amps'] for p in expensive['points']])
+        self.assertAlmostEqual(cheap['totals']['objective'],expensive['totals']['objective'])
+        self.assertTrue(all('Spotpreis' not in p['reason'] for p in expensive['points']))
+
     def test_limit_reached_does_not_add_energy(self):
         ev=vehicle(initial_soc=80);r=optimize_ev(slots(ee=90),config(),ev)
         self.assertTrue(all(p['ev_amps']==0 for p in r['points']))
@@ -86,10 +96,10 @@ class JointPlanning(unittest.TestCase):
         c=config(initial_soc=70);ev=vehicle();data=slots(ee=90);data[0]['start']=173
         r=optimize_ev(data,c,ev);self.verify(r,c,ev)
         self.assertGreater(r['ev']['planned_soc'],79)
-    def test_prices_select_network_windows_without_claiming_ee_and_keep_tariff(self):
+    def test_ee_selects_network_windows_despite_opposing_spot_prices(self):
         data=slots(hours=8,load=.2);c=config(initial_soc=3,minimum_soc=3,price_weight=1,ev_price_ct=10);ev=vehicle(target_soc=45)
         for i,p in enumerate(data):p.update(ee=0 if i<16 else 100,spot_ct=-5 if i<16 else 30,price_forecast=i>=16)
         r=optimize_ev(data,c,ev);self.verify(r,c,ev)
-        self.assertGreater(sum(p['ev_grid_kw'] for p in r['points'][:16]),0)
-        self.assertAlmostEqual(sum(p['ev_grid_kw'] for p in r['points'][16:]),0)
+        self.assertAlmostEqual(sum(p['ev_grid_kw'] for p in r['points'][:16]),0)
+        self.assertGreater(sum(p['ev_grid_kw'] for p in r['points'][16:]),0)
         self.assertAlmostEqual(r['totals']['cost'],sum((p['grid_kw']*c.purchase-p['export_kw']*c.feed_in)*(p['end']-p['start'])/3600 for p in r['points']))

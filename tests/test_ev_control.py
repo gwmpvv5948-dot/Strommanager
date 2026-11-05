@@ -46,8 +46,8 @@ class JointControl(unittest.TestCase):
         d,m=self.run_joint(s=s,plan=plan);self.assertEqual((d.target_amps,d.discharge_w),(16,0))
     def test_soc_drift_requests_replan(self):
         _,m=self.run_joint(s=replace(self.s,car_soc=45));self.assertEqual(m['source'],'fallback');self.assertTrue(m['replan'])
-    def test_price_window_requires_fresh_current_price_not_just_high_ee(self):
+    def test_live_grid_permission_depends_only_on_ee_not_spot_price(self):
         plan={**self.plan,'points':[{**self.plan['points'][0],'spot_ct':5}]}
-        d,_=self.run_joint(plan=plan,spot_ct=5,grid_share=0);self.assertEqual(d.target_amps,16)
+        d,_=self.run_joint(plan=plan,spot_ct=5,grid_share=0);self.assertEqual(d.target_amps,0)
         for price in (None,11):
-            d,_=self.run_joint(plan=plan,spot_ct=price,grid_share=100);self.assertEqual(d.target_amps,0)
+            d,_=self.run_joint(plan=plan,spot_ct=price,grid_share=100);self.assertEqual(d.target_amps,16)

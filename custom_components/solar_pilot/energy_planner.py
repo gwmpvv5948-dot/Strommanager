@@ -46,15 +46,11 @@ def validate(slots, c):
 
 
 def signal_cost(s, c):
-    """Planning preference only. Never change the actual tariff in cost totals."""
-    if s.get("spot_ct") is not None:
-        return c.price_weight*s["spot_ct"]/100
-    return c.ee_weight*(1-min(100,s["ee"])/100) if s.get("ee") is not None else 0
+    """Fixed tariff: only a reduced EE preference; spot prices are display-only."""
+    return .25*c.ee_weight*(1-min(100,s["ee"])/100) if s.get("ee") is not None else 0
 
 
 def ev_grid_allowed(s, c, share):
-    if s.get("spot_ct") is not None:
-        return s["spot_ct"] <= c.ev_price_ct
     return s.get("ee") is not None and s["ee"] >= share
 
 
@@ -177,9 +173,7 @@ def optimize(slots, c):
             raise ValueError('Fahrplan verletzt die Energiebilanz')
         previous = energy
         p['reason'],p['explanation'] = explain(p,c)
-        if p.get('spot_ct') is not None:
-            p['explanation'] += f' Spotpreis {p["spot_ct"]:.2f} ct/kWh als Planungssignal; Kosten weiterhin zum eingestellten Tarif.'
-        elif p.get('ee') is None:
+        if p.get('ee') is None:
             p['explanation'] += ' EE-Prognose fehlt in diesem Zeitfenster; Planung nur nach Stromkosten, PV und Akku-Grenzen, ohne EE-Gewichtung.'
     plan_totals,base_totals = totals(points),totals(reference)
     if abs(plan_totals['end_soc']-base_totals['end_soc'])>1e-4:

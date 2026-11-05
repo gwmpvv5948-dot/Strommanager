@@ -266,7 +266,7 @@ class Controller:
             forecast_inputs_valid = (isinstance(house_updated,(int,float)) and 0<=self.snapshot.now-house_updated<=900
                 and 0<=self.snapshot.forecast_age<=self.settings.forecast_max_age_s)
             current_price = self.price_forecast.status(self.snapshot.now,self.settings)
-            inputs_valid = (current_grid['available'] or current_price['available']) and forecast_inputs_valid
+            inputs_valid = forecast_inputs_valid
             energy_plan = self.planner.status(self.snapshot.now)
             if self.mode == "charge_now":
                 self.energy_control={'enabled':True,'source':'charge_now','reason':self.decision.reason,'discharge_w':0,'replan':False}

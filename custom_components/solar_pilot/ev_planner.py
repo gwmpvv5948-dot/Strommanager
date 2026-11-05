@@ -213,13 +213,13 @@ def optimize_ev(slots, c, ev):
         nonrenewable=grid*(1-min(100,s['ee'])/100)*hours if s.get('ee') is not None else None
         reason=('Tesla lädt · Mindestladung' if amps and ev.urgent and previous_ev<urgent_goal-1e-5 else
                 'Tesla lädt · PV / Speicher' if amps and values['g_ev']<.02 else
-                ('Tesla lädt · günstiger Spotpreis' if s.get('spot_ct') is not None else 'Tesla lädt · hoher EE-Anteil') if amps else
+                'Tesla lädt · hoher EE-Anteil' if amps else
                 'PV lädt den Akku' if charge>.02 else 'Akku versorgt das Haus' if dis>.02 else
                 'PV versorgt das Haus' if grid<.02 else 'Netz versorgt das Haus')
         explanation=(f'Tesla: {amps} A, {ev_kw:.2f} kW; Ziel ist das Fahrzeug-Ladelimit ohne feste Abfahrtszeit. '
-            +'Netzladung nur im freigegebenen Preisfenster, bei fehlendem Preis über den EE-Fallback oder für die ausgelöste Mindestladung. '
+            +'Flexible Netzladung nach EE-Freigabe oder für die ausgelöste Mindestladung; Festtarif, kein Spotpreiseinfluss. '
             +'Haus- und Tesla-Reservegrenzen bleiben verbindlich.')
-        if s.get('ee') is None and s.get('spot_ct') is None:explanation+=' EE-Prognose fehlt: keine zusätzliche flexible Tesla-Netzladung in diesem Zeitfenster.'
+        if s.get('ee') is None:explanation+=' EE-Prognose fehlt: keine zusätzliche flexible Tesla-Netzladung in diesem Zeitfenster.'
         points.append({**s,'pv_direct_kw':direct,'charge_kw':charge,'battery_kw':dis,'grid_kw':grid,
             'house_grid_kw':max(0,need-values['b_house']),'house_battery_kw':max(0,values['b_house']),
             'ev_pv_kw':max(0,values['pv_ev']),'ev_battery_kw':max(0,values['b_ev']),'ev_grid_kw':max(0,values['g_ev']),
