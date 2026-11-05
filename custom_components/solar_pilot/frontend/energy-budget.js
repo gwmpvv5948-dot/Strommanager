@@ -57,3 +57,28 @@ export function remainingPV(points,now,end){
   }
   return covered<end-1000?null:energy;
 }
+
+// Today only: historical PV ledger plus the remaining flows of the shared HiGHS plan.
+export function plannedDayAllocation(ledger,plan,day,now,end){
+  const a=ledger?.actual,keys=['house','storage','tesla','buffer'];
+  const actual=ledger?.available&&ledger.day===day&&Number.isFinite(ledger.updated)&&now-ledger.updated<=900&&ledger.updated<=now+60&&a&&['house','storage','tesla','other'].every(k=>Number.isFinite(a[k])&&a[k]>=0)
+    ?{house:a.house,storage:a.storage,tesla:a.tesla,buffer:a.other}:null;
+  const unavailable=reason=>({actual,future:null,total:null,remaining:null,reason});
+  if(!plan?.available)return unavailable(plan?.calculating?'Energie-Fahrplan wird berechnet.':plan?.reason||'Kein gültiger Energie-Fahrplan verfügbar.');
+  if(!Number.isFinite(plan.updated)||now-plan.updated>600||plan.updated>now+60)return unavailable('Energie-Fahrplan ist veraltet.');
+  const future=Object.fromEntries(keys.map(k=>[k,0]));let covered=now;
+  for(const p of plan.points||[]){
+    if(!Number.isFinite(p.start)||!Number.isFinite(p.end)||p.end<=p.start)return unavailable('Ungültiges Fahrplanintervall.');
+    const start=Math.max(now,p.start),stop=Math.min(end,p.end);
+    if(stop<=start)continue;
+    if(Math.abs(start-covered)>1)return unavailable('Energie-Fahrplan deckt den heutigen Resttag nicht lückenlos ab.');
+    const flows={house:p.pv_direct_kw,storage:p.charge_kw,tesla:plan.joint?p.ev_pv_kw:0,buffer:p.export_kw};
+    if(Object.values(flows).some(v=>!Number.isFinite(v)||v<0))return unavailable('PV-Verteilung im Energie-Fahrplan unvollständig.');
+    const hours=(stop-start)/3600;
+    for(const key of keys)future[key]+=flows[key]*hours;
+    covered=stop;
+  }
+  if(covered<end-1)return unavailable('Energie-Fahrplan reicht nicht bis Mitternacht.');
+  const sum=values=>Object.values(values).reduce((s,v)=>s+v,0),remaining=sum(future);
+  return {actual,future,remaining,total:actual?sum(actual)+remaining:null,reason:actual?'':'Historische Tagesbilanz noch nicht verfügbar.'};
+}

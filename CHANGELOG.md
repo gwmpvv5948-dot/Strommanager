@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.88
+
+- PV-Tagesverteilung übernimmt zukünftige PV-Flüsse aus dem Energie-Fahrplan bis Mitternacht; historische Bilanz bleibt erhalten.
+- Netz- und Akkuenergie werden nicht als PV gezählt. Ohne gültigen vollständigen Fahrplan bleiben Zukunftswerte offen.
+
 ## 0.1.87
 
 - Animiertes Zahnrad mit „Wird berechnet …“ während der Fahrplanberechnung, auch bei Neuberechnung eines vorhandenen Plans.
