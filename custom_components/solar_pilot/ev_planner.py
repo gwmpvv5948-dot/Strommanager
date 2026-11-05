@@ -1,6 +1,11 @@
 """Joint house/storage/Tesla MILP. No device access; all flows independently checked."""
 from dataclasses import dataclass, asdict
 import math
+import logging
+import time
+
+_LOGGER = logging.getLogger(__name__)
+SOLVE_TIME_LIMIT_S = 60.0
 from .energy_planner import validate, components, recovery_bounds, totals, signal_cost, ev_grid_allowed
 
 
@@ -36,7 +41,7 @@ def optimize_ev(slots, c, ev):
         raise ValueError('Ungültige Tesla-Planungsparameter')
     import highspy
     h=highspy.Highs()
-    for name,value in [('output_flag',False),('time_limit',15.),('threads',1),('mip_rel_gap',0.)]:h.setOptionValue(name,value)
+    for name,value in [('output_flag',False),('time_limit',SOLVE_TIME_LIMIT_S),('threads',1),('mip_rel_gap',0.)]:h.setOptionValue(name,value)
     integer=highspy.HighsVarType.kInteger
     binary=lambda:h.addVariable(lb=0,ub=1,type=integer)
     initial=c.capacity*c.initial_soc/100
@@ -59,6 +64,8 @@ def optimize_ev(slots, c, ev):
         h.addConstr(amps>=ev.min_amps*on)
         h.addConstr(amps<=ev.max_amps*on)
         h.addConstr(started>=on-previous_on)
+        h.addConstr(started<=on)
+        h.addConstr(started<=1-previous_on)
         h.addConstr(amps>=ev.min_amps*on+(ev.start_amps-ev.min_amps)*started)
         ev_kw=kw_per_amp*amps
         pv_ev=h.addVariable(lb=0,ub=min(surplus,max_ev))
@@ -146,19 +153,31 @@ def optimize_ev(slots, c, ev):
         seed_house+=charge*hours*c.efficiency
         was_on=amps>0
     h.setSolution(len(seed_indices),seed_indices,seed_values)
-    def solve(expression, gap=.001):
+    diagnostics=[]
+    def solve(expression, stage, gap=.001):
         h.setOptionValue("mip_abs_gap",gap)
+        started_at=time.monotonic()
         h.minimize(expression)
+        info=h.getInfo()
+        status=h.modelStatusToString(h.getModelStatus())
+        elapsed=time.monotonic()-started_at
+        finite_or_none=lambda v:float(v) if math.isfinite(v) else None
+        diagnostic={'stage':stage,'status':status,'seconds':round(elapsed,3),
+            'nodes':info.mip_node_count,'gap':finite_or_none(info.mip_gap),
+            'objective':finite_or_none(info.objective_function_value),
+            'bound':finite_or_none(info.mip_dual_bound),'time_limit_s':SOLVE_TIME_LIMIT_S}
+        diagnostics.append(diagnostic)
         if h.getModelStatus()!=highspy.HighsModelStatus.kOptimal:
-            raise ValueError('Tesla-Fahrplan nicht gelöst: '+h.modelStatusToString(h.getModelStatus()))
+            _LOGGER.warning("Tesla solver stage failed: %s; slots=%s, variables=%s, constraints=%s",diagnostic,len(slots),h.getNumCol(),h.getNumRow())
+            raise ValueError(f"Tesla-Fahrplan nicht gelöst: {status} · Stufe {stage} · {elapsed:.1f} s / {SOLVE_TIME_LIMIT_S:.0f} s · {info.mip_node_count} Knoten")
     # Lexicographic objectives avoid a fictitious euro value for mobility/reserve.
     objectives=['reserve','ev'] if ev.storage_first else ['ev','reserve']
     for objective in objectives:
         if objective=='reserve':
-            solve(reserve_missing);value=max(0,h.val(reserve_missing));h.addConstr(reserve_missing<=value+1e-6)
+            solve(reserve_missing,"Speicherreserve");value=max(0,h.val(reserve_missing));h.addConstr(reserve_missing<=value+1e-6)
         else:
-            solve(-previous_ev,ev.start_amps*kw_per_amp*.25*ev.efficiency);value=h.val(previous_ev);h.addConstr(previous_ev>=value-1e-6)
-    solve(cost)
+            solve(-previous_ev,"Tesla-Ladeziel",ev.start_amps*kw_per_amp*.25*ev.efficiency);value=h.val(previous_ev);h.addConstr(previous_ev>=value-1e-6)
+    solve(cost,"Kosten und Ladestarts")
     points=[];previous,previous_ev=initial,initial_ev;permission=ev.released
     for i,(s,row) in enumerate(zip(slots,rows)):
         values={key:h.val(value) for key,value in row.items()}
@@ -212,7 +231,7 @@ def optimize_ev(slots, c, ev):
     return {'available':True,'solver':'HiGHS · MILP','mode':'observe','joint':True,'points':points,
         'ee_incomplete':any(p['ee'] is None for p in points),'reference':None,'delta':None,'totals':totals(points),
         'initial_soc':c.initial_soc,'minimum_soc':c.minimum_soc,'terminal_soc':points[-1]['soc'],
-        'config':asdict(c),'mip_tolerances':{'ev_goal_kwh':ev.start_amps*kw_per_amp*.25*ev.efficiency,'reserve_kwh':.001,'objective_eur':.001},'start':slots[0]['start'],'end':slots[-1]['end'],
+        'config':asdict(c),'solver_diagnostics':diagnostics,'mip_tolerances':{'ev_goal_kwh':ev.start_amps*kw_per_amp*.25*ev.efficiency,'reserve_kwh':.001,'objective_eur':.001},'start':slots[0]['start'],'end':slots[-1]['end'],
         'ev':{**asdict(ev),'active':True,'planned_soc':points[-1]['ev_soc'],
             'charged_kwh':sum(p['ev_kw']*(p['end']-p['start'])/3600 for p in points),
             'reserve_planned_soc':points[reserve_index]['soc'],

@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.1.93
+
+- Tesla-Optimierung: 60 Sekunden je Solve-Stufe statt 15 Sekunden; ein Thread und bestehende Lösungsprüfungen bleiben erhalten.
+- Fehlermeldung nennt die betroffene Stufe, Laufzeit und Suchknoten. HA-Protokoll ergänzt Zielwert, Schranke, Lücke und Modellgröße. Erfolgreiche Pläne enthalten Stufendiagnosen.
+- Ladestart-Variablen exakt an den Wechsel von Aus nach Ein gekoppelt; unnötige ganzzahlige Mehrdeutigkeiten entfernt.
+
 ## 0.1.92
 
 - Tesla-Optimierung: Zeitlimit je Solve-Stufe von 5 auf 15 Sekunden erhöht. Prüfungen und Fallback bleiben erhalten.

@@ -55,6 +55,16 @@ class JointPlanning(unittest.TestCase):
         self.assertEqual(r['points'][0]['ev_amps'],16)
         self.assertGreater(r['ev']['planned_soc'],49)
         self.assertTrue(all(p['battery_kw']<1e-5 for p in r['points'] if p['ev_amps']))
+    def test_stage_diagnostics_report_time_and_search_work(self):
+        r=optimize_ev(slots(ee=90),config(),vehicle())
+        diagnostics=r['solver_diagnostics']
+        self.assertEqual([d['stage'] for d in diagnostics],['Tesla-Ladeziel','Speicherreserve','Kosten und Ladestarts'])
+        for d in diagnostics:
+            self.assertEqual(d['status'],'Optimal')
+            self.assertEqual(d['time_limit_s'],60)
+            self.assertGreaterEqual(d['seconds'],0)
+            self.assertGreaterEqual(d['nodes'],0)
+
     def test_limit_reached_does_not_add_energy(self):
         ev=vehicle(initial_soc=80);r=optimize_ev(slots(ee=90),config(),ev)
         self.assertTrue(all(p['ev_amps']==0 for p in r['points']))
