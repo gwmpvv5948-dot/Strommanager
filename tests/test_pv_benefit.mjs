@@ -41,7 +41,10 @@ test("missing or invalid energy stays unknown; known zero, negative rounding noi
   );
 });
 test("calendar navigation respects ISO years and local DST week lengths", () => {
-  const previous = benefitWeek(Date.parse("2026-11-02T12:00:00Z"));
+  const current = benefitWeek(Date.parse("2026-11-02T12:00:00Z"));
+  assert.equal(current.week, 45);
+  assert.equal(current.days[0], "2026-11-02");
+  const previous = benefitWeek(Date.parse("2026-11-02T12:00:00Z"), "Europe/Berlin", -1);
   assert.equal(previous.week, 44);
   assert.deepEqual(
     [previous.days[0], previous.days[6]],

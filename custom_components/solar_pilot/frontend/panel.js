@@ -1,22 +1,22 @@
-import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.82";
-import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.82-collapse";
-import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.82";
-import {solarTimeline} from "./solar-timeline-view.js?v=0.1.82";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.82';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.82';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.82';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.82';
+import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.84";
+import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.84-collapse";
+import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.84";
+import {solarTimeline} from "./solar-timeline-view.js?v=0.1.84";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.84';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.84';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.84';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.84';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.82-price2';
-import {esc,fmt} from './view-format.js?v=0.1.82';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.82';
-import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.82';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.84-price2';
+import {esc,fmt} from './view-format.js?v=0.1.84';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.84';
+import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.84';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
 import {dayAllocation,remainingPV} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.82";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.84";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",paused:"Pausiert"};
 const FIELD_INFO = {
   planner_price_weight:["Spotpreis · Gewicht im Fahrplan", "Modellgewicht · keine Stromgebühr", 0, 10, .1],
@@ -76,7 +76,7 @@ const FIELD_HELP = {
 
 
 export class SolarPilotPanel extends HTMLElement {
-  constructor(){super();this.attachShadow({mode:"open"});this.tab="overview";this.consumptionView="total";this.consumptionHistoryDate=null;this.status=null;this.busy=false;this.message="";this.draft=null;this._error="";this.solarHistory=[];this.socHistory=[];this.pvExtraHistory={};this.benefitWeekOffset=-1;this.benefitCache=new Map();this._benefitLoading=new Set();this.historyLoaded=0;this.historyError="";}
+  constructor(){super();this.attachShadow({mode:"open"});this.tab="overview";this.consumptionView="total";this.consumptionHistoryDate=null;this.status=null;this.busy=false;this.message="";this.draft=null;this._error="";this.solarHistory=[];this.socHistory=[];this.pvExtraHistory={};this.benefitWeekOffset=0;this.benefitCache=new Map();this._benefitLoading=new Set();this.historyLoaded=0;this.historyError="";}
   set hass(value){this._hass=value;if(!this.status && !this._loading)this.refresh();
     if(!this._consumerFrame&&this.isConnected&&this.shadowRoot?.querySelector('.consumer-content')){
       this._consumerFrame=requestAnimationFrame(()=>{this._consumerFrame=null;this.updateConsumers();});
@@ -168,9 +168,9 @@ export class SolarPilotPanel extends HTMLElement {
   async loadBenefitHistory(){
     if(this.demo||!this._hass?.callWS)return;
     this.benefitCache??=new Map();this._benefitLoading??=new Set();
-    const now=Date.now(),zone=this._hass.config?.time_zone||'Europe/Berlin',ids=benefitSources(this.status),week=benefitWeek(now,zone,this.benefitWeekOffset??-1),today=dayBounds(now,zone),sources=ids.join('|')+'|'+zone;
+    const now=Date.now(),zone=this._hass.config?.time_zone||'Europe/Berlin',ids=benefitSources(this.status),week=benefitWeek(now,zone,this.benefitWeekOffset??0),today=dayBounds(now,zone),sources=ids.join('|')+'|'+zone;
     if(ids.some(id=>!id))return;
-    const requests=[['all:'+week.today+'|'+sources,Date.UTC(2000,0,1),today.start,86400000],['today:'+week.today+'|'+sources,today.start,today.end,300000],['week:'+week.days[0]+'|'+sources,week.start,week.end,(this.benefitWeekOffset??-1)<0?86400000:300000]];
+    const requests=[['all:'+week.today+'|'+sources,Date.UTC(2000,0,1),today.start,86400000],['today:'+week.today+'|'+sources,today.start,today.end,300000],['week:'+week.days[0]+'|'+sources,week.start,week.end,(this.benefitWeekOffset??0)<0?86400000:300000]];
     await Promise.allSettled(requests.map(async([key,start,end,ttl])=>{
       const cached=this.benefitCache.get(key);
       if(this._benefitLoading.has(key)||cached&&now-cached.fetched<(cached.error?60000:ttl))return;
@@ -363,7 +363,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.83</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><span class="logo">ϟ</span><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}<span class="eyebrow">PV · Hausspeicher · Tesla</span><h1>Deine Sonne. Gut verteilt.</h1><p class="intro">Genug Energie für unterwegs. Eine Reserve für den Abend. Und eine Entscheidung, die du nachvollziehen kannst.</p>${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.84</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});
@@ -401,7 +401,7 @@ export class SolarPilotPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll('[data-plan-step]').forEach(el=>el.onclick=()=>{this.planGroupIndex=Math.max(0,(this.planGroupIndex??0)+Number(el.dataset.planStep));this.render();});
     this.shadowRoot.querySelectorAll('[data-pv-day]').forEach(el=>el.onclick=()=>{this.pvDayOffset=Number(el.dataset.pvDay);this.render();});
     this.shadowRoot.querySelectorAll('[data-benefit-week]').forEach(el=>el.onclick=()=>{
-      this.benefitWeekOffset=Math.min(0,(this.benefitWeekOffset??-1)+(el.dataset.benefitWeek==='older'?-1:1));
+      this.benefitWeekOffset=Math.min(0,(this.benefitWeekOffset??0)+(el.dataset.benefitWeek==='older'?-1:1));
       this.render();this.loadBenefitHistory().then(()=>{if(this.isConnected)this.render();});
     });
     bindSourceSettings(this);

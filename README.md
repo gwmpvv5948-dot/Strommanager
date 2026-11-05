@@ -1,6 +1,6 @@
 # Strommanager
 
-**Version 0.1.83** · Home-Assistant-Integration für Photovoltaik, Hausspeicher und Tesla – mit eigener Übersicht in der Seitenleiste.
+**Version 0.1.84** · Home-Assistant-Integration für Photovoltaik, Hausspeicher und Tesla – mit eigener Übersicht in der Seitenleiste.
 
 ## Funktionen
 
