@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.86
+
+- Einfarbige Sonne-Haus-Blitz-Variante als eigenes Icon in der HA-Seitenleiste. Verwendet die vom HA-Theme vorgegebene Iconfarbe.
+- Icon wird global geladen, damit es auch vor dem Öffnen des Strommanager-Panels verfügbar ist.
+
 ## 0.1.85
 
 - Eigenes Strommanager-Icon im Panel, in der HACS-Beschreibung und als lokale Home-Assistant-Markenbilder (256/512 Pixel).

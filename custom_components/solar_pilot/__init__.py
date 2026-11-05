@@ -47,6 +47,7 @@ async def async_setup_entry(hass, entry):
         await hass.http.async_register_static_paths([
             StaticPathConfig("/solar_pilot_frontend", str(Path(__file__).parent / "frontend"), False)
         ])
+        frontend.add_extra_js_url(hass, f"/solar_pilot_frontend/sidebar-icon.js?v={VERSION}")
         websocket_api.async_register_command(hass, ws_status)
         schema = {vol.Required("entry_id"): cv.string}
 
@@ -90,7 +91,7 @@ async def async_setup_entry(hass, entry):
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         await async_register_panel(
             hass, frontend_url_path=PANEL_PATH, webcomponent_name="solar-pilot-panel",
-            sidebar_title="Strommanager", sidebar_icon="mdi:flash",
+            sidebar_title="Strommanager", sidebar_icon="strommanager:energy",
             module_url=f"/solar_pilot_frontend/panel.js?v={VERSION}",
             require_admin=True, config={"entry_id": entry.entry_id},
         )
