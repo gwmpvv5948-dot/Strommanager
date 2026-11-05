@@ -16,15 +16,15 @@ def vehicle_inputs(controller, now):
     if not actuator or actuator.attributes.get('restored') or actuator.attributes.get('unit_of_measurement')!='A':
         return unavailable('Tesla-Ladestromsteller fehlt')
     try:
-        maximum=min(c.max_amps,int(actuator.attributes['max']))
-        if float(actuator.attributes['step'])!=1 or maximum<c.start_amps:raise ValueError()
+        maximum=min(16,c.max_amps,int(actuator.attributes['max']))
+        if float(actuator.attributes['step'])!=1 or maximum<max(10,c.start_amps,c.min_amps):raise ValueError()
     except (KeyError,TypeError,ValueError):return unavailable('Tesla-Ladestromgrenzen ungültig')
     target=min(s.car_limit,c.car_min_soc) if controller.mode=='charge_minimum' else s.car_limit
     state=controller.charging_state
     urgent=s.car_soc<c.car_low_soc or state.minimum_active
     sunset=now+s.hours_left*3600 if s.daylight and s.hours_left is not None else now
     ev=EVConfig(capacity=c.planner_ev_capacity_kwh,initial_soc=s.car_soc,target_soc=target,limit_soc=s.car_limit,
-        efficiency=c.planner_ev_efficiency,min_amps=c.min_amps,start_amps=c.start_amps,max_amps=maximum,phases=c.phases,
+        efficiency=c.planner_ev_efficiency,min_amps=max(10,c.min_amps),start_amps=max(10,c.start_amps),max_amps=maximum,phases=c.phases,
         grid_share=c.planner_ev_grid_share,reserve_soc=c.reserve_soc,release_soc=c.storage_release_soc,
         released=state.storage_active,charging=s.charging is True,urgent=urgent,minimum_soc=c.car_min_soc,
         reserve_stamp=sunset,storage_first=controller.mode=='storage_first')

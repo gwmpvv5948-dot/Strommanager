@@ -22,6 +22,11 @@ class JointControl(unittest.TestCase):
             d,m=self.run_joint(grid_share=share);self.assertEqual(d.target_amps,0)
         s=replace(self.s,pv_w=4000,grid_export_w=3000)
         d,m=self.run_joint(s=s,grid_share=None);self.assertGreaterEqual(d.target_amps,8)
+    def test_shortfall_below_ten_amps_stops_instead_of_sending_low_current(self):
+        s=replace(self.s,pv_w=2300,grid_export_w=2000)
+        d,m=self.run_joint(s=s,grid_share=None)
+        self.assertEqual(d.target_amps,0)
+
     def test_actual_car_limit_change_invalidates_plan(self):
         _,m=self.run_joint(s=replace(self.s,car_limit=50));self.assertEqual(m['source'],'fallback');self.assertTrue(m['replan'])
     def test_away_unplugged_sleeping_or_stale_vehicle_never_gets_plan_permission(self):

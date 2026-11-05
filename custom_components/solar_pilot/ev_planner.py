@@ -1,5 +1,5 @@
 """Joint house/storage/Tesla MILP. No device access; all flows independently checked."""
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, replace
 import math
 import logging
 import time
@@ -39,6 +39,9 @@ def optimize_ev(slots, c, ev):
             or ev.phases not in (1,3) or not 6<=ev.min_amps<=ev.start_amps<=ev.max_amps<=48
             or not 0<=ev.grid_share<=100 or not 0<=ev.reserve_soc<=ev.release_soc<=100):
         raise ValueError('Ungültige Tesla-Planungsparameter')
+    ev=replace(ev,min_amps=max(10,ev.min_amps),start_amps=max(10,ev.start_amps),max_amps=min(16,ev.max_amps))
+    if ev.max_amps<ev.start_amps or ev.max_amps<ev.min_amps:
+        raise ValueError('Tesla-Planung benötigt einen freigegebenen Ladestrom zwischen 10 und 16 A')
     import highspy
     h=highspy.Highs()
     for name,value in [('output_flag',False),('time_limit',SOLVE_TIME_LIMIT_S),('threads',1),('mip_rel_gap',0.)]:h.setOptionValue(name,value)
@@ -112,7 +115,7 @@ def optimize_ev(slots, c, ev):
             h.addConstr(dis<=c.discharge_kw*(1-on+before_min))
         price=c.purchase+signal_cost(s,c)
         grid=need-b_house+g_ev
-        cost+=grid*price*hours-export*c.feed_in*hours+c.cycle_cost*(charge+dis)*hours+.002*started
+        cost+=grid*price*hours-export*c.feed_in*hours+c.cycle_cost*(charge+dis)*hours+.05*started+.01*on*hours
         rows.append(dict(amps=amps,on=on,started=started,energy=energy,energy_ev=energy_ev,pv_ev=pv_ev,
             charge=charge,export=export,b_house=b_house,b_ev=b_ev,g_ev=g_ev,released=released))
         previous,previous_ev,previous_on,previous_release=energy,energy_ev,on,released
@@ -223,7 +226,7 @@ def optimize_ev(slots, c, ev):
             'ev_kw':ev_kw,'ev_amps':amps,'ev_soc':energy_ev/ev.capacity*100,
             'export_kw':max(0,values['export']),'soc':energy/c.capacity*100,
             'cost':(grid*c.purchase-values['export']*c.feed_in)*hours,'nonrenewable_kwh':nonrenewable,
-            'throughput_kwh':(charge+dis)*hours,'objective':grid*c.purchase*hours-values['export']*c.feed_in*hours+grid*signal_cost(s,c)*hours+c.cycle_cost*(charge+dis)*hours+.002*values['started'],
+            'throughput_kwh':(charge+dis)*hours,'objective':grid*c.purchase*hours-values['export']*c.feed_in*hours+grid*signal_cost(s,c)*hours+c.cycle_cost*(charge+dis)*hours+.05*values['started']+.01*values['on']*hours,
             'reason':reason,'explanation':explanation})
         previous,previous_ev=energy,energy_ev
     if abs(sum(p['objective'] for p in points)-h.getObjectiveValue())>1e-4:raise ValueError('Tesla-Fahrplan verletzt die Zielbilanz')

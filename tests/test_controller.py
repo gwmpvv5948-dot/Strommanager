@@ -232,13 +232,13 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         self.c.grid_forecast.status=Mock(return_value={'available':True,'share':90})
         self.c.planner.status=Mock(return_value={'available':True,'joint':True,'updated':s.now,'initial_soc':50,
             'ev':{'active':True,'initial_soc':39,'limit_soc':80,'target_soc':80,'phases':1},
-            'points':[{'start':s.now,'end':s.now+900,'soc':50,'ev_soc':40,'ev_amps':8,'battery_kw':0}]})
+            'points':[{'start':s.now,'end':s.now+900,'soc':50,'ev_soc':40,'ev_amps':10,'battery_kw':0}]})
         self.states['number.batterien_entlade_ende_ladestand']=state(3,"%")
         with patch.object(sys.modules['pilot_test.controller'],'display_sources',return_value={'battery_min_soc':'number.batterien_entlade_ende_ladestand'}):
             await self.c.async_update()
         self.assertEqual(self.c.energy_control['source'],'highs_ev')
         self.assertIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['discharge_limit'],'value':0}),self.calls)
-        self.assertIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['car_current'],'value':8}),self.calls)
+        self.assertIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['car_current'],'value':10}),self.calls)
         self.assertIn(('switch','turn_on',{'entity_id':ENTITY_DEFAULTS['car_charge']}),self.calls)
 
     async def test_status_is_json_safe(self):

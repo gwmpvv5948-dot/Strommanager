@@ -1,5 +1,12 @@
 # Änderungen
 
+## 0.1.94
+
+- Zusammenhängende Tesla-Ladeblöcke durch höheres Startgewicht (0,05 € Modellgewicht/Start) bevorzugt; keine zusätzliche Netzfreigabe bei Wolken.
+
+- Tesla-Fahrplan plant nur Aus oder 10–16 A. Ein kleines Ladezeit-Modellgewicht bevorzugt höhere Ströme bei vergleichbaren Bedingungen. Schutz- und Geräteobergrenzen bleiben verbindlich.
+- Tesla-Zielübersicht und Preisprognose-Status unten bei der Fahrplan-Erklärung.
+
 ## 0.1.93
 
 - Tesla-Optimierung: 60 Sekunden je Solve-Stufe statt 15 Sekunden; ein Thread und bestehende Lösungsprüfungen bleiben erhalten.

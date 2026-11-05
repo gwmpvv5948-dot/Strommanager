@@ -65,6 +65,15 @@ class JointPlanning(unittest.TestCase):
             self.assertGreaterEqual(d['seconds'],0)
             self.assertGreaterEqual(d['nodes'],0)
 
+    def test_prefers_contiguous_high_current_within_ten_to_sixteen_amps(self):
+        data=slots(ee=90);c=config(initial_soc=3);ev=vehicle(initial_soc=30,target_soc=50,limit_soc=50)
+        r=optimize_ev(data,c,ev);self.verify(r,c,ev)
+        amps=[p['ev_amps'] for p in r['points']]
+        self.assertTrue(all(a==0 or 10<=a<=16 for a in amps))
+        self.assertIn(16,amps)
+        starts=sum(a>0 and (i==0 or amps[i-1]==0) for i,a in enumerate(amps))
+        self.assertEqual(starts,1)
+
     def test_limit_reached_does_not_add_energy(self):
         ev=vehicle(initial_soc=80);r=optimize_ev(slots(ee=90),config(),ev)
         self.assertTrue(all(p['ev_amps']==0 for p in r['points']))
