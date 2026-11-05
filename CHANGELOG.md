@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.90
+
+- Akku-Grenzwerte rechts neben dem Akku statt als Fußlegende; große Ladestandsanzeige darüber.
+- Tesla mit überarbeiteter Fahrzeug-Silhouette und Anordnung näher am Mockup: Fahrzeug, Prozent, Energieinhalt, Ladebalken, Status und Ziel-Felder.
+
 ## 0.1.89
 
 - Separate Kachel „Dein Fahrzeug“ entfernt; die Fahrzeugdarstellung steht zentral im Energie-Fahrplan.

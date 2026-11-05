@@ -1,17 +1,4 @@
 // Decorative side profile selected in the vehicle mockup. No device logic.
 export function vehicleSilhouette(connected=false){
-  return `<div class="tesla-art" role="img" aria-label="Tesla-inspirierte Fahrzeug-Silhouette${connected?', Ladekabel verbunden':''}">
-    <div class="tesla-car">
-      <div class="tesla-shadow"></div>
-      <div class="tesla-bodywork"></div>
-      <div class="tesla-glass"></div>
-      <div class="tesla-belt"></div>
-      <div class="tesla-wheel tesla-front-wheel"></div>
-      <div class="tesla-wheel tesla-rear-wheel"></div>
-      <div class="tesla-headlight"></div>
-      <div class="tesla-taillight"></div>
-      <div class="tesla-handle"></div>
-      ${connected?'<div class="tesla-cable"></div>':''}
-    </div>
-  </div>`;
+  return `<div class="tesla-art" role="img" aria-label="Tesla-inspirierte Fahrzeug-Silhouette${connected?', Ladekabel verbunden':''}"><svg class="tesla-profile" viewBox="0 0 600 210" aria-hidden="true"><defs><linearGradient id="tesla-body-fill" x2="0" y2="1"><stop stop-color="#f4f7f9"/><stop offset=".55" stop-color="#c6cfd5"/><stop offset="1" stop-color="#80929f"/></linearGradient></defs><ellipse cx="300" cy="177" rx="246" ry="8" fill="#000" opacity=".15"/><path d="M53 138Q60 120 119 114L183 70Q203 57 254 57L328 59Q353 63 391 95L416 113L509 126Q543 133 550 151L544 169L511 174H94Q62 172 51 160Z" fill="url(#tesla-body-fill)" stroke="#8c9da6" stroke-width="2"/><path d="M145 113L194 77Q209 67 253 67L325 69Q348 73 386 108Z" fill="#283b46"/><path d="M255 68L254 112M327 70L343 110" stroke="#72838c" stroke-width="4"/><path d="M123 124L412 123M257 118L255 164M395 119L402 161" stroke="#80939f" stroke-width="1.5" fill="none"/><path d="M73 129L113 125L108 134L68 138M501 131L538 142L508 143" fill="#eefaff"/><path d="M56 140L70 142L66 151L53 149" fill="#d66d62"/><g fill="#26343e" stroke="#aab7bf" stroke-width="4"><circle cx="141" cy="164" r="31"/><circle cx="456" cy="164" r="31"/></g><g fill="#8596a3" stroke="#c7d2d8" stroke-width="2"><circle cx="141" cy="164" r="18"/><circle cx="456" cy="164" r="18"/></g><g fill="#c5ced4"><circle cx="141" cy="164" r="5"/><circle cx="456" cy="164" r="5"/></g><path d="M272 123h17M365 123h17" stroke="#647883" stroke-width="3" stroke-linecap="round"/>${connected?'<path d="M62 155Q25 154 25 180V193H6" fill="none" stroke="var(--green)" stroke-width="4"/>':''}</svg></div>`;
 }

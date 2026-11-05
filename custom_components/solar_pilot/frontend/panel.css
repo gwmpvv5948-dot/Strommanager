@@ -2520,3 +2520,26 @@ details summary {
 .vehicle-visual .tesla-art{width:100%;max-width:400px;height:150px;margin:4px auto 12px;flex-shrink:0}
 .vehicle-visual .plan-limit-bar{width:100%;max-width:350px;margin:18px 0}
 @media(max-width:700px){.storage-vehicle article{padding:18px}.storage-battery{height:170px}.storage-percent{font-size:38px}}
+
+/* Mockup arrangement: labels beside battery, car above state and target fields. */
+.storage-vehicle article{padding:24px;min-height:510px}
+.storage-vehicle h3{font-size:23px;margin-bottom:22px}
+.storage-percent{font-size:52px}
+.storage-stage{position:relative;width:100%;max-width:420px;height:240px;margin:32px auto 8px;padding-left:10px}
+.storage-stage .storage-battery{width:39%;height:100%;margin:0}
+.storage-side-label{position:absolute;left:51%;right:0;transform:translateY(-50%);font-size:14px;white-space:normal;line-height:1.25}
+.storage-side-label:before{content:'';position:absolute;right:calc(100% + 8px);top:50%;width:25px;border-top:1px dashed var(--muted)}
+.storage-side-label b{white-space:nowrap;font-weight:500}
+.storage-mark{border-color:var(--muted)}
+.storage-floor{margin:4px 0 0}
+.vehicle-visual .tesla-art{height:180px;max-width:460px;margin:5px 0 2px;width:100%;overflow:visible}
+.tesla-profile{display:block;width:100%;height:100%}
+.vehicle-visual .plan-limit-bar{height:18px;border-radius:12px;margin:18px 0 8px}
+.vehicle-visual .plan-limit-bar span{border-radius:12px;background:var(--green)}
+.vehicle-visual .storage-flow{font-size:20px;margin:5px 0 18px}
+.vehicle-targets{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;margin-top:auto}
+.vehicle-targets span{border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center;font-size:14px}
+.vehicle-targets b{white-space:nowrap}
+.vehicle-minimum{margin-top:10px;font-size:12px}
+@media(max-width:1050px) and (min-width:701px){.storage-vehicle article{padding:18px}.storage-side-label{font-size:12px}.storage-stage{height:225px}.vehicle-targets span{font-size:12px}}
+@media(max-width:700px){.storage-vehicle article{min-height:0;padding:20px}.storage-stage{height:240px;max-width:350px}.storage-percent{font-size:48px}.vehicle-visual .tesla-art{height:170px}.vehicle-targets{margin-top:12px}.storage-side-label{font-size:13px}}
