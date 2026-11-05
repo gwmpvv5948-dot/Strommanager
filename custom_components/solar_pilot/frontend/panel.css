@@ -1935,19 +1935,19 @@ details summary {
 }
 
 /* Tesla silhouette: body, glass, wheels and connected charging cable. */
-.vehicle-card .tesla-art {
+:is(.vehicle-card,.vehicle-visual) .tesla-art {
   position: relative;
   height: 155px;
   margin: 18px -6px 10px;
   overflow: hidden;
 }
-.vehicle-card .tesla-car {
+:is(.vehicle-card,.vehicle-visual) .tesla-car {
   position: absolute;
   inset: 0;
   max-width: 425px;
   margin: auto;
 }
-.vehicle-card .tesla-shadow {
+:is(.vehicle-card,.vehicle-visual) .tesla-shadow {
   position: absolute;
   left: 8%;
   right: 5%;
@@ -1956,7 +1956,7 @@ details summary {
   border-radius: 50%;
   background: light-dark(#c5cdc5, #14231d);
 }
-.vehicle-card .tesla-bodywork {
+:is(.vehicle-card,.vehicle-visual) .tesla-bodywork {
   position: absolute;
   left: 5%;
   right: 3%;
@@ -1987,7 +1987,7 @@ details summary {
   );
   border-radius: 25%;
 }
-.vehicle-card .tesla-glass {
+:is(.vehicle-card,.vehicle-visual) .tesla-glass {
   position: absolute;
   left: 27%;
   right: 24%;
@@ -1996,7 +1996,7 @@ details summary {
   background: linear-gradient(160deg, #45616a, #172d38);
   clip-path: polygon(1% 98%, 24% 9%, 41% 0, 67% 5%, 99% 99%);
 }
-.vehicle-card .tesla-glass:after {
+:is(.vehicle-card,.vehicle-visual) .tesla-glass:after {
   content: "";
   position: absolute;
   left: 56%;
@@ -2005,7 +2005,7 @@ details summary {
   background: #172731;
   transform: rotate(-7deg);
 }
-.vehicle-card .tesla-belt {
+:is(.vehicle-card,.vehicle-visual) .tesla-belt {
   position: absolute;
   left: 11%;
   right: 8%;
@@ -2014,7 +2014,7 @@ details summary {
   background: #99a7b4;
   transform: rotate(-1deg);
 }
-.vehicle-card .tesla-wheel {
+:is(.vehicle-card,.vehicle-visual) .tesla-wheel {
   position: absolute;
   width: 49px;
   height: 49px;
@@ -2029,13 +2029,13 @@ details summary {
     #303c49 73%
   );
 }
-.vehicle-card .tesla-front-wheel {
+:is(.vehicle-card,.vehicle-visual) .tesla-front-wheel {
   left: 19%;
 }
-.vehicle-card .tesla-rear-wheel {
+:is(.vehicle-card,.vehicle-visual) .tesla-rear-wheel {
   right: 15%;
 }
-.vehicle-card .tesla-headlight {
+:is(.vehicle-card,.vehicle-visual) .tesla-headlight {
   position: absolute;
   width: 36px;
   height: 5px;
@@ -2045,7 +2045,7 @@ details summary {
   background: #ecf7ff;
   transform: rotate(-12deg);
 }
-.vehicle-card .tesla-taillight {
+:is(.vehicle-card,.vehicle-visual) .tesla-taillight {
   position: absolute;
   width: 26px;
   height: 4px;
@@ -2055,7 +2055,7 @@ details summary {
   background: #f36e70;
   transform: rotate(18deg);
 }
-.vehicle-card .tesla-handle {
+:is(.vehicle-card,.vehicle-visual) .tesla-handle {
   position: absolute;
   width: 18px;
   height: 3px;
@@ -2065,7 +2065,7 @@ details summary {
   border-radius: 4px;
 }
 
-.vehicle-card .tesla-cable {
+:is(.vehicle-card,.vehicle-visual) .tesla-cable {
   position: absolute;
   right: 1%;
   bottom: 12px;
@@ -2076,11 +2076,11 @@ details summary {
   border-radius: 0 0 18px 0;
 }
 @media (max-width: 400px) {
-  .vehicle-card .tesla-wheel {
+  :is(.vehicle-card,.vehicle-visual) .tesla-wheel {
     width: 40px;
     height: 40px;
   }
-  .vehicle-card .tesla-art {
+  :is(.vehicle-card,.vehicle-visual) .tesla-art {
     height: 145px;
   }
 }
@@ -2505,3 +2505,18 @@ details summary {
 .plan-calculating-icon{--mdc-icon-size:34px;flex-shrink:0;animation:plan-calculating-spin 3s linear infinite}
 @keyframes plan-calculating-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.plan-calculating-icon{animation:none}}
+
+.storage-vehicle{gap:18px}
+.storage-vehicle article{border:1px solid var(--line);border-radius:18px;padding:22px;display:flex;align-items:center;flex-direction:column;min-width:0}
+.storage-vehicle h3{font-size:20px;align-self:flex-start;display:flex;align-items:center;gap:10px;font-weight:600;margin-bottom:20px}
+.storage-vehicle h3 ha-icon{color:#d5a644}
+.storage-percent{font-size:44px;line-height:1.15;color:var(--green);margin:4px 0 8px}
+.storage-battery{position:relative;width:125px;height:190px;border:3px solid var(--ink);border-radius:18px;margin:26px 0 10px}
+.storage-battery:before{content:'';position:absolute;width:42px;height:12px;left:calc(50% - 24px);top:-17px;border:3px solid var(--ink);border-radius:6px 6px 0 0}
+.storage-fill{position:absolute;bottom:0;left:0;right:0;background:var(--green);opacity:.8;border-radius:13px;max-height:100%}
+.storage-mark{position:absolute;left:0;right:0;border-top:2px dashed #d5a644;z-index:1}
+.storage-flow{font-weight:600;color:var(--green);margin:14px 0}
+.storage-vehicle .plan-limit-labels{justify-content:center;margin-top:auto;padding-top:12px;gap:10px}
+.vehicle-visual .tesla-art{width:100%;max-width:400px;height:150px;margin:4px auto 12px;flex-shrink:0}
+.vehicle-visual .plan-limit-bar{width:100%;max-width:350px;margin:18px 0}
+@media(max-width:700px){.storage-vehicle article{padding:18px}.storage-battery{height:170px}.storage-percent{font-size:38px}}

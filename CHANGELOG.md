@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.89
+
+- Hausspeicher als gefüllter Akku mit Grenzmarkierungen und Tesla als Fahrzeugvisualisierung im Energie-Fahrplan.
+- Ladezustand, Leistung, Ziele und modellierter Energieinhalt aus bestehenden HA-Daten; keine Mockup-Beispielwerte im Betrieb.
+
 ## 0.1.88
 
 - PV-Tagesverteilung übernimmt zukünftige PV-Flüsse aus dem Energie-Fahrplan bis Mitternacht; historische Bilanz bleibt erhalten.
