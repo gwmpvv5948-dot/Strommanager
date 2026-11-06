@@ -2577,3 +2577,5 @@ details summary {
 /* Equal Tesla targets share one position, keeping both colors visible. */
 .tesla-mark.minimum.coincident{width:4px;transform:translateX(-4px)}
 .tesla-mark.limit.coincident{width:4px;transform:none}
+
+.tesla-start-threshold{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;margin:0 0 12px;color:var(--muted)}.tesla-start-threshold>i{width:7px;height:7px;background:#d47872;border-radius:2px;flex:none}.tesla-start-threshold strong{color:var(--ink);font-weight:600}.tesla-start-threshold small{font-size:11px;margin-left:auto}
