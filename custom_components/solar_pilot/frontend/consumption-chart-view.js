@@ -1,4 +1,5 @@
-import { batteryHistory } from "./battery-history.js?v=0.1.50";
+import { smoothPath } from "./solar-timeline-view.js?v=0.1.122";
+import { batteryHistory, batteryLinePoints } from "./battery-history.js?v=0.1.122";
 import { esc, fmt, html } from "./view-format.js?v=0.1.41";
 import { batteryForecast } from "./battery-forecast.js?v=0.1.56";
 import { pvOverlay } from "./pv-overlay.js?v=20261028-2";
@@ -200,15 +201,10 @@ export function consumptionBarChart(panel, b, zone) {
         (seg) => html`
           <g class="consumption-pv-${kind}">
             <path
-              d="${seg
-                .map(
-                  (p, i) =>
-                    `${i ? "L" : "M"}${64 + ((p.t - b.start) / (b.end - b.start)) * 816},${y(p.kwh)}`,
-                )
-                .join(" ")}"
+              d="${smoothPath(seg.map(p=>({t:p.t,p:p.kwh})),t=>64+((t-b.start)/(b.end-b.start))*816,y)}"
               fill="none"
               stroke="#d6b04f"
-              stroke-width="2.6"
+              stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
               ${kind === "forecast" ? 'stroke-dasharray="7 5"' : ""}
             />
             ${seg
@@ -275,7 +271,7 @@ export function consumptionBarChart(panel, b, zone) {
   const socMarkup = socActual
     .map(
       (segment) =>
-        `<g class="battery-actual" aria-label="Gemessener Hausspeicher-SoC"><path d="${segment.map((p, i) => `${i ? "L" : "M"}${bx(p.t).toFixed(2)},${by(p.soc).toFixed(2)}`).join(" ")}" fill="none" stroke="#91bfee" stroke-width="2.7" pointer-events="none"/>${segment.length === 1 ? `<circle cx="${bx(segment[0].t)}" cy="${by(segment[0].soc)}" r="3" fill="#91bfee"/>` : ""}</g>`,
+        `<g class="battery-actual" aria-label="Gemessener Hausspeicher-SoC"><path d="${smoothPath(batteryLinePoints(segment),bx,by)}" fill="none" stroke="#91bfee" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>${segment.length === 1 ? `<circle cx="${bx(segment[0].t)}" cy="${by(segment[0].soc)}" r="3" fill="#91bfee"/>` : ""}</g>`,
     )
     .join("");
   const socAxis = showSocAxis
@@ -530,7 +526,7 @@ export function consumptionHistoryChart(panel, day, zone) {
               .join(" ")}"
             fill="none"
             stroke="#d6b04f"
-            stroke-width="2.6"
+            stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
           />
           ${segment.length === 1
             ? html`

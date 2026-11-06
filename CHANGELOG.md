@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.122
+
+- Verbrauch-Kachel: Hausspeicher-SoC und PV-Verlauf als glatte, begrenzte Kurven statt sichtbarer Treppen und harter Knicke. Rein visuelle Interpolation; Messwerte, Energiebilanzen und Datenlücken bleiben erhalten.
+
+
 ## 0.1.121
 
 - Tesla-Hinweise im Fahrplan gekürzt: kompakt „Tesla · Wallbox aus“. Weckbestätigung nur noch in den eingeklappten Berechnungsdetails; laufendes Wecken kurz anzeigen.

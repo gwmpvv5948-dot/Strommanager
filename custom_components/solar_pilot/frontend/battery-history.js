@@ -58,3 +58,11 @@ export function batteryHistory(
   flush();
   return segments;
 }
+
+// Display interpolation only: collapse duplicate times from held-state steps.
+// Recorder samples, accounting and the separate unknown segments stay unchanged.
+export function batteryLinePoints(segment){
+  const points=new Map();
+  for(const point of segment)points.set(point.t,{t:point.t,p:point.soc});
+  return [...points.values()];
+}
