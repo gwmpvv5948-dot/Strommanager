@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.1.119
+
+- Hausversorgung vor normaler Tesla-Ladung optimieren: kein nächtliches Zurückhalten des Hausspeichers allein zugunsten des Tesla-Ladeziels.
+- Nur ausgelöste Tesla-Mindestladung hat bis zum Mindestziel Vorrang. Anschluss und aktuelle Fahrzeugdaten bleiben Voraussetzung für die Ausführung. Ein älterer letzter SoC unter der Startschwelle darf die Mindestladung vormerken und das geplante Wecken anstoßen.
+
+
 ## 0.1.118
 
 - Berechnungshinweis bei automatischer Aktualisierung eines sichtbaren Fahrplans ausgeblendet. Er erscheint ohne vorhandenes Diagramm während der Berechnung sowie bei manueller Neuberechnung.

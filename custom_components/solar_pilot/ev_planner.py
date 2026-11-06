@@ -58,7 +58,7 @@ def optimize_ev(slots, c, ev):
     kw_per_amp=230*ev.phases/1000
     max_ev=kw_per_amp*ev.max_amps
     previous,previous_ev,previous_on,previous_release=initial,initial_ev,int(ev.charging),int(ev.released)
-    rows=[];cost=0
+    rows=[];cost=0;house_cost=0
     reserve_index=next((i for i,s in enumerate(slots) if s['end']>=ev.reserve_stamp),len(slots)-1)
     for i,s in enumerate(slots):
         direct,surplus,need,hours=components(s)
@@ -115,6 +115,7 @@ def optimize_ev(slots, c, ev):
             h.addConstr(dis<=c.discharge_kw*(1-on+before_min))
         price=c.purchase+signal_cost(s,c)
         grid=need-b_house+g_ev
+        house_cost+=(need-b_house)*price*hours+c.cycle_cost*b_house*hours
         cost+=grid*price*hours-export*c.feed_in*hours+c.cycle_cost*(charge+dis)*hours+.05*started+.01*on*hours
         rows.append(dict(amps=amps,on=on,started=started,energy=energy,energy_ev=energy_ev,pv_ev=pv_ev,
             charge=charge,export=export,b_house=b_house,b_ev=b_ev,g_ev=g_ev,released=released))
@@ -173,13 +174,22 @@ def optimize_ev(slots, c, ev):
         if h.getModelStatus()!=highspy.HighsModelStatus.kOptimal:
             _LOGGER.warning("Tesla solver stage failed: %s; slots=%s, variables=%s, constraints=%s",diagnostic,len(slots),h.getNumCol(),h.getNumRow())
             raise ValueError(f"Tesla-Fahrplan nicht gelöst: {status} · Stufe {stage} · {elapsed:.1f} s / {SOLVE_TIME_LIMIT_S:.0f} s · {info.mip_node_count} Knoten")
-    # Lexicographic objectives avoid a fictitious euro value for mobility/reserve.
-    objectives=['reserve','ev'] if ev.storage_first else ['ev','reserve']
+    # Normal Tesla charging may use only flexibility left after optimal house supply.
+    # Urgent minimum charging is bounded to the minimum target, never the car limit.
+    if ev.urgent:
+        missing=h.addVariable(lb=0,ub=max(0,urgent_goal-initial_ev))
+        h.addConstr(previous_ev+missing>=urgent_goal)
+        solve(missing,"Tesla-Mindestladung")
+        h.addConstr(missing<=max(0,h.val(missing))+1e-6)
+    objectives=['reserve','house','ev'] if ev.storage_first else ['house','reserve','ev']
     for objective in objectives:
-        if objective=='reserve':
+        if objective=='house':
+            solve(house_cost,"Hausversorgung")
+            h.addConstr(house_cost<=h.val(house_cost)+1e-6)
+        elif objective=='reserve':
             solve(reserve_missing,"Speicherreserve");value=max(0,h.val(reserve_missing));h.addConstr(reserve_missing<=value+1e-6)
         else:
-            solve(-previous_ev,"Tesla-Ladeziel",ev.start_amps*kw_per_amp*.25*ev.efficiency);value=h.val(previous_ev);h.addConstr(previous_ev>=value-1e-6)
+            solve(-previous_ev,"Tesla-Überschussziel",ev.start_amps*kw_per_amp*.25*ev.efficiency);value=h.val(previous_ev);h.addConstr(previous_ev>=value-1e-6)
     solve(cost,"Kosten und Ladestarts")
     points=[];previous,previous_ev=initial,initial_ev;permission=ev.released
     for i,(s,row) in enumerate(zip(slots,rows)):
@@ -216,7 +226,7 @@ def optimize_ev(slots, c, ev):
                 'Tesla lädt · hoher EE-Anteil' if amps else
                 'PV lädt den Hausspeicher' if charge>.02 else 'Hausspeicher versorgt das Haus' if dis>.02 else
                 'PV versorgt das Haus' if grid<.02 else 'Netz versorgt das Haus')
-        explanation=(f'Tesla: {amps} A, {ev_kw:.2f} kW; Ziel ist das Fahrzeug-Ladelimit ohne feste Abfahrtszeit. '
+        explanation=(f'Tesla: {amps} A, {ev_kw:.2f} kW; Hausversorgung hat Vorrang; normale Tesla-Ladung nutzt die verbleibende Flexibilität bis zum Fahrzeuglimit. Nur die ausgelöste Mindestladung hat bis zum Mindestziel Vorrang. '
             +'Flexible Netzladung nach EE-Freigabe oder für die ausgelöste Mindestladung; Festtarif, kein Spotpreiseinfluss. '
             +'Haus- und Tesla-Reservegrenzen bleiben verbindlich.')
         if s.get('ee') is None:explanation+=' EE-Prognose fehlt: keine zusätzliche flexible Tesla-Netzladung in diesem Zeitfenster.'

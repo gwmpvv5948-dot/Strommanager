@@ -9,7 +9,7 @@ from pilot_test.ev_wake import wake_due, vehicle_confirmed
 class SleepingVehicle(unittest.TestCase):
     def controller(self, **changes):
         s=sample(online=False, car_soc=None, car_limit=None, car_age=99999,location_age=99999,at_home=False,cable=False)
-        c=N(snapshot=replace(s,**changes),settings=replace(Settings(),planner_ev_enabled=True,planner_control_enabled=True),
+        c=N(snapshot=replace(s,**changes),settings=replace(Settings(),planner_ev_enabled=True,planner_control_enabled=True,car_low_soc=25),
             last_car_soc=39,last_car_limit=65,last_car_seen=s.now-10800,mode='auto',charging_state=ChargingState(),entities={'car_current':'number.car'},
             hass=N(states=N(get=lambda _:N(state='unavailable',attributes={'unit_of_measurement':'A','max':16,'step':1}))))
         return c
@@ -24,6 +24,14 @@ class SleepingVehicle(unittest.TestCase):
         for stamp in (None,10001,-80000,float('nan')):
             c=self.controller();c.last_car_seen=stamp
             self.assertIsNone(vehicle_inputs(c,c.snapshot.now)[0])
+    def test_old_low_soc_still_marks_minimum_charge_but_never_confirms_execution(self):
+        c=self.controller();c.last_car_soc=20;c.last_car_seen=c.snapshot.now-3*86400
+        ev,meta=vehicle_inputs(c,c.snapshot.now)
+        self.assertTrue(ev.urgent);self.assertTrue(meta['estimated'])
+        self.assertFalse(vehicle_confirmed(c))
+        c.snapshot=replace(c.snapshot,wallbox_enabled=False)
+        self.assertIsNone(vehicle_inputs(c,c.snapshot.now)[0])
+
     def test_missing_current_capabilities_prevents_plan(self):
         c=self.controller();c.hass.states.get=lambda _:None
         self.assertIsNone(vehicle_inputs(c,c.snapshot.now)[0])

@@ -10,9 +10,12 @@ def planning_vehicle(controller, now):
         return None, None, {"active": False, "reason": "Wallbox aus oder unbekannt · keine Tesla-Planung"}
     soc, limit = controller.last_car_soc, controller.last_car_limit
     seen = controller.last_car_seen
-    if not all(type(v) in (int, float) and math.isfinite(v) for v in (soc, limit, seen)) or not 0 <= soc <= 100 or not 0 <= limit <= 100 or not 0 <= now-seen <= 86400:
+    if not all(type(v) in (int, float) and math.isfinite(v) for v in (soc, limit, seen)) or not 0 <= soc <= 100 or not 0 <= limit <= 100 or now-seen < 0:
         return None, None, {"active": False, "reason": "Kein verlässlicher Tesla-SoC innerhalb der letzten 24 Stunden"}
-    estimated = (not s.online or not s.at_home or not s.cable
+    urgent = soc < controller.settings.car_low_soc or controller.charging_state.minimum_active
+    if now-seen > 86400 and not urgent:
+        return None, None, {"active": False, "reason": "Kein verlässlicher Tesla-SoC innerhalb der letzten 24 Stunden"}
+    estimated = (now-seen > controller.settings.car_max_age_s or not s.online or not s.at_home or not s.cable
         or not 0 <= s.car_age <= controller.settings.car_max_age_s
         or not 0 <= s.location_age <= controller.settings.car_max_age_s)
     return soc, limit, {"active": True, "estimated": estimated, "soc_updated": seen,
