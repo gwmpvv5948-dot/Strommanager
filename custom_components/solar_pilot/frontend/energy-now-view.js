@@ -1,8 +1,9 @@
+import {solarDayData} from './solar-timeline-view.js?v=0.1.114';
 import {liveEnergy,dischargeLocked,energyMix} from './live-energy.js';
 import {esc,fmt} from './view-format.js';
 import {dayBounds,number} from './solar-chart.js';
 import {dailyEnergy} from './energy-budget.js';
-import {currentEEValue} from './energy-plan-view.js?v=0.1.113';
+import {currentEEValue} from './energy-plan-view.js?v=0.1.114';
 
 export {energyMix} from './live-energy.js';
 export function energyToday(status,states,now,zone){
@@ -23,6 +24,7 @@ const icons={sun:'<circle cx="0" cy="0" r="4"/><path d="M0-10v2M0 8v2M-10 0h2M8 
 export function energyNowCard(panel,now=Date.now()){
   const status=panel._error?null:panel.status,states=panel._hass?.states||{},v=status?liveEnergy(status,states,now):{},mix=energyMix(v),zone=panel._hass?.config?.time_zone||'Europe/Berlin';
   const today=energyToday(status,states,now,zone),source=panel.solarSources(),peak=observedPeak([{unit:source.power?.attributes?.unit_of_measurement,history:panel.solarHistory},...panel.auxiliarySolarSources()],dayBounds(now,zone).start,now);
+  const remaining=solarDayData({now,zone,states,source,history:[],unit:source.power?.attributes?.unit_of_measurement}).remaining;
   const power=x=>x==null?'—':fmt(Math.abs(x)/1000,'kW',2),discharging=v.battery< -10,charging=v.battery>10,locked=dischargeLocked(status,states,now);
   const age=(now-Date.parse(status?.updated||''))/1000,fresh=Number.isFinite(age)&&age>=-60&&age<=120;
   const ring=(x,y,kind,value,label)=>`<g class="en-node en-${kind}" transform="translate(${x} ${y})"><circle r="34"/><g class="en-symbol" transform="translate(0 -15) scale(.8)">${icons[kind]||''}</g><text class="en-power" y="15">${esc(value)}</text>${label?`<text class="en-caption" y="53">${esc(label)}</text>`:''}</g>`;
@@ -35,7 +37,7 @@ export function energyNowCard(panel,now=Date.now()){
     ${path('M190 83 Q210 147 294 155','sun',fresh&&v.pv>10)}${path('M94 170 H294','grid',fresh&&Math.abs(v.grid)>10,v.grid>0)}${path('M190 257 Q210 193 294 183','storage',fresh&&Math.abs(v.battery)>10,charging)}
     ${ring(173,64,'sun',power(v.pv),'')}${ring(57,170,'grid',power(v.grid),v.grid>10?'Einspeisung':v.grid< -10?'Netzbezug':'Netz')}${ring(328,170,'house',power(v.house),'Haus')}
     <g transform="translate(173 278)" class="en-node en-storage"><circle r="34"/>${v.soc==null?'':`<circle class="en-soc-ring" r="34" pathLength="100" stroke-dasharray="${v.soc} 100" transform="rotate(-90)"/>`}<text class="en-power" y="-1">${esc(fmt(v.soc,'%',0))}</text><text class="en-battery-w" y="15">${esc(v.battery==null?'—':fmt(Math.abs(v.battery),'W',0))}</text></g>
-    <text class="en-label" x="240" y="59">PV</text><text class="en-note" x="240" y="75">Spitze heute ${esc(power(peak))}</text><text class="en-label" x="223" y="288">${locked?'🔒 ':''}${esc(storageLabel)}</text><text class="en-note" x="223" y="303">${hours===null?'':`ca. ${esc(fmt(hours,'h',1))} Restlaufzeit`}</text>
+    <text class="en-label" x="240" y="59">PV</text><text class="en-note" x="240" y="75">Spitze heute ${esc(power(peak))}</text><text class="en-note" x="240" y="91"><title>Solcast P50 · verbleibender Dach-Ertrag heute, ohne Prognose für Garage und Schuppen</title>Noch erwartet ${esc(fmt(remaining,'kWh',1))}</text><text class="en-label" x="223" y="288">${locked?'🔒 ':''}${esc(storageLabel)}</text><text class="en-note" x="223" y="303">${hours===null?'':`ca. ${esc(fmt(hours,'h',1))} Restlaufzeit`}</text>
     <foreignObject x="0" y="225" width="132" height="30"><div xmlns="http://www.w3.org/1999/xhtml" class="en-ee">${currentEEValue(status)}</div></foreignObject>
     </svg><div class="energy-now-summary"><div class="en-autarky"><span>Autarkie jetzt</span><strong>${pct(mix?.autarky)}</strong></div><div class="en-origins" title="Momentane Leistungsbilanz für Haus und Tesla. Quellen werden rechnerisch anteilig verteilt. Hausspeicher zählt zur Autarkie, unabhängig von seiner früheren Ladequelle."><h3>Woher kommt der Strom?</h3><div class="en-mix" role="img" aria-label="PV ${pct(mix?.pv)}, Hausspeicher ${pct(mix?.storage)}, Netz ${pct(mix?.grid)}">${mix?parts.map(([k])=>`<i class="en-fill-${k}" style="width:${mix[k]}%"></i>`).join(''):'<span>—</span>'}</div><div class="en-mix-legend">${parts.map(([k,label])=>`<div><i class="en-fill-${k}"></i><span>${label}</span><strong>${pct(mix?.[k])}</strong></div>`).join('')}</div></div><div class="en-day"><div><span>Erzeugt heute</span><strong>${fmt(today.generated,'kWh',2)}</strong></div><div><span>Bezug heute</span><strong>${fmt(today.imported,'kWh',2)}</strong></div></div></div></div></section>`;
 }
