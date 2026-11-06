@@ -85,6 +85,12 @@ class PlannerTracker:
         self.busy = False
         self.attempted = None
         self.stopped = False
+        self.manual_requested = False
+        self.manual_active = False
+
+    def request_manual(self):
+        self.manual_requested = True
+        self.attempted = None
 
     async def refresh(self, controller):
         now = controller.snapshot.now
@@ -92,6 +98,7 @@ class PlannerTracker:
         if self.stopped or self.busy or self.attempted is not None and now-self.attempted<delay:
             return
         self.busy,self.attempted = True,now
+        self.manual_active,self.manual_requested = self.manual_requested,False
         try:
             slots,config,sources = collect(controller,now)
             ev,ev_status = vehicle_inputs(controller,now)
@@ -107,10 +114,13 @@ class PlannerTracker:
             self.result = {'available':False,'mode':'observe','reason':str(exc)[:250],'updated':now}
         finally:
             self.busy = False
+            self.manual_active = False
+            if self.manual_requested:
+                self.attempted = None
             if not self.stopped:
                 controller.publish()
 
     def status(self, now):
         if self.result.get('available') and now-self.result['updated']>600:
-            return {'available':False,'mode':'observe','reason':'Fahrplan veraltet · Neuberechnung ausstehend','calculating':self.busy}
-        return {**self.result,'calculating':self.busy}
+            return {'available':False,'mode':'observe','reason':'Fahrplan veraltet · Neuberechnung ausstehend','calculating':self.busy,'manual_calculating':self.manual_requested or self.manual_active}
+        return {**self.result,'calculating':self.busy,'manual_calculating':self.manual_requested or self.manual_active}

@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.1.118
+
+- Berechnungshinweis bei automatischer Aktualisierung eines sichtbaren Fahrplans ausgeblendet. Er erscheint ohne vorhandenes Diagramm während der Berechnung sowie bei manueller Neuberechnung.
+- Jetzt neu berechnen fordert tatsächlich eine neue Optimierung an und umgeht die normale Wartezeit.
+
+
 ## 0.1.117
 
 - Energie jetzt: Einspeisung heute direkt neben Bezug heute, aus dem konfigurierbaren Tageszähler sensor.tagesexport. Drei kompakte Tageswerte nebeneinander.

@@ -67,6 +67,7 @@ async def async_setup_entry(hass, entry):
             elif call.service == "configure":
                 await controller.async_configure(call.data["settings"])
             else:
+                controller.planner.request_manual()
                 await controller.async_update()
 
         for name in ("activate", "evaluate", "set_mode", "configure", "configure_price", "configure_sources", "import_consumption_history"):

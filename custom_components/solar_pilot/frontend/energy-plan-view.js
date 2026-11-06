@@ -43,7 +43,8 @@ export function energyPlanCard(panel) {
   const active=panel.status?.settings?.planner_control_enabled && !["observe","paused"].includes(panel.status?.mode);
   const head = `<div class="card-title"><h2>Energie-Fahrplan</h2><span class="plan-observe">${active ? "HiGHS" : "Beobachtung"} · ${plan?.joint?"Haus, Speicher & Tesla":"Haus & Speicher"}</span></div>`;
   const state=panel.status?.mode==='charge_now' ? `<p class="note plan-control-state"><strong>Tesla-Sofortladen · Hausspeicherentladung gesperrt</strong><br>PV und Netz erlaubt · Energie-Fahrplan wird für die Steuerung übergangen.</p>` : active ? `<p class="note plan-control-state"><strong>${esc(control?.reason || "Steuerung wird vorbereitet")}</strong><br>Entladegrenze: ${fmt(control?.discharge_w,"W")} · eingestellt: ${fmt(panel.status?.snapshot?.current_discharge_w,"W")}</p>` : "";
-  const calculating = plan?.calculating === true || !plan;
+  const hasDiagram = plan?.available && Array.isArray(plan.points) && plan.points.length > 0;
+  const calculating = panel.manualPlanCalculating === true || plan?.manual_calculating === true || (!hasDiagram && (plan?.calculating === true || !plan));
   const progress = calculating ? `<div class="plan-calculating" role="status" aria-live="polite"><ha-icon icon="mdi:cog" class="plan-calculating-icon" aria-hidden="true"></ha-icon><div><strong>Wird berechnet …</strong><span>Der Energie-Fahrplan für die nächsten 24 Stunden wird erstellt.</span></div></div>` : "";
   if (!plan?.available)
     return `<section class="card full energy-plan-card">${head}${state}${progress}${calculating ? "" : `<p class="note">${esc(plan?.reason || "Fahrplan wird vorbereitet")}</p>`}<p class="note">${active ? "Die bisherige Regelung übernimmt als Fallback; Schutzgrenzen bleiben verbindlich." : "Keine Gerätebefehle aus dem Fahrplan. Die bestehende Regelung bleibt aktiv."}</p>${priceConnection(panel.status)}${planControls(panel)}</section>`;
