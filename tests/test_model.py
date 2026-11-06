@@ -28,6 +28,15 @@ def sample(**changes):
         grid_charge_enabled=False,battery_min_soc=1), **changes)
 
 
+class WallboxOffCommands(unittest.TestCase):
+    def test_off_wallbox_blocks_even_an_outdated_positive_car_decision(self):
+        c=Settings();s=sample(car_soc=10)
+        d=decide(s,c,'charge_now')
+        self.assertGreater(d.target_amps,0)
+        commands=plan(replace(s,wallbox_enabled=False),d,c)
+        self.assertFalse(any(cmd.channel in ('car_current','car_charge') for cmd in commands))
+
+
 class ImmediateCharging(unittest.TestCase):
     def test_ignores_price_weather_and_reserve_but_never_discharges_storage(self):
         s=sample(house_soc=99,car_soc=30,car_limit=50,forecast_kwh=None,forecast_age=99999,daylight=False)

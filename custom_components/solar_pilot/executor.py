@@ -21,7 +21,7 @@ def plan(s: Snapshot, d: Decision, c: Settings) -> list[Command]:
         commands.append(Command("grid_charge", False))
     if s.current_discharge_w is not None and abs(s.current_discharge_w - d.discharge_w) >= 1:
         commands.append(Command("discharge_limit", d.discharge_w))
-    if not d.may_control_car or d.target_amps is None:
+    if not s.wallbox_enabled or not d.may_control_car or d.target_amps is None:
         return commands
     if d.target_amps == 0:
         if s.charging is True:

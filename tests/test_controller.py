@@ -113,6 +113,19 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.hass.services.async_call.await_count,1)
         self.assertIn('eindeutige',self.c.car_wake['reason'])
 
+    async def test_wallbox_off_clears_only_inactive_tesla_error_not_history_or_backoff(self):
+        self.values['wallbox_enabled'].state='off'
+        self.c.executor.error='car_current: Warte auf Rückmeldung'
+        self.c.executor.failures={'car_current':2}
+        self.c.executor.history=[{'channel':'car_current','outcome':'error'}]
+        await self.c.async_update()
+        self.assertIsNone(self.c.executor.error)
+        self.assertEqual(self.c.executor.failures['car_current'],2)
+        self.assertEqual(self.c.executor.history[0]['outcome'],'error')
+        self.c.executor.error='discharge_limit: fehlgeschlagen'
+        await self.c.async_update()
+        self.assertEqual(self.c.executor.error,'discharge_limit: fehlgeschlagen')
+
     async def test_car_display_cache_survives_unavailable_state_and_restart(self):
         await self.c.async_update()
         expected = self.c.last_car_soc

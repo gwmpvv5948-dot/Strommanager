@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.1.120
+
+- Frühere Tesla-Steuerfehler bei ausdrücklich ausgeschalteter Wallbox nicht mehr als aktuellen Steuerfehler anzeigen; Verlauf und Wiederholungsbegrenzung bleiben erhalten.
+- Befehlsplanung sperrt Tesla-Befehle bei ausgeschalteter Wallbox unabhängig von einer älteren Ladeentscheidung.
+
+
 ## 0.1.119
 
 - Hausversorgung vor normaler Tesla-Ladung optimieren: kein nächtliches Zurückhalten des Hausspeichers allein zugunsten des Tesla-Ladeziels.

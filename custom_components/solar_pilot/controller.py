@@ -227,6 +227,10 @@ class Controller:
             self.entry.async_create_background_task(self.hass,self.price_forecast.refresh(self.hass,dt_util.utcnow().timestamp()),"Strommanager Energyforecast")
         async with self.lock:
             self.snapshot = self.read()
+            # A historical Tesla failure is not an active fault while the wallbox is off.
+            # Retain retry backoff and command history for subsequent diagnostics.
+            if self.boolean('wallbox_enabled') is False and self.executor.error and self.executor.error.startswith(('car_current:', 'car_charge:')):
+                self.executor.error = None
             if self.snapshot.car_soc is not None and 0 <= self.snapshot.car_soc <= 100:
                 self.last_car_soc = self.snapshot.car_soc
                 source = self.state("car_soc")
