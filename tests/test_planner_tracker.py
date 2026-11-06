@@ -26,8 +26,9 @@ class PlannerInputs(unittest.TestCase):
         self.assertEqual(a,b);self.assertEqual(len(a[0]),96)
     def test_naive_timestamps_are_not_assumed_to_be_utc(self):
         c,rows,now=self.fixture();rows[0]['period_start']=rows[0]['period_start'].replace(tzinfo=None)
-        with self.assertRaisesRegex(ValueError,'Prognoselücke ab 02.11. 13:00: PV'):
-            collect(c,now)
+        data,_,sources=collect(c,now)
+        self.assertEqual(data[0]['pv_kw'],0)
+        self.assertGreater(sources['pv_fallback_slots'],0)
     def test_missing_house_and_ee_are_named(self):
         c,_,now=self.fixture();c.consumption.result['window_hours'][0]['kwh']=None
         with self.assertRaisesRegex(ValueError,'Haus'):collect(c,now)
@@ -46,3 +47,11 @@ class PlannerInputs(unittest.TestCase):
             data,config,_=collect(c,now)
             self.assertEqual(len(data),96);self.assertEqual(config.initial_soc,soc)
             self.assertEqual(config.minimum_soc,5)
+
+    def test_overnight_forecast_remains_usable_and_stale_becomes_zero_pv_plan(self):
+        c,_,now=self.fixture();c.snapshot.forecast_age=16.3*3600
+        slots,_,sources=collect(c,now)
+        self.assertTrue(all(s['pv_kw']>0 for s in slots));self.assertEqual(sources['pv_fallback_slots'],0)
+        c.snapshot.forecast_age=25*3600
+        slots,_,sources=collect(c,now)
+        self.assertEqual(len(slots),96);self.assertTrue(all(s['pv_kw']==0 for s in slots));self.assertEqual(sources['pv_fallback_slots'],96)

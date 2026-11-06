@@ -273,7 +273,7 @@ class Controller:
             current_grid = self.grid_forecast.status(self.snapshot.now,self.settings)
             house_updated = self.consumption.result.get('updated')
             forecast_inputs_valid = (isinstance(house_updated,(int,float)) and 0<=self.snapshot.now-house_updated<=900
-                and 0<=self.snapshot.forecast_age<=self.settings.forecast_max_age_s)
+                )
             current_price = self.price_forecast.status(self.snapshot.now,self.settings)
             inputs_valid = forecast_inputs_valid
             energy_plan = self.planner.status(self.snapshot.now)

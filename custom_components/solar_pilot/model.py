@@ -193,7 +193,7 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     if not meters_ok:
         problems.append("Leistungsmessungen fehlen oder sind veraltet")
     if not forecast_ok:
-        problems.append("PV-Prognose fehlt oder ist veraltet; Speicher wird bevorzugt")
+        problems.append("PV-Restprognose fehlt oder Abruf älter als zulässig; Schwellen-Fallback bevorzugt Speicher (HiGHS prüft die Zeitprognose separat)")
     if eligible and not car_ok:
         problems.append("Fahrzeugdaten fehlen oder sind veraltet")
     if s.daylight is None:

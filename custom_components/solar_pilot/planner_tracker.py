@@ -26,8 +26,9 @@ def collect(controller, now):
     if not finite(house.get('updated')) or not 0 <= now-house['updated'] <= 900:
         raise ValueError('Hausverbrauchsprognose fehlt oder ist veraltet')
     grid = controller.grid_forecast.status(now,c)
-    if not 0 <= s.forecast_age+max(0,now-s.now) <= c.forecast_max_age_s:
-        raise ValueError('Solcast-Prognose ist veraltet')
+    pv_age = s.forecast_age+max(0,now-s.now)
+    pv_usable = 0 <= pv_age <= max(86400,c.forecast_max_age_s)
+    fallback_slots = 0
     sources = display_sources(controller.entities,controller.entry.options.get('display_sources'))
     minimum = controller.hass.states.get(sources['battery_min_soc'])
     if not minimum or minimum.state in ('unknown','unavailable') or minimum.attributes.get('restored') or minimum.attributes.get('unit_of_measurement') != '%':
@@ -55,7 +56,10 @@ def collect(controller, now):
     slots,t,end = [],now,now+24*3600
     while t < end:
         stop = min(end,(int(t)//900+1)*900)
-        power = next((p for stamp,p in pv if stamp<=t<stamp+1800),None)
+        power = next((p for stamp,p in pv if stamp<=t<stamp+1800),None) if pv_usable else None
+        if power is None:
+            power = 0.0
+            fallback_slots += 1
         load = hours.get(int(t)//3600*3600)
         share = next((p['share'] for p in grid.get('points',[]) if p['available'] and p['start']<=t<p['end']),None)
         if not all(finite(v) for v in (power,load)):
@@ -71,7 +75,7 @@ def collect(controller, now):
         efficiency=c.efficiency,purchase=c.purchase_eur_kwh,feed_in=c.feed_in_eur_kwh,
         ee_weight=c.planner_ee_weight_eur_kwh,cycle_cost=c.planner_cycle_eur_kwh,
         hold_share=c.grid_hold_share,release_share=c.grid_release_share,grid_enabled=c.grid_renewable_enabled,initial_hold=grid['hold'],price_weight=c.planner_price_weight,ev_price_ct=c.planner_ev_price_ct)
-    return slots,config,{'price_fetched':prices['fetched'],'house_updated':house['updated'],'ee_fetched':grid['fetched'],'pv_age_s':s.forecast_age,
+    return slots,config,{'price_fetched':prices['fetched'],'house_updated':house['updated'],'ee_fetched':grid['fetched'],'pv_age_s':pv_age,'pv_fallback_slots':fallback_slots,'pv_warning':('PV-Ersatzplan: fehlende oder über 24 Stunden alte PV-Zeitfenster mit 0 kW angesetzt.' if fallback_slots else 'Solcast-Abruf über 8 Stunden alt; vollständige Zeitprognose wird weiter genutzt.' if pv_age>c.forecast_max_age_s else None),
         'pv_factor':c.forecast_factor,'pv_source':'Solcast Hauptanlage · ohne Garage/Schuppen-Prognose'}
 
 
