@@ -1,5 +1,5 @@
-import {houseStorageCard} from './house-storage-card.js?v=0.1.114';
-import {teslaCard} from './tesla-card.js?v=0.1.114';
+import {houseStorageCard} from './house-storage-card.js?v=0.1.115';
+import {teslaCard} from './tesla-card.js?v=0.1.115';
 import {esc,fmt} from './view-format.js';
 export function planThresholds(panel) {
   return `<section class="plan-thresholds storage-vehicle full" aria-label="Eingestellte Reserven und Ladeziele">${houseStorageCard(panel)}${teslaCard(panel)}</section>`;

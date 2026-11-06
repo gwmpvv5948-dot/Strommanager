@@ -23,3 +23,13 @@ test('peak requires overlapping valid readings across all three PV plants',()=>{
  assert.equal(observedPeak([c(1000),c(200),c(300)],t,t+1000),1500);
  assert.equal(observedPeak([c(1000),c(200),{unit:'W',history:[]}],t,t+1000),null);
 });
+
+test('storage estimates full and inverter floor durations, never inventing missing data',async()=>{
+ const {storageDuration}=await import('../custom_components/solar_pilot/frontend/energy-now-view.js');
+ const status={settings:{capacity_kwh:5},source_entities:{display:{battery_min_soc:'floor'}}},states={floor:{state:'3',attributes:{unit_of_measurement:'%'}}};
+ assert.equal(storageDuration(status,states,{soc:60,battery:1000}),'Voll in ca. 2 h');
+ assert.equal(storageDuration(status,states,{soc:43,battery:-500}),'Bis 3 % in ca. 4 h');
+ assert.equal(storageDuration(status,{}, {soc:43,battery:-500}),'');
+ assert.equal(storageDuration(status,states,{soc:43,battery:0}),'');
+ assert.equal(storageDuration(status,states,{soc:43,battery:500},false),'');
+});
