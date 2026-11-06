@@ -2579,3 +2579,5 @@ details summary {
 .tesla-mark.limit.coincident{width:4px;transform:none}
 
 .tesla-start-threshold{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;margin:0 0 12px;color:var(--muted)}.tesla-start-threshold>i{width:7px;height:7px;background:#d47872;border-radius:2px;flex:none}.tesla-start-threshold strong{color:var(--ink);font-weight:600}.tesla-start-threshold small{font-size:11px;margin-left:auto}
+
+.plan-comparison{grid-template-columns:repeat(4,minmax(0,1fr))}.plan-comparison>div{min-width:0}.plan-comparison strong{overflow-wrap:anywhere}@media(max-width:700px){.plan-comparison{grid-template-columns:repeat(2,minmax(0,1fr))}}

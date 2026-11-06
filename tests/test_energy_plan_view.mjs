@@ -43,3 +43,12 @@ test('joint plan renders EV without a misleading house-only cost comparison',()=
   assert.match(failed,/Prognoselücke/);assert.doesNotMatch(failed,/plan-calculating/);
   assert.match(energyPlanCard({status:{}}),/Wird berechnet/);
  });
+
+test('comparison shows EE benefit, missing EE and rounded zero honestly',async()=>{
+ const {comparisonHTML}=await import('../custom_components/solar_pilot/frontend/energy-plan-view.js');
+ const delta={cost:1e-12,grid_kwh:-1e-12,throughput_kwh:1e-12,nonrenewable_kwh:-.8};
+ let html=comparisonHTML({delta});assert.match(html,/0,8 kWh weniger/);assert.doesNotMatch(html,/\+0|\-0|Kein relevanter Unterschied/);
+ html=comparisonHTML({delta:{...delta,nonrenewable_kwh:1e-12}});assert.match(html,/Kein relevanter Unterschied/);assert.doesNotMatch(html,/\+0|\-0/);
+ html=comparisonHTML({delta,ee_incomplete:true});assert.match(html,/Nicht berechenbar/);assert.doesNotMatch(html,/Kein relevanter Unterschied|0,8 kWh weniger/);
+ assert.equal(comparisonHTML({joint:true,delta:null}),'');
+});
