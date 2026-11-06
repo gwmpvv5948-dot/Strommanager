@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.124
+
+- Verbrauch-Kachel in „Haus Verbrauch · Prognose“ umbenannt.
+
+
 ## 0.1.123
 
 - Scrollposition bei regelmäßiger Aktualisierung an der aktuell sichtbaren Kachel festhalten. Automatisches Browser-Scroll-Anchoring im Panel deaktiviert, um doppelte Positionskorrekturen zu verhindern.
