@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.1.116
+
+- Tesla-Planung über Wallbox an/aus, unabhängig vom Schlafzustand. Letzter bekannter SoC bis 24 Stunden wird ausdrücklich als vorläufig angezeigt.
+- Vor geplantem Ladestart Tesla über seine eindeutig zugeordnete Aufwecken-Taste wecken; aktuelle Fahrzeugdaten, Standort und Anschluss bestätigen. Kein Laden mit bloßen Schätzwerten. Maximal drei Weckversuche pro 24 Stunden mit mindestens 15 Minuten Abstand.
+
+
 ## 0.1.96
 
 - Festtarifplanung: Börsenpreis beeinflusst weder HiGHS-Ziel noch Tesla-Netzfreigabe oder laufende Steuerung. Preis bleibt reine Anzeige.

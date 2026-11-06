@@ -97,6 +97,7 @@ class PlannerTracker:
             ev,ev_status = vehicle_inputs(controller,now)
             if ev:
                 result = await controller.hass.async_add_executor_job(optimize_ev,slots,config,ev)
+                result['ev'].update(ev_status)
             else:
                 result = await controller.hass.async_add_executor_job(optimize,slots,config)
                 result['ev'] = ev_status

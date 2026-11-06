@@ -20,6 +20,7 @@ from .model import Settings, Snapshot, decide, without_retired_settings, Chargin
 from .grid_forecast import GridForecast
 from .price_forecast import PriceForecast
 from .planner_tracker import PlannerTracker
+from .ev_wake import wake_due, vehicle_confirmed
 from .planner_control import apply_house_plan, apply_joint_plan
 from .day_budget import DayBudgetTracker
 from .consumption_tracker import ConsumptionTracker
@@ -53,6 +54,7 @@ class Controller:
         self.last_car_soc = None
         self.last_car_seen = None
         self.last_car_limit = None
+        self.car_wake = {}
         self.consumption = ConsumptionTracker(hass, entry, self.entities, self.settings, self.publish)
         self.day_budget = DayBudgetTracker(hass, entry, self.entities, self.settings, self.publish)
 
@@ -150,6 +152,7 @@ class Controller:
         self.last_car_soc = saved.get("last_car_soc")
         self.last_car_seen = saved.get("last_car_seen")
         self.last_car_limit = saved.get("last_car_limit")
+        self.car_wake = saved.get("car_wake", {})
         self.mode = saved.get("mode", "observe")
         if self.mode not in MODES:
             self.mode = "observe"
@@ -277,6 +280,7 @@ class Controller:
             current_price = self.price_forecast.status(self.snapshot.now,self.settings)
             inputs_valid = forecast_inputs_valid
             energy_plan = self.planner.status(self.snapshot.now)
+            await self.prepare_vehicle(energy_plan)
             if self.mode == "charge_now":
                 self.energy_control={'enabled':True,'source':'charge_now','reason':self.decision.reason,'discharge_w':0,'replan':False}
             elif energy_plan.get('joint') and self.settings.planner_ev_enabled:
@@ -287,6 +291,11 @@ class Controller:
             else:
                 self.decision,self.energy_control = apply_house_plan(self.snapshot,self.settings,self.decision,self.mode,
                     energy_plan,device_min_soc=floor,device_max_w=maximum,device_step_w=increment,inputs_valid=inputs_valid)
+            pending = self.car_wake.get('pending')
+            if pending is not None and not vehicle_confirmed(self,pending):
+                self.decision=replace(self.decision,target_amps=0,may_control_car=False,
+                    reason='Tesla geweckt · warte auf bestätigte aktuelle Fahrzeugdaten')
+                self.energy_control['reason']=self.decision.reason
             if self.energy_control['replan'] and not self.planner.busy:
                 self.planner.attempted = None
             self.adapter_error = None
@@ -303,6 +312,46 @@ class Controller:
                 self.entry.async_create_background_task(self.hass,self.planner.refresh(self),"Strommanager energy plan")
             self.updated = dt_util.utcnow().isoformat()
             self.publish()
+
+    async def prepare_vehicle(self, energy_plan):
+        """Only wake for a scheduled charging interval, never on each polling cycle."""
+        pending = self.car_wake.get('pending')
+        if vehicle_confirmed(self,pending):
+            if pending is not None:
+                self.car_wake.pop('pending',None)
+                self.car_wake['reason']='Tesla-Fahrzeugdaten bestätigt · Fahrplan wird aktualisiert'
+                self.planner.attempted=None  # Replan with the confirmed actual SoC.
+                energy_plan['available']=False
+            return
+        if not wake_due(self.snapshot,self.settings,self.mode,energy_plan):
+            return
+        now=self.snapshot.now
+        if self.age('wallbox_enabled',now)>self.settings.meter_max_age_s:
+            self.car_wake['reason']='Tesla-Ladestart wartet auf aktuelle Wallbox-Rückmeldung'
+            return
+        # A current contrary report wins over a planning assumption; do not wake an absent/unplugged car.
+        if ((self.age('car_home',now)<=self.settings.car_max_age_s and not self.snapshot.at_home)
+                or (self.age('car_cable',now)<=self.settings.car_max_age_s and not self.snapshot.cable)):
+            self.car_wake['reason']='Tesla nicht zuhause oder nicht angeschlossen'
+            return
+        attempts=[stamp for stamp in self.car_wake.get('attempts',[]) if 0<=now-stamp<86400]
+        if attempts and now-attempts[-1]<900 or len(attempts)>=3:
+            return
+        from homeassistant.helpers import entity_registry as er
+        registry=er.async_get(self.hass)
+        soc=registry.async_get(self.entities['car_soc'])
+        candidates=[e.entity_id for e in registry.entities.values() if soc and soc.device_id
+            and e.device_id==soc.device_id and e.domain=='button' and not e.disabled_by
+            and any(word in (str(e.unique_id)+' '+str(e.original_name)).lower() for word in ('wake','aufweck','wecken'))]
+        if len(candidates)!=1:
+            self.car_wake['reason']='Tesla-Ladestart wartet · eindeutige Aufwecken-Taste der Tesla-Integration fehlt'
+            return
+        self.car_wake={'attempts':attempts+[now],'pending':now,'reason':'Tesla aufwecken · aktuelle Fahrzeugdaten vor Ladestart prüfen'}
+        await self.persist()
+        try:
+            await self.hass.services.async_call('button','press',{'entity_id':candidates[0]},blocking=True)
+        except Exception as exc:
+            self.car_wake['reason']='Tesla-Aufwecken fehlgeschlagen: '+str(exc)[:150]
 
     def current_settings(self):
         return {"discharge_limit": self.number("discharge_limit"), "car_current": self.number("car_current")}
@@ -346,6 +395,7 @@ class Controller:
             "last_car_soc": self.last_car_soc,
             "last_car_seen": self.last_car_seen,
             "last_car_limit": self.last_car_limit,
+            "car_wake": self.car_wake,
             "charging_state": asdict(self.charging_state),
             "baselines": self.executor.baselines, "owned": self.executor.owned,
             "cloud_last": self.executor.cloud_last if math.isfinite(self.executor.cloud_last) else 0,
@@ -512,6 +562,7 @@ class Controller:
             "last_car_soc": self.last_car_soc,
             "last_car_seen": self.last_car_seen,
             "last_car_limit": self.last_car_limit,
+            "car_wake": self.car_wake,
             "entry_id": self.entry.entry_id, "mode": self.mode, "immediate_return_mode": self.immediate_return_mode,
             "updated": self.updated,
             "error": self.adapter_error or self.executor.error,

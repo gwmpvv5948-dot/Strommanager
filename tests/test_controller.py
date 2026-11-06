@@ -83,6 +83,36 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
             async_on_unload=Mock(),async_create_background_task=Mock())
         self.c=Controller(self.hass,self.entry)
 
+    async def test_scheduled_wake_is_throttled_and_never_a_charge_command(self):
+        from dataclasses import replace
+        self.c.settings=replace(self.c.settings,planner_ev_enabled=True,planner_control_enabled=True)
+        self.c.mode='auto'
+        for key in ('car_soc','car_limit','car_cable','car_home'):
+            self.values[key].state='unavailable'
+        self.values['car_online'].state='off'
+        self.values['car_charge'].state='off'
+        self.c.snapshot=self.c.read()
+        now=self.c.snapshot.now
+        button=SimpleNamespace(entity_id='button.test_wake',device_id='tesla',domain='button',disabled_by=None,unique_id='vin_wake_up',original_name='Wake up')
+        registry=SimpleNamespace(async_get=lambda _:SimpleNamespace(device_id='tesla'),entities={'wake':button})
+        er=module('homeassistant.helpers.entity_registry',async_get=lambda _:registry)
+        sys.modules['homeassistant.helpers'].entity_registry=er
+        self.hass.services.async_call=AsyncMock()
+        plan={'available':True,'joint':True,'updated':now,'points':[{'start':now,'end':now+900,'ev_amps':16}]}
+        await self.c.prepare_vehicle(plan)
+        self.hass.services.async_call.assert_awaited_once_with('button','press',{'entity_id':'button.test_wake'},blocking=True)
+        self.assertEqual(self.c.car_wake['pending'],now)
+        await self.c.prepare_vehicle(plan)
+        self.assertEqual(self.hass.services.async_call.await_count,1)
+        self.assertEqual(self.c.store.payload['car_wake']['attempts'],[now])
+        self.c.snapshot=replace(self.c.snapshot,now=now+901,at_home=True,cable=True)
+        plan.update(updated=now+901,points=[{'start':now+901,'end':now+1801,'ev_amps':16}])
+        self.c.age=lambda key,now:0
+        registry.entities['other']=SimpleNamespace(**{**vars(button),'entity_id':'button.other'})
+        await self.c.prepare_vehicle(plan)
+        self.assertEqual(self.hass.services.async_call.await_count,1)
+        self.assertIn('eindeutige',self.c.car_wake['reason'])
+
     async def test_car_display_cache_survives_unavailable_state_and_restart(self):
         await self.c.async_update()
         expected = self.c.last_car_soc
