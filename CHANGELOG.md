@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.117
+
+- Energie jetzt: Einspeisung heute direkt neben Bezug heute, aus dem konfigurierbaren Tageszähler sensor.tagesexport. Drei kompakte Tageswerte nebeneinander.
+
+
 ## 0.1.116
 
 - Tesla-Planung über Wallbox an/aus, unabhängig vom Schlafzustand. Letzter bekannter SoC bis 24 Stunden wird ausdrücklich als vorläufig angezeigt.

@@ -1,16 +1,16 @@
-import {solarDayData} from './solar-timeline-view.js?v=0.1.116';
+import {solarDayData} from './solar-timeline-view.js?v=0.1.117';
 import {liveEnergy,dischargeLocked,energyMix} from './live-energy.js';
 import {esc,fmt} from './view-format.js';
 import {dayBounds,number} from './solar-chart.js';
 import {dailyEnergy} from './energy-budget.js';
-import {currentEEValue} from './energy-plan-view.js?v=0.1.116';
+import {currentEEValue} from './energy-plan-view.js?v=0.1.117';
 
 export {energyMix} from './live-energy.js';
 export function energyToday(status,states,now,zone){
   const d=status?.source_entities?.display||{},start=dayBounds(now,zone).start;
   const read=key=>dailyEnergy(states?.[d[key]],start,now);
   const pv=[read('roof_daily'),read('garage_daily'),read('shed_daily')];
-  return {generated:pv.every(x=>x!==null)?pv.reduce((a,b)=>a+b,0):null,imported:read('grid_import_daily')};
+  return {generated:pv.every(x=>x!==null)?pv.reduce((a,b)=>a+b,0):null,imported:read('grid_import_daily'),exported:read('grid_export_daily')};
 }
 export function observedPeak(channels,start,end){
   if(channels.length!==3)return null;
@@ -50,5 +50,5 @@ export function energyNowCard(panel,now=Date.now()){
     <g transform="translate(173 278)" class="en-node en-storage"><circle r="34"/>${v.soc==null?'':`<circle class="en-soc-ring" r="34" pathLength="100" stroke-dasharray="${v.soc} 100" transform="rotate(-90)"/>`}<text class="en-power" y="-1">${esc(fmt(v.soc,'%',0))}</text><text class="en-battery-w" y="15">${esc(v.battery==null?'—':fmt(Math.abs(v.battery),'W',0))}</text></g>
     <text class="en-label" x="240" y="59">PV</text><text class="en-note" x="240" y="75">Spitze heute ${esc(power(peak))}</text><text class="en-note" x="240" y="91"><title>Solcast P50 · verbleibender Dach-Ertrag heute, ohne Prognose für Garage und Schuppen</title>Noch erwartet ${esc(fmt(remaining,'kWh',1))}</text><text class="en-label" x="223" y="288">${locked?'🔒 ':''}${esc(storageLabel)}</text><text class="en-note" x="223" y="303"><title>Schätzung bei gleichbleibender aktueller Hausspeicherleistung; kein Fahrplan. Entladung bis zur Wechselrichter-Untergrenze.</title>${esc(duration)}</text>
     <foreignObject x="0" y="225" width="132" height="30"><div xmlns="http://www.w3.org/1999/xhtml" class="en-ee">${currentEEValue(status)}</div></foreignObject>
-    </svg><div class="energy-now-summary"><div class="en-autarky"><span>Autarkie jetzt</span><strong>${pct(mix?.autarky)}</strong></div><div class="en-origins" title="Momentane Leistungsbilanz für Haus und Tesla. Quellen werden rechnerisch anteilig verteilt. Hausspeicher zählt zur Autarkie, unabhängig von seiner früheren Ladequelle."><h3>Woher kommt der Strom?</h3><div class="en-mix" role="img" aria-label="PV ${pct(mix?.pv)}, Hausspeicher ${pct(mix?.storage)}, Netz ${pct(mix?.grid)}">${mix?parts.map(([k])=>`<i class="en-fill-${k}" style="width:${mix[k]}%"></i>`).join(''):'<span>—</span>'}</div><div class="en-mix-legend">${parts.map(([k,label])=>`<div><i class="en-fill-${k}"></i><span>${label}</span><strong>${pct(mix?.[k])}</strong></div>`).join('')}</div></div><div class="en-day"><div><span>Erzeugt heute</span><strong>${fmt(today.generated,'kWh',2)}</strong></div><div><span>Bezug heute</span><strong>${fmt(today.imported,'kWh',2)}</strong></div></div></div></div></section>`;
+    </svg><div class="energy-now-summary"><div class="en-autarky"><span>Autarkie jetzt</span><strong>${pct(mix?.autarky)}</strong></div><div class="en-origins" title="Momentane Leistungsbilanz für Haus und Tesla. Quellen werden rechnerisch anteilig verteilt. Hausspeicher zählt zur Autarkie, unabhängig von seiner früheren Ladequelle."><h3>Woher kommt der Strom?</h3><div class="en-mix" role="img" aria-label="PV ${pct(mix?.pv)}, Hausspeicher ${pct(mix?.storage)}, Netz ${pct(mix?.grid)}">${mix?parts.map(([k])=>`<i class="en-fill-${k}" style="width:${mix[k]}%"></i>`).join(''):'<span>—</span>'}</div><div class="en-mix-legend">${parts.map(([k,label])=>`<div><i class="en-fill-${k}"></i><span>${label}</span><strong>${pct(mix?.[k])}</strong></div>`).join('')}</div></div><div class="en-day"><div><span>Erzeugt heute</span><strong>${fmt(today.generated,'kWh',2)}</strong></div><div><span>Bezug heute</span><strong>${fmt(today.imported,'kWh',2)}</strong></div><div><span>Einspeisung heute</span><strong>${fmt(today.exported,'kWh',2)}</strong></div></div></div></div></section>`;
 }

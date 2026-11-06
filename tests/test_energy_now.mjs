@@ -12,9 +12,9 @@ test('house/Tesla balance and autarky share storage without double counting PV',
  assert.equal(energyMix({pv:0,house:340,ev:0,grid:-320,battery:0}).autarky,0);
 });
 test('daily production sums roof/garage/shed only with current-day energy units',()=>{
- const now=Date.parse('2026-11-05T13:00:00Z'),status={source_entities:{display:{roof_daily:'r',garage_daily:'g',shed_daily:'s',grid_import_daily:'i'}}};
- const states=Object.fromEntries(['r','g','s','i'].map((k,i)=>[k,{state:String(i+1),last_updated:new Date(now).toISOString(),attributes:{unit_of_measurement:'kWh'}}]));
- assert.deepEqual(energyToday(status,states,now,'Europe/Berlin'),{generated:6,imported:4});
+ const now=Date.parse('2026-11-05T13:00:00Z'),status={source_entities:{display:{roof_daily:'r',garage_daily:'g',shed_daily:'s',grid_import_daily:'i',grid_export_daily:'e'}}};
+ const states=Object.fromEntries(['r','g','s','i','e'].map((k,i)=>[k,{state:String(i+1),last_updated:new Date(now).toISOString(),attributes:{unit_of_measurement:'kWh'}}]));
+ assert.deepEqual(energyToday(status,states,now,'Europe/Berlin'),{generated:6,imported:4,exported:5});
  states.g.state='unavailable';assert.equal(energyToday(status,states,now,'Europe/Berlin').generated,null);
  states.i.last_updated='2026-11-04T12:00:00Z';assert.equal(energyToday(status,states,now,'Europe/Berlin').imported,null);
 });
