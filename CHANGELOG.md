@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.121
+
+- Tesla-Hinweise im Fahrplan gekürzt: kompakt „Tesla · Wallbox aus“. Weckbestätigung nur noch in den eingeklappten Berechnungsdetails; laufendes Wecken kurz anzeigen.
+
+
 ## 0.1.120
 
 - Frühere Tesla-Steuerfehler bei ausdrücklich ausgeschalteter Wallbox nicht mehr als aktuellen Steuerfehler anzeigen; Verlauf und Wiederholungsbegrenzung bleiben erhalten.
