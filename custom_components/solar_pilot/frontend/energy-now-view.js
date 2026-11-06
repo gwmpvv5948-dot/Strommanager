@@ -2,7 +2,7 @@ import {liveEnergy,dischargeLocked,energyMix} from './live-energy.js';
 import {esc,fmt} from './view-format.js';
 import {dayBounds,number} from './solar-chart.js';
 import {dailyEnergy} from './energy-budget.js';
-import {currentEEValue} from './energy-plan-view.js?v=0.1.110';
+import {currentEEValue} from './energy-plan-view.js?v=0.1.111';
 
 export {energyMix} from './live-energy.js';
 export function energyToday(status,states,now,zone){
