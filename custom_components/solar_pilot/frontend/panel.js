@@ -1,25 +1,25 @@
-import {bindTeslaCard} from './tesla-card.js?v=0.1.122';
-import {energyNowCard} from './energy-now-view.js?v=0.1.122';
-import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.122";
-import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.122-collapse";
-import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.122";
-import {solarTimeline} from "./solar-timeline-view.js?v=0.1.122";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.122';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.122';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.122';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.122';
+import {bindTeslaCard} from './tesla-card.js?v=0.1.123';
+import {energyNowCard} from './energy-now-view.js?v=0.1.123';
+import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.123";
+import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.123-collapse";
+import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.123";
+import {solarTimeline} from "./solar-timeline-view.js?v=0.1.123";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.123';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.123';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.123';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.123';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.122-price2';
-import {esc,fmt} from './view-format.js?v=0.1.122';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.122';
-import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.122';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.123-price2';
+import {esc,fmt} from './view-format.js?v=0.1.123';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.123';
+import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.123';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
-import {planThresholds} from './plan-thresholds.js?v=0.1.122';
+import {planThresholds} from './plan-thresholds.js?v=0.1.123';
 import {plannedDayAllocation} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.122";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.123";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",charge_now:"Tesla-Sofortladen",paused:"Pausiert"};
 const FIELD_INFO = {
   planner_ev_capacity_kwh:["Tesla · nutzbare Batteriekapazität", "kWh · vorläufige Annahme 50", 1, 200, 1],
@@ -335,9 +335,12 @@ export class SolarPilotPanel extends HTMLElement {
     scrollContainer=scrollContainer||doc.scrollingElement;
     const scrollTop=resetScroll?0:scrollContainer.scrollTop;
     const anchorKey=el=>scrollAnchorKey(el,this.tab);
-    const candidates=root=>[...root.querySelectorAll('h2,h3,summary,.mapping .split')];
+    const candidates=root=>[...root.querySelectorAll('.card,h2,h3,summary,.mapping .split')];
     const viewportTop=scrollContainer===doc.scrollingElement?0:scrollContainer.getBoundingClientRect().top;
-    const anchor=!resetScroll&&oldShell&&candidates(oldShell).find(el=>{const r=el.getBoundingClientRect();return r.height>0&&r.top>=viewportTop&&r.top<viewportTop+scrollContainer.clientHeight;});
+    // Anchor the card currently being read, rather than a heading in the next
+    // card whose position may move when live values wrap inside the visible card.
+    const anchors=!resetScroll&&oldShell?candidates(oldShell):[];
+    const anchor=anchors.find(el=>{const r=el.getBoundingClientRect();return el.matches('.card')&&r.top<=viewportTop&&r.bottom>viewportTop;})||anchors.find(el=>{const r=el.getBoundingClientRect();return r.height>0&&r.top>=viewportTop&&r.top<viewportTop+scrollContainer.clientHeight;});
     const anchorState=anchor?{key:anchorKey(anchor),top:anchor.getBoundingClientRect().top}:null;
     const detailKey=el=>el.classList.contains('consumer-more')?'consumer-more':`${el.className}|${el.querySelector('summary')?.textContent.trim()}`;
     const detailsOpen=new Map([...this.shadowRoot.querySelectorAll("details")].map(el=>[detailKey(el),el.open]));
@@ -346,7 +349,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><img class="logo" src="/solar_pilot_frontend/strommanager-icon.png?v=0.1.122" alt="" width="38" height="38"><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.122</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><img class="logo" src="/solar_pilot_frontend/strommanager-icon.png?v=0.1.123" alt="" width="38" height="38"><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.123</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});

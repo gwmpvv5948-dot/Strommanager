@@ -170,6 +170,8 @@ a {
 }
 .shell {
   overflow-anchor: none;
+  scroll-behavior: auto;
+  overflow-anchor: none;
   height: 100%;
   overflow: auto;
 }

@@ -1,5 +1,10 @@
 # Änderungen
 
+## 0.1.123
+
+- Scrollposition bei regelmäßiger Aktualisierung an der aktuell sichtbaren Kachel festhalten. Automatisches Browser-Scroll-Anchoring im Panel deaktiviert, um doppelte Positionskorrekturen zu verhindern.
+
+
 ## 0.1.122
 
 - Verbrauch-Kachel: Hausspeicher-SoC und PV-Verlauf als glatte, begrenzte Kurven statt sichtbarer Treppen und harter Knicke. Rein visuelle Interpolation; Messwerte, Energiebilanzen und Datenlücken bleiben erhalten.
