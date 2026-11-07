@@ -1,9 +1,9 @@
-import {solarDayData} from './solar-timeline-view.js?v=0.1.125';
+import {solarDayData} from './solar-timeline-view.js?v=0.1.126';
 import {liveEnergy,dischargeLocked,energyMix} from './live-energy.js';
 import {esc,fmt} from './view-format.js';
 import {dayBounds,number} from './solar-chart.js';
 import {dailyEnergy} from './energy-budget.js';
-import {currentEEValue} from './energy-plan-view.js?v=0.1.125';
+import {currentEEValue} from './energy-plan-view.js?v=0.1.126';
 
 export {energyMix} from './live-energy.js';
 export function energyToday(status,states,now,zone){
@@ -43,10 +43,16 @@ export function energyNowCard(panel,now=Date.now()){
   const path=(d,kind,active,reverse=false)=>`<path class="en-track" d="${d}"/><path class="en-flow en-${kind} ${active?'is-flowing':''} ${reverse?'reverse':''}" d="${d}"/>`;
   const storageLabel=locked?'Entladung gesperrt':v.battery==null?'Leistung unbekannt':charging?'Hausspeicher lädt':discharging?'Hausspeicher entlädt':'Hausspeicher ruht';
   const duration=storageDuration(status,states,v,fresh);
+  const teslaWatts=fresh&&v.house!=null&&v.ev>10?fmt(v.ev,'W',0):null;
   const pct=x=>fmt(x,'%',0),parts=[['pv','PV'],['storage','Hausspeicher'],['grid','Netz']];
-  return `<section class="card full energy-now-card" aria-label="Energie jetzt"><header class="card-title"><h2>Energie jetzt</h2><span class="en-live ${fresh?'':'is-stale'}"><i></i>${fresh?`Live · vor ${Math.max(0,Math.round(age))} s`:'Daten fehlen / veraltet'}</span></header><div class="energy-now-body"><svg class="energy-now-flow" viewBox="0 0 415 320" role="img" aria-label="PV ${power(v.pv)}, Haus ${power(v.house)}, Netz ${power(v.grid)}, Hausspeicher ${fmt(v.soc,'%',0)}. ${storageLabel}">
+  return `<section class="card full energy-now-card" aria-label="Energie jetzt"><header class="card-title"><h2>Energie jetzt</h2><span class="en-live ${fresh?'':'is-stale'}"><i></i>${fresh?`Live · vor ${Math.max(0,Math.round(age))} s`:'Daten fehlen / veraltet'}</span></header><div class="energy-now-body"><svg class="energy-now-flow" viewBox="0 0 415 320" role="img" aria-label="PV ${power(v.pv)}, Haus ${power(v.house)}, Netz ${power(v.grid)}, Hausspeicher ${fmt(v.soc,'%',0)}. ${storageLabel}${teslaWatts?`. Tesla lädt mit ${esc(teslaWatts)}`:''}">
     ${path('M190 83 Q210 147 294 155','sun',fresh&&v.pv>10)}${path('M94 170 H294','grid',fresh&&Math.abs(v.grid)>10,v.grid>0)}${path('M190 257 Q210 193 294 183','storage',fresh&&Math.abs(v.battery)>10,charging)}
     ${ring(173,64,'sun',power(v.pv),'')}${ring(57,170,'grid',power(v.grid),v.grid>10?'Einspeisung':v.grid< -10?'Netzbezug':'Netz')}${ring(328,170,'house',power(v.house),'Haus')}
+    ${teslaWatts?`<g transform="translate(328 245)" class="en-tesla-charge">
+      <title>Tesla lädt</title>
+      <path d="M-11 1l2-5h10l2 5M-11 1H3v6h-14zM-9 7v2M1 7v2M9-6l-4 6h5l-4 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text class="en-note" text-anchor="middle" y="22">${esc(teslaWatts)}</text>
+    </g>`:''}
     <g transform="translate(173 278)" class="en-node en-storage"><circle r="34"/>${v.soc==null?'':`<circle class="en-soc-ring" r="34" pathLength="100" stroke-dasharray="${v.soc} 100" transform="rotate(-90)"/>`}<text class="en-power" y="-1">${esc(fmt(v.soc,'%',0))}</text><text class="en-battery-w" y="15">${esc(v.battery==null?'—':fmt(Math.abs(v.battery),'W',0))}</text></g>
     <text class="en-label" x="240" y="59">PV</text><text class="en-note" x="240" y="75">Spitze heute ${esc(power(peak))}</text><text class="en-note" x="240" y="91"><title>Solcast P50 · verbleibender Dach-Ertrag heute, ohne Prognose für Garage und Schuppen</title>Noch erwartet ${esc(fmt(remaining,'kWh',1))}</text><text class="en-label" x="223" y="288">${locked?'🔒 ':''}${esc(storageLabel)}</text><text class="en-note" x="223" y="303"><title>Schätzung bei gleichbleibender aktueller Hausspeicherleistung; kein Fahrplan. Entladung bis zur Wechselrichter-Untergrenze.</title>${esc(duration)}</text>
     <foreignObject x="0" y="225" width="132" height="30"><div xmlns="http://www.w3.org/1999/xhtml" class="en-ee">${currentEEValue(status)}</div></foreignObject>
