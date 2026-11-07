@@ -117,10 +117,10 @@ class Decisions(unittest.TestCase):
     def test_one_three_phase_current(self):
         self.assertEqual(decide(sample(),self.c).target_amps,16)
         self.assertEqual(decide(sample(),replace(self.c,phases=3)).target_amps,0)
-    def test_start_hysteresis(self):
+    def test_minimum_current_applies_while_charging(self):
         s=sample(grid_export_w=1810,battery_charge_w=0)
         self.assertEqual(decide(s,self.c).target_amps,0)
-        self.assertEqual(decide(replace(s,wallbox_w=1400,grid_export_w=410),self.c).target_amps,7)
+        self.assertEqual(decide(replace(s,wallbox_w=1400,grid_export_w=410),self.c).target_amps,0)
     def test_minimum_only_mode(self):
         self.assertEqual(decide(sample(),self.c,"charge_minimum").target_amps,0)
     def test_unknown_protection_blocks_start(self):
@@ -175,7 +175,7 @@ class ChargingThresholds(unittest.TestCase):
     def test_storage_hysteresis_night(self):
         state = ChargingState()
         for soc, active in ((80,False),(81,True),(79,True),(61,True),(60,False),(75,False)):
-            s = replace(self.night,car_soc=55,house_soc=soc)
+            s = replace(self.night,car_soc=55,house_soc=soc,wallbox_w=900)
             state = charging_state(s,self.c,state)
             self.assertEqual(state.storage_active,active)
             d = decide(s,self.c,state=state)

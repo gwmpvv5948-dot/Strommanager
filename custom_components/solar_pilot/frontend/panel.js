@@ -1,25 +1,25 @@
-import {bindTeslaCard} from './tesla-card.js?v=0.1.124';
-import {energyNowCard} from './energy-now-view.js?v=0.1.124';
-import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.124";
-import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.124-collapse";
-import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.124";
-import {solarTimeline} from "./solar-timeline-view.js?v=0.1.124";
-import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.124';
-import {consumerHeatmap} from './power-consumers.js?v=0.1.124';
-import {vehicleSilhouette} from './vehicle-art.js?v=0.1.124';
-import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.124';
+import {bindTeslaCard} from './tesla-card.js?v=0.1.125';
+import {energyNowCard} from './energy-now-view.js?v=0.1.125';
+import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.125";
+import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.125-collapse";
+import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.125";
+import {solarTimeline} from "./solar-timeline-view.js?v=0.1.125";
+import {pvBenefitCard,benefitSources,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.125';
+import {consumerHeatmap} from './power-consumers.js?v=0.1.125';
+import {vehicleSilhouette} from './vehicle-art.js?v=0.1.125';
+import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.125';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.124-price2';
-import {esc,fmt} from './view-format.js?v=0.1.124';
-import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.124';
-import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.124';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.125-price2';
+import {esc,fmt} from './view-format.js?v=0.1.125';
+import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.125';
+import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.125';
 import {monthlyReferences,referenceScale,yieldAssessment} from './pv-reference.js?v=0.1.27';
 import {consumptionBars,rollingConsumptionBars,historicalConsumptionBars,dailyConsumption} from "./consumption-chart.js?v=0.1.40";
 
-import {planThresholds} from './plan-thresholds.js?v=0.1.124';
+import {planThresholds} from './plan-thresholds.js?v=0.1.125';
 import {plannedDayAllocation} from "./energy-budget.js?v=20261027-3";
 import {number as numeric,dayBounds,forecastPoints,actualSegments,storagePotential,batteryProtection} from "./solar-chart.js?v=20261027-2";
-import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.124";
+import {dateKey,nextDays,pvDays,pvDayIds,weatherDays,duration,weatherLabel} from "./day-forecast.js?v=0.1.125";
 const MODES = {observe:"Beobachten",auto:"Automatik",storage_first:"Speicher bevorzugen",charge_minimum:"Nur Tesla-Mindeststand",charge_now:"Tesla-Sofortladen",paused:"Pausiert"};
 const FIELD_INFO = {
   planner_ev_capacity_kwh:["Tesla · nutzbare Batteriekapazität", "kWh · vorläufige Annahme 50", 1, 200, 1],
@@ -37,6 +37,7 @@ const FIELD_INFO = {
   car_low_soc:["Tesla-Untergrenze für Netzladung", "% Tesla-Batterie-SoC", 0, 99, 1],
   storage_release_soc:["Tesla-Speicherfreigabe ab Hausspeicher-Ladestand", "% Hausspeicher-SoC", 0, 100, 1],
   car_min_soc:["Tesla-Mindestziel", "% Tesla-Batterie-SoC", 0, 100, 1], phases:["Ladephasen", "1 oder 3", 1, 3, 2],
+  tesla_min_charge_amps:["Tesla-Mindestladestrom", "A pro Phase", 10, 16, 1],
   max_amps:["Maximaler Ladestrom", "A", 8, 48, 1], normal_discharge_w:["Entladeleistung ohne Schutz", "W", 0, 30000, 100],
   max_charge_w:["Speicher-Ladebudget maximal", "W", 0, 30000, 100],
   forecast_factor:["Anteil der PV-Prognose einplanen", "Faktor", .1, 1, .05], buffer_kwh:["Energiepuffer", "kWh", 0, 30, .1],
@@ -61,6 +62,7 @@ const FIELD_HELP = {
   "car_low_soc": "Unter diesem Ladestand startet eine Mindestladung bis zum Tesla-Mindestziel, auch nachts und mit Netzstrom. Der Hausspeicher bleibt dabei geschützt. Muss unter dem Mindestziel liegen.",
   "storage_release_soc": "Oberhalb dieses Speicherstands wird zusätzlich zum PV-Laden Speicherenergie für den Tesla freigegeben. Die Freigabe endet an der Abendreserve. Muss mindestens so hoch wie die Abendreserve sein.",
   "phases": "Anzahl der beim Laden genutzten Phasen. 1 oder 3 wählen; der Wert muss zur tatsächlichen Ladung passen.",
+  tesla_min_charge_amps: "Kleinster Ladestrom im Fahrplan und in der Ersatzregel. Reicht die Leistung dafür nicht aus, wartet die Ladung.",
   "max_amps": "Obergrenze des Ladestroms pro Phase. Bei 1 Phase entsprechen 16 A ungefähr 3,7 kW.",
   "normal_discharge_w": "Gemeinsame Entladegrenze für Haus und Tesla. Hausversorgung auch tagsüber unter der Tesla-Reserve erlaubt; Netzstrategie und Tesla-Schutz können die Entladung sperren.",
   "max_charge_w": "Maximales PV-Leistungsbudget, das für die Speicherreserve zurückgehalten wird. Ändert nicht die Ladeleistungsgrenze am Wechselrichter.",
@@ -349,7 +351,7 @@ export class SolarPilotPanel extends HTMLElement {
     const focusKey=el=>[el.tagName,el.id,el.getAttribute('name'),el.getAttribute('data-tab'),el.getAttribute('data-consumption-info-key'),el.hasAttribute('data-consumption-info-key')?'':el.tagName==='SUMMARY'?detailKey(el.parentElement):el.textContent.trim()].join('|');
     const focused=active&&focusKey(active);
     const template=this.ownerDocument.createElement('template');
-    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><img class="logo" src="/solar_pilot_frontend/strommanager-icon.png?v=0.1.124" alt="" width="38" height="38"><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.124</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
+    template.innerHTML=`<style>${CSS}</style><div class="shell"><main class="wrap"><header class="top"><div class="brand"><button class="menu" id="sidebar" aria-label="Seitenleiste öffnen">☰</button><img class="logo" src="/solar_pilot_frontend/strommanager-icon.png?v=0.1.125" alt="" width="38" height="38"><div><strong>Strommanager</strong><small>Sonne sinnvoll verteilen</small></div></div><span class="badge ${this.demo?"demo":""}">${this.demo?"Demo · Beispieldaten":t?esc(MODES[t.mode]):"Verbinden …"}</span></header>${this.message?`<div class="flash" role="status">${esc(this.message)}</div>`:""}${this._error?`<div class="alert error" role="alert">Verbindung unterbrochen: ${esc(this._error)}. Angezeigte Werte können veraltet sein.</div>`:""}${t?`<nav class="tabs" aria-label="Bereiche">${[["overview","Übersicht"],["settings","Einstellungen"],["diagnostics","Diagnose"],["tesla_history","Tesla-Historie"]].map(([k,n])=>`<button data-tab="${k}" class="${this.tab===k?"active":""}" aria-current="${this.tab===k?"page":"false"}">${n}</button>`).join("")}</nav>${t.error?`<div class="alert error" role="alert">Steuerfehler: ${esc(t.error)}</div>`:""}${(t.decision?.problems||[]).map(p=>`<div class="alert">${esc(p)}</div>`).join("")}${this.tab==="settings"?this.settings()+sourceSettings(this):this.tab==="diagnostics"?this.diagnostics():this.tab==="tesla_history"?this.teslaHistory():this.overview()}<footer class="footer"><span>Strommanager · Entwicklungsversion 0.1.125</span><span>Stand ${esc(t.updated?new Date(t.updated).toLocaleTimeString("de-DE"):"—")}${this.demo?" · keine Verbindung zu Geräten":""}</span></footer>`:'<div class="loading" role="status">Messwerte werden geladen …</div>'}</main></div>`;
     // Expand off-DOM first: restoring scroll against collapsed details clamps
     // the saved position and browser anchoring can then jump to the bottom.
     template.content.querySelectorAll('details').forEach(el=>{el.open=detailsOpen.get(detailKey(el))||false;});

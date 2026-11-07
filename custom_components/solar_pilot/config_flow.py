@@ -21,7 +21,7 @@ SETTINGS_FIELDS = (
     "planner_control_enabled",
     "planner_terminal_soc", "planner_ee_weight_eur_kwh", "planner_cycle_eur_kwh",
     "grid_renewable_enabled", "grid_hold_share", "grid_release_share",
-    "reserve_soc", "capacity_kwh", "car_min_soc", "car_low_soc", "storage_release_soc", "phases", "max_amps",
+    "reserve_soc", "capacity_kwh", "car_min_soc", "car_low_soc", "storage_release_soc", "phases", "tesla_min_charge_amps", "max_amps",
     "normal_discharge_w", "max_charge_w", "forecast_factor", "buffer_kwh",
     "margin_w", "minimum_house_w", "budget_extra_kwh", "cloud_interval_s", "grid_export_positive",
     "battery_charge_positive", "benefit_initial_savings_eur", "feed_in_eur_kwh", "purchase_eur_kwh",

@@ -100,7 +100,7 @@ def apply_joint_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device
     if abs(s.house_soc-(before+(point['soc']-before)*fraction))>5 or abs(s.car_soc-(car_before+(point['ev_soc']-car_before)*fraction))>3:
         return result('Fallback: Hausspeicher-/Tesla-SoC weicht ab · Neuberechnung',replan=True)
     amps=point.get('ev_amps');battery_kw=point.get('battery_kw')
-    if type(amps) is not int or amps not in (0,*range(max(10,c.min_amps),min(16,c.max_amps)+1)) or not valid(battery_kw) or battery_kw<0:
+    if type(amps) is not int or amps not in (0,*range(c.ev_min_amps,min(16,c.max_amps)+1)) or not valid(battery_kw) or battery_kw<0:
         return result('Fallback: ungültiger Tesla-Sollwert',replan=True)
     if s.car_soc>=min(s.car_limit,ev['target_soc']):amps=0
     ceiling=min(c.normal_discharge_w,device_max_w)
@@ -121,7 +121,7 @@ def apply_joint_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device
         balance=s.wallbox_w+s.grid_export_w+min(s.battery_charge_w,s.battery_charge_w*.95)
         safe=math.floor(max(0,balance+watts-c.margin_w)/(230*c.phases))
         amps=min(amps,safe)
-        threshold=max(10,c.min_amps if s.wallbox_w>10 else c.start_amps)
+        threshold=(c.ev_min_amps if s.wallbox_w>10 else c.ev_start_amps)
         if amps<threshold:amps=0
     # Actual EV power still keeps protection active until a stop is confirmed.
     watts=watts_for(amps>=c.min_amps or s.wallbox_w>10)

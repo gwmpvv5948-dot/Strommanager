@@ -29,6 +29,7 @@ class Settings:
     phases: int = 1
     min_amps: int = 6
     max_amps: int = 16
+    tesla_min_charge_amps: int = 12
     start_amps: int = 8
     normal_discharge_w: float = 2500
     max_charge_w: float = 2500
@@ -56,7 +57,7 @@ class Settings:
                 raise ValueError(f.name)
             if isinstance(value, (int, float)) and not isfinite(value):
                 raise ValueError(f.name)
-        for name in ("phases", "min_amps", "max_amps", "start_amps", "cloud_interval_s",
+        for name in ("phases", "min_amps", "max_amps", "start_amps", "tesla_min_charge_amps", "cloud_interval_s",
                      "meter_max_age_s", "car_max_age_s", "forecast_max_age_s", "minimum_pause_s"):
             if type(getattr(self, name)) is not int:
                 raise ValueError(name)
@@ -91,8 +92,19 @@ class Settings:
             raise ValueError("storage_release_soc must be at least reserve_soc")
         if self.phases not in (1, 3):
             raise ValueError("phases")
+        if not 10 <= self.tesla_min_charge_amps <= 16:
+            raise ValueError("Tesla-Mindestladestrom muss zwischen 10 und 16 A liegen")
         if not (6 <= self.min_amps <= self.start_amps <= self.max_amps <= 48):
             raise ValueError("amps")
+
+
+    @property
+    def ev_min_amps(self):
+        return max(self.min_amps, self.tesla_min_charge_amps)
+
+    @property
+    def ev_start_amps(self):
+        return max(self.start_amps, self.ev_min_amps)
 
 
 @dataclass(frozen=True)
@@ -175,7 +187,7 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     if mode == "charge_now":
         car_ok=(valid(s.car_soc,0,100) and valid(s.car_limit,0,100) and 0<=s.car_age<=c.car_max_age_s)
         eligible=s.at_home and s.cable and s.wallbox_enabled and 0<=s.location_age<=c.car_max_age_s
-        amps=min(16,c.max_amps) if car_ok and eligible and s.car_soc<s.car_limit else 0
+        amps=min(16,c.max_amps) if car_ok and eligible and s.car_soc<s.car_limit and c.max_amps>=c.ev_min_amps else 0
         reason="Tesla-Sofortladen · maximaler Ladestrom · Hausspeicher gesperrt" if amps else "Tesla-Sofortladen wartet auf Fahrzeug oder Ladelimit erreicht"
         return Decision("charge_now",reason,amps,0,eligible and s.online,0,amps*230*c.phases,None,None,())
     state = charging_state(s, c, state or ChargingState())
@@ -221,7 +233,7 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     car_w = max(0, pv_available - reserve - c.margin_w)
     solar_amps = floor(car_w / (230 * c.phases))
     watts_running = valid(s.wallbox_w, 200)
-    threshold = c.min_amps if watts_running else c.start_amps
+    threshold = c.ev_min_amps if watts_running else c.ev_start_amps
     storage_allowed = (state.storage_active and storage_ok and meters_ok
                        and valid(s.battery_min_soc, 0, 100) and s.house_soc > max(c.reserve_soc, s.battery_min_soc) and not state.minimum_active
                        and not (c.grid_renewable_enabled and s.grid_hold))
@@ -241,6 +253,8 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
             code, reason = "minimum_reached", "Tesla-Mindeststand erreicht; Modus lädt nicht weiter"
         elif not meters_ok or not storage_ok:
             code, reason = "measurements_missing", "Laden pausieren: keine verlässliche Energiebilanz"
+        elif c.max_amps < threshold:
+            code, reason = "current_limit", "Tesla-Mindestladestrom liegt über dem verfügbaren Ladestrom"
         elif state.minimum_active:
             target = c.max_amps
             code, reason = "minimum_grid", "Mindestladung bis zum Tesla-Mindestziel; Netzstrom erlaubt, Hausspeicher geschützt"

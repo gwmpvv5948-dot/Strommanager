@@ -256,7 +256,7 @@ class Controller:
                 maximum=current.attributes.get("max") if current else None
                 try:
                     maximum=min(16,self.settings.max_amps,int(maximum))
-                    if maximum<self.settings.min_amps:maximum=0
+                    if maximum<self.settings.ev_min_amps:maximum=0
                 except (TypeError,ValueError):maximum=0
                 if maximum:
                     decision_settings=replace(self.settings,max_amps=maximum)

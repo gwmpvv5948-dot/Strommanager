@@ -1,3 +1,7 @@
+## 0.1.125
+
+- Tesla-Mindestladestrom pro Phase einstellbar, standardmäßig 12 A. Gilt im Energie-Fahrplan und in der Ladesteuerung.
+
 # Änderungen
 
 ## 0.1.124

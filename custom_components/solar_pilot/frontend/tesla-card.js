@@ -1,5 +1,5 @@
 import {esc,fmt} from './view-format.js';
-import {liveEnergy,energyMix} from './live-energy.js?v=0.1.124';
+import {liveEnergy,energyMix} from './live-energy.js?v=0.1.125';
 const valid=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=100?v:null;
 const stamp=v=>typeof v==='number'?v*1000:Date.parse(v||'');
 export function teslaDisplay(panel,now=Date.now()){
