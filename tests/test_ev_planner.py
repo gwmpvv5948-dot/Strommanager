@@ -69,7 +69,7 @@ class JointPlanning(unittest.TestCase):
     def test_stage_diagnostics_report_time_and_search_work(self):
         r=optimize_ev(slots(ee=90),config(),vehicle())
         diagnostics=r['solver_diagnostics']
-        self.assertEqual([d['stage'] for d in diagnostics],['Tesla-Ladeziel','Hausversorgung','Speicherreserve','Kosten und Ladestarts'])
+        self.assertEqual([d['stage'] for d in diagnostics],['Tesla-Ladeziel','Tesla-Ladeblöcke','Hausversorgung','Speicherreserve','Kosten und Ladedauer'])
         for d in diagnostics:
             self.assertEqual(d['status'],'Optimal')
             self.assertEqual(d['time_limit_s'],60)

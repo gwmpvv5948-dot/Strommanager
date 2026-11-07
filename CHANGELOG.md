@@ -1,3 +1,7 @@
+## 0.1.128
+
+- HiGHS minimiert nach dem Tesla-Ladeziel die Zahl der Ladestarts, damit die Ladung in möglichst wenigen zusammenhängenden Blöcken erfolgt.
+
 ## 0.1.127
 
 - Bei eingeschalteter Wallbox hat das Tesla-Ladeziel im HiGHS-Fahrplan Vorrang. Netzfreigaben und feste Speichergrenzen gelten weiterhin.

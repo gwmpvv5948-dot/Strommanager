@@ -158,10 +158,13 @@ def optimize_ev(slots, c, ev):
         was_on=amps>0
     h.setSolution(len(seed_indices),seed_indices,seed_values)
     diagnostics=[]
-    def solve(expression, stage, gap=.001):
+    def solve(expression, stage, gap=.001, seed=None):
         h.setOptionValue("mip_abs_gap",gap)
         started_at=time.monotonic()
-        h.minimize(expression)
+        h.setObjective(expression,highspy.ObjSense.kMinimize)
+        if seed is not None:
+            h.setSolution(seed)
+        h.solve()
         info=h.getInfo()
         status=h.modelStatusToString(h.getModelStatus())
         elapsed=time.monotonic()-started_at
@@ -181,16 +184,20 @@ def optimize_ev(slots, c, ev):
         h.addConstr(previous_ev+missing>=urgent_goal)
         solve(missing,"Tesla-Mindestladung")
         h.addConstr(missing<=max(0,h.val(missing))+1e-6)
-    objectives=['ev','reserve','house'] if ev.storage_first else ['ev','house','reserve']
+    objectives=['ev','starts','reserve','house'] if ev.storage_first else ['ev','starts','house','reserve']
     for objective in objectives:
         if objective=='house':
             solve(house_cost,"Hausversorgung")
             h.addConstr(house_cost<=h.val(house_cost)+1e-6)
+        elif objective=='starts':
+            starts=sum(row['started'] for row in rows)
+            solve(starts,"Tesla-Ladeblöcke",0,seed=charging_solution)
+            h.addConstr(starts<=round(h.val(starts)))
         elif objective=='reserve':
             solve(reserve_missing,"Speicherreserve");value=max(0,h.val(reserve_missing));h.addConstr(reserve_missing<=value+1e-6)
         else:
-            solve(-previous_ev,"Tesla-Ladeziel",ev.start_amps*kw_per_amp*.25*ev.efficiency);value=h.val(previous_ev);h.addConstr(previous_ev>=value-1e-6)
-    solve(cost,"Kosten und Ladestarts")
+            solve(-previous_ev,"Tesla-Ladeziel",ev.start_amps*kw_per_amp*.25*ev.efficiency);value=h.val(previous_ev);charging_solution=h.getSolution();h.addConstr(previous_ev>=value-1e-6)
+    solve(cost,"Kosten und Ladedauer")
     points=[];previous,previous_ev=initial,initial_ev;permission=ev.released
     for i,(s,row) in enumerate(zip(slots,rows)):
         values={key:h.val(value) for key,value in row.items()}
