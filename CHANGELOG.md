@@ -1,3 +1,7 @@
+## 0.1.127
+
+- Bei eingeschalteter Wallbox hat das Tesla-Ladeziel im HiGHS-Fahrplan Vorrang. Netzfreigaben und feste Speichergrenzen gelten weiterhin.
+
 ## 0.1.126
 
 - Energie jetzt zeigt den aktiven Tesla-Ladevorgang mit Autosymbol, Blitz und Wattwert unter dem Haus.

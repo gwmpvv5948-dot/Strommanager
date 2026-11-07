@@ -49,26 +49,27 @@ class JointPlanning(unittest.TestCase):
         self.assertTrue(all(p['battery_kw']<1e-5 for p in r['points'] if p['ev_amps']))
     def test_released_storage_stops_at_tesla_reserve(self):
         c=config(initial_soc=90);ev=vehicle(released=True);r=optimize_ev(slots(ee=10),c,ev);self.verify(r,c,ev)
-        self.assertTrue(all(p['ev_amps']==0 for p in r['points']))
-        self.assertGreater(sum(p['house_battery_kw']*.25 for p in r['points']),2)
+        self.assertGreater(sum(p['ev_battery_kw']*.25 for p in r['points']),0)
+        self.assertAlmostEqual(sum(p['ev_grid_kw']*.25 for p in r['points']),0)
     def test_mandatory_minimum_charge_overrides_dirty_grid_without_house_battery(self):
         c=config(initial_soc=90);ev=vehicle(initial_soc=20,target_soc=50,urgent=True);r=optimize_ev(slots(ee=10),c,ev);self.verify(r,c,ev)
         self.assertEqual(r['points'][0]['ev_amps'],16)
         self.assertGreater(r['ev']['planned_soc'],49)
         self.assertTrue(all(p['battery_kw']<1e-5 for p in r['points'] if p['ev_amps']))
-    def test_normal_tesla_cannot_hold_battery_overnight_for_tomorrows_charge(self):
+    def test_priority_can_preserve_battery_for_a_later_tesla_window(self):
         data=slots(ee=None);c=config(initial_soc=90,minimum_soc=3,terminal_soc=10);ev=vehicle()
         for i,p in enumerate(data):p['pv_kw']=3 if 48<=i<80 else 0
         r=optimize_ev(data,c,ev);self.verify(r,c,ev)
         night=r['points'][:48]
-        self.assertGreater(sum(p['house_battery_kw']*.25 for p in night),3)
-        self.assertLess(night[-1]['soc'],20)
+        self.assertLess(sum(p['house_battery_kw']*.25 for p in night),3)
+        self.assertGreater(night[-1]['soc'],ev.release_soc)
         self.assertTrue(all(p['ev_amps']==0 for p in night))
+        self.assertTrue(any(p['ev_amps']>0 for p in r['points'][48:]))
 
     def test_stage_diagnostics_report_time_and_search_work(self):
         r=optimize_ev(slots(ee=90),config(),vehicle())
         diagnostics=r['solver_diagnostics']
-        self.assertEqual([d['stage'] for d in diagnostics],['Hausversorgung','Speicherreserve','Tesla-Überschussziel','Kosten und Ladestarts'])
+        self.assertEqual([d['stage'] for d in diagnostics],['Tesla-Ladeziel','Hausversorgung','Speicherreserve','Kosten und Ladestarts'])
         for d in diagnostics:
             self.assertEqual(d['status'],'Optimal')
             self.assertEqual(d['time_limit_s'],60)

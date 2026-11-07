@@ -174,14 +174,14 @@ def optimize_ev(slots, c, ev):
         if h.getModelStatus()!=highspy.HighsModelStatus.kOptimal:
             _LOGGER.warning("Tesla solver stage failed: %s; slots=%s, variables=%s, constraints=%s",diagnostic,len(slots),h.getNumCol(),h.getNumRow())
             raise ValueError(f"Tesla-Fahrplan nicht gelöst: {status} · Stufe {stage} · {elapsed:.1f} s / {SOLVE_TIME_LIMIT_S:.0f} s · {info.mip_node_count} Knoten")
-    # Normal Tesla charging may use only flexibility left after optimal house supply.
+    # Prioritize the Tesla target within the existing supply and protection constraints.
     # Urgent minimum charging is bounded to the minimum target, never the car limit.
     if ev.urgent:
         missing=h.addVariable(lb=0,ub=max(0,urgent_goal-initial_ev))
         h.addConstr(previous_ev+missing>=urgent_goal)
         solve(missing,"Tesla-Mindestladung")
         h.addConstr(missing<=max(0,h.val(missing))+1e-6)
-    objectives=['reserve','house','ev'] if ev.storage_first else ['house','reserve','ev']
+    objectives=['ev','reserve','house'] if ev.storage_first else ['ev','house','reserve']
     for objective in objectives:
         if objective=='house':
             solve(house_cost,"Hausversorgung")
@@ -189,7 +189,7 @@ def optimize_ev(slots, c, ev):
         elif objective=='reserve':
             solve(reserve_missing,"Speicherreserve");value=max(0,h.val(reserve_missing));h.addConstr(reserve_missing<=value+1e-6)
         else:
-            solve(-previous_ev,"Tesla-Überschussziel",ev.start_amps*kw_per_amp*.25*ev.efficiency);value=h.val(previous_ev);h.addConstr(previous_ev>=value-1e-6)
+            solve(-previous_ev,"Tesla-Ladeziel",ev.start_amps*kw_per_amp*.25*ev.efficiency);value=h.val(previous_ev);h.addConstr(previous_ev>=value-1e-6)
     solve(cost,"Kosten und Ladestarts")
     points=[];previous,previous_ev=initial,initial_ev;permission=ev.released
     for i,(s,row) in enumerate(zip(slots,rows)):
@@ -226,7 +226,7 @@ def optimize_ev(slots, c, ev):
                 'Tesla lädt · hoher EE-Anteil' if amps else
                 'PV lädt den Hausspeicher' if charge>.02 else 'Hausspeicher versorgt das Haus' if dis>.02 else
                 'PV versorgt das Haus' if grid<.02 else 'Netz versorgt das Haus')
-        explanation=(f'Tesla: {amps} A, {ev_kw:.2f} kW; Hausversorgung hat Vorrang; normale Tesla-Ladung nutzt die verbleibende Flexibilität bis zum Fahrzeuglimit. Nur die ausgelöste Mindestladung hat bis zum Mindestziel Vorrang. '
+        explanation=(f'Tesla: {amps} A, {ev_kw:.2f} kW; Tesla-Ladung bis zum Ladeziel hat bei eingeschalteter Wallbox Vorrang innerhalb der Netzfreigabe und Speichergrenzen. '
             +'Flexible Netzladung nach EE-Freigabe oder für die ausgelöste Mindestladung; Festtarif, kein Spotpreiseinfluss. '
             +'Haus- und Tesla-Reservegrenzen bleiben verbindlich.')
         if s.get('ee') is None:explanation+=' EE-Prognose fehlt: keine zusätzliche flexible Tesla-Netzladung in diesem Zeitfenster.'
