@@ -83,7 +83,7 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
             async_on_unload=Mock(),async_create_background_task=Mock())
         self.c=Controller(self.hass,self.entry)
 
-    async def test_scheduled_wake_is_throttled_and_never_a_charge_command(self):
+    async def test_immediate_wake_is_throttled_and_never_a_charge_command(self):
         from dataclasses import replace
         self.c.settings=replace(self.c.settings,planner_ev_enabled=True,planner_control_enabled=True)
         self.c.mode='auto'
@@ -99,17 +99,17 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         sys.modules['homeassistant.helpers'].entity_registry=er
         self.hass.services.async_call=AsyncMock()
         plan={'available':True,'joint':True,'updated':now,'points':[{'start':now,'end':now+900,'ev_amps':16}]}
-        await self.c.prepare_vehicle(plan)
+        await self.c.prepare_vehicle()
         self.hass.services.async_call.assert_awaited_once_with('button','press',{'entity_id':'button.test_wake'},blocking=True)
         self.assertEqual(self.c.car_wake['pending'],now)
-        await self.c.prepare_vehicle(plan)
+        await self.c.prepare_vehicle()
         self.assertEqual(self.hass.services.async_call.await_count,1)
         self.assertEqual(self.c.store.payload['car_wake']['attempts'],[now])
         self.c.snapshot=replace(self.c.snapshot,now=now+901,at_home=True,cable=True)
         plan.update(updated=now+901,points=[{'start':now+901,'end':now+1801,'ev_amps':16}])
         self.c.age=lambda key,now:0
         registry.entities['other']=SimpleNamespace(**{**vars(button),'entity_id':'button.other'})
-        await self.c.prepare_vehicle(plan)
+        await self.c.prepare_vehicle()
         self.assertEqual(self.hass.services.async_call.await_count,1)
         self.assertIn('eindeutige',self.c.car_wake['reason'])
 
@@ -228,7 +228,7 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         await self.c.async_start()
         self.assertEqual(self.c.mode,"observe")
         self.assertEqual(self.calls,[])
-        self.assertEqual(self.c.decision.target_amps,0)
+        self.assertIsNone(self.c.decision.target_amps)
 
     async def test_activation_never_calls_automations(self):
         await self.c.async_activate()
@@ -331,7 +331,7 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         self.assertIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['discharge_limit'],'value':400}),self.calls)
         self.assertFalse(any(domain!='number' for domain,_,_ in self.calls))
 
-    async def test_joint_plan_routes_ev_and_protection_through_existing_executor(self):
+    async def test_automatic_mode_ignores_legacy_joint_ev_commands(self):
         from dataclasses import replace
         from unittest.mock import patch
         self.c.settings=replace(self.c.settings,planner_control_enabled=True,planner_ev_enabled=True)
@@ -345,10 +345,10 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         self.states['number.batterien_entlade_ende_ladestand']=state(3,"%")
         with patch.object(sys.modules['pilot_test.controller'],'display_sources',return_value={'battery_min_soc':'number.batterien_entlade_ende_ladestand'}):
             await self.c.async_update()
-        self.assertEqual(self.c.energy_control['source'],'highs_ev')
+        self.assertEqual(self.c.energy_control['source'],'highs')
         self.assertIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['discharge_limit'],'value':0}),self.calls)
-        self.assertIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['car_current'],'value':12}),self.calls)
-        self.assertIn(('switch','turn_on',{'entity_id':ENTITY_DEFAULTS['car_charge']}),self.calls)
+        self.assertNotIn(('number','set_value',{'entity_id':ENTITY_DEFAULTS['car_current'],'value':12}),self.calls)
+        self.assertNotIn(('switch','turn_on',{'entity_id':ENTITY_DEFAULTS['car_charge']}),self.calls)
 
     async def test_status_is_json_safe(self):
         import json

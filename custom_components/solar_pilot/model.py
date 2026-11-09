@@ -1,7 +1,7 @@
 """Pure decision engine. No Home Assistant imports, network or side effects."""
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from dataclasses import replace, dataclass, fields
 from math import floor, isfinite
 
 
@@ -287,6 +287,13 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     return Decision(code, reason, target, discharge, eligible and s.online,
                     round(reserve), round(car_w), forecast_net, needed, tuple(problems))
 
+
+def decide_house(s: Snapshot, c: Settings, mode: str) -> Decision:
+    """Protect the shared inverter while leaving Tesla commands to charge_now."""
+    decision = decide(replace(s, at_home=False), c, mode)
+    if mode in ("observe", "paused"):
+        return decision
+    return replace(decision, code=mode, reason="Hausspeicher-Regelung · Tesla nur im Sofortladen")
 
 def consumption_comparison(s: Snapshot, c: Settings, forecast: dict) -> dict:
     """Read-only comparison for the same remaining daylight window as decide().

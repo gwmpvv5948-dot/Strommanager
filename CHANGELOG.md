@@ -1,3 +1,7 @@
+## 0.1.129
+
+- HiGHS plant nur Haus und Hausspeicher. Tesla-Ladebefehle und Aufwecken sind auf den Modus Tesla-Sofortladen beschränkt.
+
 ## 0.1.128
 
 - HiGHS minimiert nach dem Tesla-Ladeziel die Zahl der Ladestarts, damit die Ladung in möglichst wenigen zusammenhängenden Blöcken erfolgt.

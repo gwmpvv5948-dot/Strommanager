@@ -16,12 +16,12 @@ from homeassistant.util import dt as dt_util
 from .source_config import display_sources, validate_mapping, LEARNING_DEFAULTS, LEARNING_LABELS, DISPLAY_LABELS, ENTITY_ID
 from .const import DOMAIN, ENTITY_DEFAULTS, ENTITY_LABELS, MODES
 from .executor import Command, Executor, plan
-from .model import Settings, Snapshot, decide, without_retired_settings, ChargingState, charging_state, consumption_comparison
+from .model import Settings, Snapshot, decide, decide_house, without_retired_settings, ChargingState, charging_state, consumption_comparison
 from .grid_forecast import GridForecast
 from .price_forecast import PriceForecast
 from .planner_tracker import PlannerTracker
-from .ev_wake import wake_due, vehicle_confirmed
-from .planner_control import apply_house_plan, apply_joint_plan
+from .ev_wake import vehicle_confirmed
+from .planner_control import apply_house_plan
 from .day_budget import DayBudgetTracker
 from .consumption_tracker import ConsumptionTracker
 
@@ -154,6 +154,10 @@ class Controller:
         self.last_car_limit = saved.get("last_car_limit")
         self.car_wake = saved.get("car_wake", {})
         self.mode = saved.get("mode", "observe")
+        if self.mode == "charge_minimum":
+            self.mode = "auto"
+        if self.immediate_return_mode == "charge_minimum":
+            self.immediate_return_mode = "auto"
         if self.mode not in MODES:
             self.mode = "observe"
         flags = saved.get("charging_state", {})
@@ -260,10 +264,10 @@ class Controller:
                 except (TypeError,ValueError):maximum=0
                 if maximum:
                     decision_settings=replace(self.settings,max_amps=maximum)
-            self.decision = decide(self.snapshot, decision_settings, self.mode, self.charging_state)
+            self.decision = (decide(self.snapshot, decision_settings, self.mode) if self.mode == "charge_now"
+                             else decide_house(self.snapshot, self.settings, self.mode))
             if self.mode == "charge_now" and (self.immediate_stop_requested or not maximum):
                 self.decision=replace(self.decision,target_amps=0,reason="Tesla-Sofortladen wird beendet" if self.immediate_stop_requested else "Tesla-Sofortladen wartet auf gültige Ladestromgrenzen")
-            display = display_sources(self.entities,self.entry.options.get("display_sources"))
             def attribute_number(state,key=None):
                 try:
                     value = float(state.attributes[key] if key else state.state)
@@ -277,26 +281,20 @@ class Controller:
             upper,step = attribute_number(actuator,'max'),attribute_number(actuator,'step')
             maximum = upper*factor if upper is not None and factor else None
             increment = step*factor if step is not None and factor else None
-            current_grid = self.grid_forecast.status(self.snapshot.now,self.settings)
             house_updated = self.consumption.result.get('updated')
             forecast_inputs_valid = (isinstance(house_updated,(int,float)) and 0<=self.snapshot.now-house_updated<=900
                 )
-            current_price = self.price_forecast.status(self.snapshot.now,self.settings)
             inputs_valid = forecast_inputs_valid
             energy_plan = self.planner.status(self.snapshot.now)
-            await self.prepare_vehicle(energy_plan)
+            if self.mode == "charge_now" and not self.immediate_stop_requested:
+                await self.prepare_vehicle()
             if self.mode == "charge_now":
                 self.energy_control={'enabled':True,'source':'charge_now','reason':self.decision.reason,'discharge_w':0,'replan':False}
-            elif energy_plan.get('joint') and self.settings.planner_ev_enabled:
-                self.decision,self.energy_control = apply_joint_plan(self.snapshot,self.settings,self.decision,self.mode,
-                    energy_plan,device_min_soc=floor,device_max_w=maximum,device_step_w=increment,
-                    inputs_valid=forecast_inputs_valid,grid_share=current_grid.get('share') if current_grid['available'] else None,
-                    spot_ct=current_price['spot_ct'],minimum_active=self.charging_state.minimum_active,storage_active=self.charging_state.storage_active)
             else:
                 self.decision,self.energy_control = apply_house_plan(self.snapshot,self.settings,self.decision,self.mode,
                     energy_plan,device_min_soc=floor,device_max_w=maximum,device_step_w=increment,inputs_valid=inputs_valid)
             pending = self.car_wake.get('pending')
-            if pending is not None and not vehicle_confirmed(self,pending):
+            if self.mode == 'charge_now' and not self.immediate_stop_requested and pending is not None and not vehicle_confirmed(self,pending):
                 self.decision=replace(self.decision,target_amps=0,may_control_car=False,
                     reason='Tesla geweckt · warte auf bestätigte aktuelle Fahrzeugdaten')
                 self.energy_control['reason']=self.decision.reason
@@ -317,17 +315,15 @@ class Controller:
             self.updated = dt_util.utcnow().isoformat()
             self.publish()
 
-    async def prepare_vehicle(self, energy_plan):
-        """Only wake for a scheduled charging interval, never on each polling cycle."""
+    async def prepare_vehicle(self):
+        """Wake only during explicitly requested immediate charging."""
         pending = self.car_wake.get('pending')
         if vehicle_confirmed(self,pending):
             if pending is not None:
                 self.car_wake.pop('pending',None)
-                self.car_wake['reason']='Tesla-Fahrzeugdaten bestätigt · Fahrplan wird aktualisiert'
-                self.planner.attempted=None  # Replan with the confirmed actual SoC.
-                energy_plan['available']=False
+                self.car_wake.pop('reason',None)
             return
-        if not wake_due(self.snapshot,self.settings,self.mode,energy_plan):
+        if not self.snapshot.wallbox_enabled or self.snapshot.charging is True:
             return
         now=self.snapshot.now
         if self.age('wallbox_enabled',now)>self.settings.meter_max_age_s:
@@ -470,6 +466,8 @@ class Controller:
             self.hass.config_entries.async_update_entry(self.entry,options=options)
 
     async def async_set_mode(self, mode):
+        if mode == "charge_minimum":
+            mode = "auto"
         if mode not in MODES:
             raise ServiceValidationError("Unbekannter Betriebsmodus")
         if mode not in ("observe", "paused") and self.mode in ("observe", "paused"):
@@ -488,12 +486,14 @@ class Controller:
 
     async def async_activate(self, mode="auto"):
         """Explicit activation; no automatic activation at setup."""
+        if mode == "charge_minimum":
+            mode = "auto"
         async with self.lock:
             if mode not in ("auto", "storage_first", "charge_minimum", "charge_now"):
                 raise ServiceValidationError("Ungültiger Modus für Aktivierung")
             s = self.read()
             if (s.current_discharge_w is None or s.grid_charge_enabled is None
-                    or s.car_current is None):
+                    or (mode == "charge_now" and s.car_current is None)):
                 raise ServiceValidationError("Steuerbare Entitäten oder Einheiten prüfen")
             actuator = self.state("discharge_limit")
             if actuator.attributes.get("min", 1) > 0:
