@@ -1,3 +1,7 @@
+## 0.1.130
+
+- Beim Pausieren gibt der Strommanager die Hausspeicherentladung auf 2.500 W frei.
+
 ## 0.1.129
 
 - HiGHS plant nur Haus und Hausspeicher. Tesla-Ladebefehle und Aufwecken sind auf den Modus Tesla-Sofortladen beschränkt.

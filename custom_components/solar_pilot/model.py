@@ -283,7 +283,7 @@ def decide(s: Snapshot, c: Settings, mode: str = "auto", state: ChargingState | 
     if mode in ("observe", "paused"):
         code = mode
         reason = ("Empfehlung: " + reason if mode == "observe"
-                  else "Pausiert: keine Befehle; letzter Gerätezustand bleibt bestehen")
+                  else "Pausiert · Hausspeicher-Freigabe 2.500 W")
     return Decision(code, reason, target, discharge, eligible and s.online,
                     round(reserve), round(car_w), forecast_net, needed, tuple(problems))
 

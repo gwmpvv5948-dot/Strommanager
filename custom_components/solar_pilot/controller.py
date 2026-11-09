@@ -38,6 +38,7 @@ class Controller:
         self.energy_control = None
         self.charging_state = ChargingState()
         self.mode = "observe"
+        self.pause_release_pending = False
         self.immediate_return_mode = "observe"
         self.immediate_stop_requested = False
         self.executor = Executor(self._send)
@@ -148,6 +149,7 @@ class Controller:
         self.immediate_return_mode = saved.get("immediate_return_mode", "observe")
         if self.immediate_return_mode not in MODES or self.immediate_return_mode == "charge_now":
             self.immediate_return_mode = "observe"
+        self.pause_release_pending = saved.get("pause_release_pending") is True
         self.immediate_stop_requested = saved.get("immediate_stop_requested") is True
         self.last_car_soc = saved.get("last_car_soc")
         self.last_car_seen = saved.get("last_car_seen")
@@ -301,6 +303,17 @@ class Controller:
             if self.energy_control['replan'] and not self.planner.busy:
                 self.planner.attempted = None
             self.adapter_error = None
+            if self.mode == "paused" and self.pause_release_pending:
+                current = self.current_settings()
+                if current["discharge_limit"] == 2500:
+                    self.pause_release_pending = False
+                else:
+                    await self.executor.run(
+                        self.snapshot.now, [Command("discharge_limit", 2500)],
+                        self.settings.cloud_interval_s, current,
+                    )
+                    self.pause_release_pending = self.number("discharge_limit") != 2500
+                await self.persist()
             if self.mode not in ("observe", "paused"):
                 try:
                     await self.executor.run(
@@ -390,6 +403,7 @@ class Controller:
     async def persist(self):
         payload = {
             "mode": self.mode,
+            "pause_release_pending": self.pause_release_pending,
             "immediate_return_mode": self.immediate_return_mode,
             "immediate_stop_requested": self.immediate_stop_requested,
             "last_car_soc": self.last_car_soc,
@@ -473,6 +487,7 @@ class Controller:
         if mode not in ("observe", "paused") and self.mode in ("observe", "paused"):
             raise ServiceValidationError("Aktive Steuerung zuerst mit 'Aktivieren' freigeben")
         async with self.lock:
+            self.pause_release_pending = mode == "paused"
             if self.mode == "charge_now" and mode != "charge_now":
                 self.immediate_return_mode=mode
                 self.immediate_stop_requested=True
@@ -502,6 +517,7 @@ class Controller:
                 self.immediate_return_mode=self.mode
                 self.immediate_stop_requested=False
             self.mode = mode
+            self.pause_release_pending = False
             await self.persist()
         await self.async_update()
 

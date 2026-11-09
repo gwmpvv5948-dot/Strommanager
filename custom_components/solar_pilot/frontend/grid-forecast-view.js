@@ -69,7 +69,7 @@ export function gridForecastCard(
     status.mode === "observe"
       ? "Beobachten · keine Steuerbefehle"
       : status.mode === "paused"
-        ? "Pausiert · letzte Geräteeinstellung bleibt"
+        ? "Pausiert · Hausspeicher-Freigabe 2.500 W"
         : d?.discharge_w === 0
           ? available && g.hold
             ? "Hausspeicher bewahren · Netz ergänzt PV"

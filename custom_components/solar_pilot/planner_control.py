@@ -14,7 +14,7 @@ def apply_house_plan(s,c,decision,mode,plan,*,device_min_soc,device_max_w,device
         actual = decision.discharge_w if watts is None else watts
         return replace(decision,discharge_w=actual),{**meta,'source':source,'reason':reason,'discharge_w':actual,'replan':replan}
     if mode in ('observe','paused'):
-        return result(mode,'Beobachten · keine Gerätebefehle' if mode=='observe' else 'Pausiert · letzte Geräteeinstellung bleibt')
+        return result(mode,'Beobachten · keine Gerätebefehle' if mode=='observe' else 'Pausiert · Hausspeicher-Freigabe 2.500 W')
     if not enabled:
         return decision,meta
     if not all(valid(v) for v in (device_min_soc,device_max_w,device_step_w)) or not 0<=device_min_soc<=100 or device_max_w<0 or device_step_w<=0:

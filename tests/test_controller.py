@@ -224,6 +224,17 @@ class Adapter(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("discharge_limit",self.c.executor.owned)
         self.assertEqual(self.calls,[])
 
+    async def test_pause_releases_house_storage_once(self):
+        self.c.mode = "auto"
+        self.values["discharge_limit"].state = "0"
+        await self.c.async_set_mode("paused")
+        self.assertEqual(self.calls, [
+            ("number", "set_value", {"entity_id": ENTITY_DEFAULTS["discharge_limit"], "value": 2500}),
+        ])
+        self.values["discharge_limit"].state = "1000"
+        await self.c.async_update()
+        self.assertEqual(len(self.calls), 1)
+
     async def test_observe_never_writes(self):
         await self.c.async_start()
         self.assertEqual(self.c.mode,"observe")
