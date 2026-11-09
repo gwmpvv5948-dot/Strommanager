@@ -1,3 +1,7 @@
+## 0.1.132
+
+- Die PV-Vorteil-Karte wechselt vollständig zwischen Vorteil und Stromkosten. Optionaler Tagesgrundpreis in den Einstellungen.
+
 ## 0.1.131
 
 - Tageskosten aus Netzbezug und Arbeitspreis als umschaltbares Wochendiagramm in Dein PV-Vorteil.

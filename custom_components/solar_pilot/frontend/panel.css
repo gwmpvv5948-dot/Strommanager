@@ -2583,3 +2583,45 @@ details summary {
 .tesla-start-threshold{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;margin:0 0 12px;color:var(--muted)}.tesla-start-threshold>i{width:7px;height:7px;background:#d47872;border-radius:2px;flex:none}.tesla-start-threshold strong{color:var(--ink);font-weight:600}.tesla-start-threshold small{font-size:11px;margin-left:auto}
 
 .plan-comparison{grid-template-columns:repeat(4,minmax(0,1fr))}.plan-comparison>div{min-width:0}.plan-comparison strong{overflow-wrap:anywhere}@media(max-width:700px){.plan-comparison{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.benefit-card .imported { background: #559cde; }
+.benefit-card .base { background: #939d99; }
+.benefit-heading { flex-wrap: wrap; gap: 8px; }
+.benefit-headline { display: block; margin: 2px 0 10px; font-size: 2rem; }
+.benefit-switch {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+  border-radius: 24px;
+  padding: 3px;
+}
+.benefit-switch::before {
+  content: "";
+  position: absolute;
+  inset: 3px auto 3px 3px;
+  z-index: -1;
+  width: calc(50% - 3px);
+  border-radius: 22px;
+  background: #d7e9de;
+  transition: transform .22s ease;
+}
+.benefit-switch.costs::before { transform: translateX(100%); }
+.benefit-switch button, .benefit-compact-week button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.benefit-switch button { display: flex; align-items: center; gap: 5px; justify-content: center; padding: 7px 10px; }
+.benefit-switch button[aria-pressed="true"] { color: #173125; font-weight: 600; }
+.benefit-switch ha-icon { --mdc-icon-size: 16px; }
+.benefit-compact-week { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.benefit-compact-week button { min-width: 32px; min-height: 32px; font-size: 20px; }
+.benefit-compact-week button:disabled { opacity: .35; cursor: default; }
+.benefit-compact-week .sub { margin-inline-start: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .benefit-switch::before { transition: none; }
+}
