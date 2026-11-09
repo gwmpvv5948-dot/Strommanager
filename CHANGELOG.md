@@ -1,3 +1,7 @@
+## 0.1.131
+
+- Tageskosten aus Netzbezug und Arbeitspreis als umschaltbares Wochendiagramm in Dein PV-Vorteil.
+
 ## 0.1.130
 
 - Beim Pausieren gibt der Strommanager die Hausspeicherentladung auf 2.500 W frei.

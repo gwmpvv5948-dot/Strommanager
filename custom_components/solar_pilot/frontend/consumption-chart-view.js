@@ -1,5 +1,5 @@
-import { smoothPath } from "./solar-timeline-view.js?v=0.1.130";
-import { batteryHistory, batteryLinePoints } from "./battery-history.js?v=0.1.130";
+import { smoothPath } from "./solar-timeline-view.js?v=0.1.131";
+import { batteryHistory, batteryLinePoints } from "./battery-history.js?v=0.1.131";
 import { esc, fmt, html } from "./view-format.js?v=0.1.41";
 import { batteryForecast } from "./battery-forecast.js?v=0.1.56";
 import { pvOverlay } from "./pv-overlay.js?v=20261028-2";
