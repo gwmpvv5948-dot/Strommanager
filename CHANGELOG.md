@@ -1,3 +1,7 @@
+## 0.1.133
+
+- Stromkosten mit Monatssumme und monatlichem Grundpreis, verteilt auf die Kalendertage.
+
 ## 0.1.132
 
 - Die PV-Vorteil-Karte wechselt vollständig zwischen Vorteil und Stromkosten. Optionaler Tagesgrundpreis in den Einstellungen.
