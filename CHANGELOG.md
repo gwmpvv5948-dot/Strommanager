@@ -1,3 +1,7 @@
+## 0.1.134
+
+- Energie-Fahrplan und Energie jetzt zeigen Netzstrom in Blau und den Hausspeicher in Grün.
+
 ## 0.1.133
 
 - Stromkosten mit Monatssumme und monatlichem Grundpreis, verteilt auf die Kalendertage.
