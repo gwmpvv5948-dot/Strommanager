@@ -2626,3 +2626,5 @@ details summary {
 @media (prefers-reduced-motion: reduce) {
   .benefit-switch::before { transition: none; }
 }
+
+.plan-fill-export{fill:#e76c70;background:#e76c70}

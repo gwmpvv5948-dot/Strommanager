@@ -1,7 +1,7 @@
 import {bindTeslaCard} from './tesla-card.js?v=0.1.133';
 import {energyNowCard} from './energy-now-view.js?v=0.1.133';
 import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.133";
-import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.133-collapse";
+import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.135";
 import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.133";
 import {solarTimeline} from "./solar-timeline-view.js?v=0.1.133";
 import {pvBenefitCard,benefitSources,benefitCostSource,benefitCostMonth,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.133';
@@ -9,7 +9,7 @@ import {consumerHeatmap} from './power-consumers.js?v=0.1.133';
 import {vehicleSilhouette} from './vehicle-art.js?v=0.1.133';
 import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.133';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.134-colors';
+import {panelCSS as CSS} from './panel-styles.js?v=0.1.135-colors';
 import {esc,fmt} from './view-format.js?v=0.1.133';
 import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.133';
 import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.133';
