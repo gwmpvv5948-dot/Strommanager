@@ -8,6 +8,7 @@ import {
 import { pvDayIds, pvDays, dateKey } from "./day-forecast.js";
 import { dailyConsumption } from "./consumption-chart.js";
 import { esc, fmt } from "./view-format.js";
+import { shadeForecast } from "./pv-shade.js";
 
 export function solarDayData({
   now,
@@ -127,6 +128,9 @@ export function solarTimeline(panel, s, now = Date.now()) {
     unit: source.power?.attributes?.unit_of_measurement,
   });
   const { forecast } = day;
+  const shade = panel.pvShadeEnabled ? shadeForecast(panel.pvShadeProfile, forecast) : null;
+  const shown = shade?.points ?? forecast;
+  const total = shade && day.total !== null ? Math.max(0,day.total - shade.loss) : day.total;
   const {start, end} = solarPlotBounds(day, panel.status?.solar_times?.[day.key]);
   const actual = day.actual;
   const date = new Intl.DateTimeFormat("de-DE", {
@@ -138,15 +142,15 @@ export function solarTimeline(panel, s, now = Date.now()) {
     offset === 0
       ? [
           [dailyConsumption(source.roofDaily, now, zone), "Dach-Ertrag heute"],
-          [day.total, "Prognose P50"],
-          [day.low, "Vorsichtig P10"],
-          [day.remaining, "Rest P50"],
+          [total, shade ? "Prognose mit Verschattung" : "Prognose P50"],
+          [day.low, "Vorsichtig P10 · Solcast"],
+          [day.remaining, "Rest P50 · Solcast"],
         ]
       : [
-          [day.total, "Prognose P50"],
-          [day.low, "Vorsichtig P10"],
+          [total, shade ? "Prognose mit Verschattung" : "Prognose P50"],
+          [day.low, "Vorsichtig P10 · Solcast"],
         ]
-  )
+  ).concat(shade ? [[shade.loss, "Weniger durch lokalen Schatten"]] : [])
     .map(
       ([v, label]) =>
         `<div><strong>${fmt(v, "kWh", 1)}</strong><span>${label}</span></div>`,
@@ -193,6 +197,16 @@ export function solarTimeline(panel, s, now = Date.now()) {
   const areas = key => forecastSegments(forecast, key).map(points =>
     `<path d="${smoothPath(points,x,y)} L${x(points.at(-1).t)},${bottom} L${x(points[0].t)},${bottom} Z" class="${key === "p" ? "forecast-area" : "forecast-low"}"/>`
   ).join("");
+  const lines = shade ? ["p","corrected"].map(key => forecastSegments(shown,key).map(points =>
+    `<path d="${smoothPath(points,x,y)}" class="${key === "p" ? "pv-solcast-reference" : "pv-shade-line"}"/>`
+  ).join("")).join("") : "";
+  const detail = point => `${time(point.start)}–${time(point.end)} · Solcast ${fmt(point.p,"kW",2)} · Korrigiert ${fmt(point.corrected,"kW",2)} · Schattenabschlag ${fmt(point.fraction*100,"%",0)}`;
+  const selected = shade?.points.find(point=>point.start===panel.pvShadeSlot);
+  const regions = shade ? shown.filter(point=>point.end>start && point.start<end).map(point=>{
+    const a=x(Math.max(start,point.start)), b=x(Math.min(end,point.end));
+    return `<rect class="pv-shade-slot" x="${a}" width="${b-a}" y="${top}" height="${bottom-top}" tabindex="0" role="button" aria-label="${esc(detail(point))}" data-pv-shade-slot="${point.start}"/>`;
+  }).join("") : "";
+  const shadeStatus = !panel.pvShadeEnabled || shade ? "" : `<p class="note" role="status">${panel.pvShadeLoading ? "Lokales Schattenprofil wird geladen …" : "Für diesen Tag liegen keine passenden lokalen Schattendaten vor. Solcast wird angezeigt."}</p>`;
   const measured = actual
     .map(
       (seg) =>
@@ -203,5 +217,5 @@ export function solarTimeline(panel, s, now = Date.now()) {
     offset === 0 && now >= start && now < end
       ? `<line x1="${x(now)}" x2="${x(now)}" y1="16" y2="${bottom}" class="chart-now"/><text class="pv-now-label" x="${Math.min(right - 20, Math.max(left + 20, x(now)))}" y="291" text-anchor="middle">JETZT</text>`
       : "";
-  return `<section class="card full forecast-card"><div class="card-title"><h2>PV-Prognose</h2><span class="sub">Solcast</span></div><nav class="pv-day-nav" aria-label="PV-Prognose nach Tag"><button type="button" data-pv-day="0" aria-label="PV-Prognose heute anzeigen" ${offset === 0 ? "disabled" : ""}>‹</button><strong>${offset === 0 ? "Heute" : "Morgen"} · ${esc(date)}</strong><button type="button" data-pv-day="1" aria-label="PV-Prognose morgen anzeigen" ${offset === 1 ? "disabled" : ""}>›</button></nav><div class="forecast-metrics">${metrics}</div><svg class="solar-chart pv-rolling" data-narrow="${narrow}" viewBox="0 0 ${W} ${H}" role="img" aria-label="PV-Leistung ${offset === 0 ? "heute" : "morgen"} von ${time(start)} bis ${time(end)} Uhr. ${offset === 0 ? "Gemessener PV-Verlauf und " : ""}Solcast-Prognose P50 und P10 in Kilowatt."><text x="${left - 25}" y="17">kW</text>${ticks}<defs><clipPath id="pv-day-clip"><rect x="${left}" y="${top}" width="${right-left}" height="${bottom-top}"/></clipPath></defs><g clip-path="url(#pv-day-clip)">${areas("p")}${areas("low")}${measured}</g>${marker}${axis.join("")}</svg><div class="chart-legend">${offset === 0 ? `<span><i class="legend-actual"></i>PV-Ist (Eingang) · ${fmt(s.pv_w == null ? null : s.pv_w / 1000, "kW", 2)}</span>` : ""}<span><i class="legend-forecast"></i>Prognose P50</span><span><i class="legend-low"></i>Vorsichtig P10</span></div>${!forecast.length ? '<p class="note">Keine gültige Solcast-Prognose für diesen Tag verfügbar.</p>' : ""}${offset === 0 && panel.historyError ? `<p class="note">${esc(panel.historyError)}</p>` : ""}</section>`;
+  return `<section class="card full forecast-card"><div class="card-title"><h2>PV-Prognose</h2><button type="button" class="pv-shade-toggle" aria-label="Lokale Verschattung" aria-pressed="${Boolean(panel.pvShadeEnabled)}" data-pv-shade>Lokale Verschattung · ${panel.pvShadeEnabled ? "An" : "Aus"}</button></div><nav class="pv-day-nav" aria-label="PV-Prognose nach Tag"><button type="button" data-pv-day="0" aria-label="PV-Prognose heute anzeigen" ${offset === 0 ? "disabled" : ""}>‹</button><strong>${offset === 0 ? "Heute" : "Morgen"} · ${esc(date)}</strong><button type="button" data-pv-day="1" aria-label="PV-Prognose morgen anzeigen" ${offset === 1 ? "disabled" : ""}>›</button></nav><div class="forecast-metrics">${metrics}</div><svg class="solar-chart pv-rolling" data-narrow="${narrow}" viewBox="0 0 ${W} ${H}" role="${shade ? "group" : "img"}" aria-label="PV-Leistung ${offset === 0 ? "heute" : "morgen"} von ${time(start)} bis ${time(end)} Uhr. ${offset === 0 ? "Gemessener PV-Verlauf und " : ""}Solcast-Prognose P50 und P10 in Kilowatt."><text x="${left - 25}" y="17">kW</text>${ticks}<defs><clipPath id="pv-day-clip"><rect x="${left}" y="${top}" width="${right-left}" height="${bottom-top}"/></clipPath></defs><g clip-path="url(#pv-day-clip)">${shade ? "" : areas("p")}${areas("low")}${lines}${measured}${regions}</g>${marker}${axis.join("")}</svg><div class="chart-legend">${offset === 0 ? `<span><i class="legend-actual"></i>PV-Ist (Eingang) · ${fmt(s.pv_w == null ? null : s.pv_w / 1000, "kW", 2)}</span>` : ""}${shade ? '<span><i class="legend-shade"></i>Mit lokaler Verschattung</span><span><i class="legend-reference"></i>Solcast P50</span>' : '<span><i class="legend-forecast"></i>Solcast P50</span>'}<span><i class="legend-low"></i>Vorsichtig P10</span></div>${shade ? `<p class="note pv-shade-detail" aria-live="polite">${selected ? esc(detail(selected)) : "Für Details ein Zeitfenster im Diagramm antippen."}</p>` : ""}${shadeStatus}${!forecast.length ? '<p class="note">Keine gültige Solcast-Prognose für diesen Tag verfügbar.</p>' : ""}${offset === 0 && panel.historyError ? `<p class="note">${esc(panel.historyError)}</p>` : ""}</section>`;
 }

@@ -146,3 +146,12 @@ Vor der Übernahme ein HA-Backup einschließlich Konfiguration erstellen. Eine z
 Nach der Übernahme dieselbe Integrations-ID, Einstellungen, Datenbank-Integrität (`PRAGMA integrity_check`) und die vorhandenen historischen Lernstunden prüfen. Neue Messungen dürfen währenddessen hinzukommen. Kein Reset und kein neuer Datenimport sind für HACS nötig. InfluxDB und die HA-Recorder-Historie werden durch die Übernahme nicht verändert.
 
 Künftige Aktualisierungen erfolgen über HACS. Bei einer Rückkehr zur vorherigen Codeversion denselben Config Entry und die Datendateien beibehalten. Sicherungen mit Zugangsdaten ausschließlich lokal aufbewahren.
+
+## Optionale lokale PV-Verschattung
+
+Der Schalter **Lokale Verschattung** in der PV-Prognose verwendet ein Profil
+der Hauptanlage aus Haus3d. Lege das exportierte Profil unter
+`/config/haus3d/pv-shadow-profile.json` ab. Die Datei liegt außerhalb von
+`www` und wird nur über den Home-Assistant-WebSocket für Administratoren
+abgerufen. Die Funktion verwendet ausschließlich Solcast-Daten, wenn für
+den ausgewählten Tag kein passendes Profil vorhanden ist.

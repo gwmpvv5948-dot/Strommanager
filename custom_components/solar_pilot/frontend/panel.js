@@ -3,13 +3,13 @@ import {energyNowCard} from './energy-now-view.js?v=0.1.133';
 import {weatherOutlookCard,bindWeatherOutlook} from "./weather-outlook-view.js?v=0.1.133";
 import {energyPlanCard,currentEEValue} from "./energy-plan-view.js?v=0.1.135";
 import {scrollAnchorKey} from "./scroll-anchor.js?v=0.1.133";
-import {solarTimeline} from "./solar-timeline-view.js?v=0.1.133";
+import {solarTimeline} from "./solar-timeline-view.js?v=pv-shade-1";
 import {pvBenefitCard,benefitSources,benefitCostSource,benefitCostMonth,benefitWeek,benefitArchive} from './pv-benefit.js?v=0.1.133';
 import {consumerHeatmap} from './power-consumers.js?v=0.1.133';
 import {vehicleSilhouette} from './vehicle-art.js?v=0.1.133';
 import {sourceSettings,bindSourceSettings} from './source-settings-view.js?v=0.1.133';
 import {pvOverlay} from './pv-overlay.js?v=20261028-2';
-import {panelCSS as CSS} from './panel-styles.js?v=0.1.135-colors';
+import {panelCSS as CSS} from './panel-styles.js?v=pv-shade-1';
 import {esc,fmt} from './view-format.js?v=0.1.133';
 import {consumptionBarChart,consumptionTotalBar,consumptionHistoryChart,consumptionHistoryTotal} from './consumption-chart-view.js?v=0.1.133';
 import {liveEnergy,dischargeLocked} from './live-energy.js?v=0.1.133';
@@ -277,6 +277,21 @@ export class SolarPilotPanel extends HTMLElement {
     if(!channels)return {actual:[]};
     return pvOverlay(channels[0].history,channels[0].unit,[],day.day_start,day.day_end,day.day_end-.001,channels.slice(1));
   }
+  async togglePVShade() {
+    this.pvShadeEnabled = !this.pvShadeEnabled;
+    this.render();
+    if (!this.pvShadeEnabled || this.pvShadeLoading) return;
+    this.pvShadeLoading = true;
+    this.render();
+    try {
+      this.pvShadeProfile = await this._hass?.callWS({type:"solar_pilot/pv_shadow_profile"});
+    } catch {
+      this.pvShadeProfile = null;
+    } finally {
+      this.pvShadeLoading = false;
+      if (this.isConnected) this.render();
+    }
+  }
   solarChart(s,c){return solarTimeline(this,s);}
   sunsetTime(day,zone){
     const id=this.status?.entities?.sun||'sun.sun',sun=this._hass?.states?.[id],key=`solar_pilot.sunsets.${id}.${zone}`;
@@ -399,6 +414,20 @@ export class SolarPilotPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-action]").forEach(el=>el.onclick=()=>this.action(el.dataset.action));
     this.shadowRoot.querySelector("#mode")?.addEventListener("change",e=>{const mode=e.target.value;if(!["observe","paused"].includes(mode)&&["observe","paused"].includes(this.status.mode)){this.action("activate",mode);}else this.service("set_mode",{mode});});
     this.shadowRoot.querySelectorAll('[data-plan-step]').forEach(el=>el.onclick=()=>{this.planGroupIndex=Math.max(0,(this.planGroupIndex??0)+Number(el.dataset.planStep));this.render();});
+    this.shadowRoot.querySelector('[data-pv-shade]')?.addEventListener('click',()=>void this.togglePVShade());
+    for (const slot of this.shadowRoot.querySelectorAll('[data-pv-shade-slot]')) {
+      const show = () => {
+        this.pvShadeSlot = Number(slot.dataset.pvShadeSlot);
+        this.shadowRoot.querySelector('.pv-shade-detail').textContent = slot.getAttribute('aria-label');
+      };
+      slot.addEventListener('click',show);
+      slot.addEventListener('keydown',event=>{
+        if (event.key==='Enter' || event.key===' ') {
+          event.preventDefault();
+          show();
+        }
+      });
+    }
     this.shadowRoot.querySelectorAll('[data-pv-day]').forEach(el=>el.onclick=()=>{this.pvDayOffset=Number(el.dataset.pvDay);this.render();});
     this.shadowRoot.querySelectorAll('[data-benefit-week]').forEach(el=>el.onclick=()=>{
       this.benefitWeekOffset=Math.min(0,(this.benefitWeekOffset??0)+(el.dataset.benefitWeek==='older'?-1:1));

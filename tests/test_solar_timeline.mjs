@@ -34,3 +34,15 @@ test('forecast curves preserve missing intervals and missing P10',()=>{
  const coords=[...path.matchAll(/[MC]?(-?[\d.]+),(-?[\d.]+)/g)].map(m=>Number(m[2]));
  assert.ok(coords.every(v=>v>=1 && v<=3));
 });
+
+test('local shading uses matching UTC slots and reduces the loss under clouds', async()=>{
+ const {shadeForecast}=await import('../custom_components/solar_pilot/frontend/pv-shade.js');
+ const start=Date.parse('2026-10-25T00:00:00Z'), step=1800000;
+ const forecast=[{start,end:start+step,p:4},{start:start+step,end:start+step*2,p:2}];
+ const profile={version:1,array:'roof',start,step,slots:[[4000,1000],[4000,1000]]};
+ const corrected=shadeForecast(profile,forecast);
+ assert.deepEqual(corrected.points.map(p=>p.corrected),[3,1.75]);
+ assert.equal(corrected.loss,.625);
+ assert.equal(shadeForecast({...profile,slots:profile.slots.slice(0,1)},forecast),null);
+ assert.equal(shadeForecast({...profile,array:'all'},forecast),null);
+});

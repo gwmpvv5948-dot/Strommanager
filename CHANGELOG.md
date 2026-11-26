@@ -1,3 +1,7 @@
+## 0.1.136
+
+- PV-Prognose mit umschaltbarer lokaler Verschattung, Solcast-Vergleich und Details je Halbstunde.
+
 ## 0.1.134
 
 - Energie-Fahrplan und Energie jetzt zeigen Netzstrom in Blau und den Hausspeicher in Grün.

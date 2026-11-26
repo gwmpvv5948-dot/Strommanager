@@ -2628,3 +2628,14 @@ details summary {
 }
 
 .plan-fill-export{fill:#e76c70;background:#e76c70}
+
+.pv-shade-toggle{min-height:42px;padding:6px 12px;white-space:normal}
+.pv-shade-toggle[aria-pressed=true]{outline:2px solid var(--positive,#26896d);outline-offset:-2px}
+.solar-chart :is(.pv-shade-line,.pv-solcast-reference){fill:none;stroke-width:2.5;vector-effect:non-scaling-stroke}
+.solar-chart .pv-shade-line{stroke:#16886c}
+.solar-chart .pv-solcast-reference{stroke:#bd861a;stroke-dasharray:7 4}
+.pv-shade-slot{fill:transparent;cursor:pointer}
+.pv-shade-slot:is(:hover,:focus-visible){fill:currentColor;fill-opacity:.1;outline:none}
+.chart-legend .legend-shade{background:#16886c}
+.chart-legend .legend-reference{background:repeating-linear-gradient(90deg,#bd861a 0 5px,transparent 5px 8px)}
+.pv-shade-detail{min-height:1.5em}

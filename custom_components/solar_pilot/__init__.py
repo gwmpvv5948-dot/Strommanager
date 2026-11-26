@@ -1,6 +1,7 @@
 """Strommanager integration lifecycle, admin services and custom panel."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 try:
@@ -49,6 +50,7 @@ async def async_setup_entry(hass, entry):
         ])
         frontend.add_extra_js_url(hass, f"/solar_pilot_frontend/sidebar-icon.js?v={VERSION}")
         websocket_api.async_register_command(hass, ws_status)
+        websocket_api.async_register_command(hass, ws_pv_shadow_profile)
         schema = {vol.Required("entry_id"): cv.string}
 
         async def service(call):
@@ -135,3 +137,21 @@ async def ws_status(hass, connection, msg):
         connection.send_error(msg["id"], "not_loaded", str(exc))
     else:
         connection.send_result(msg["id"], controller.status())
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/pv_shadow_profile"})
+@websocket_api.async_response
+async def ws_pv_shadow_profile(hass, connection, msg):
+    if not connection.user.is_admin:
+        connection.send_error(msg["id"], "unauthorized", "Administrator erforderlich")
+        return
+    path = Path(hass.config.path("haus3d", "pv-shadow-profile.json"))
+    try:
+        content = await hass.async_add_executor_job(path.read_text, "utf-8")
+        profile = json.loads(content)
+    except FileNotFoundError:
+        profile = None
+    except (OSError, ValueError):
+        connection.send_error(msg["id"], "invalid_profile", "Lokales Verschattungsprofil konnte nicht gelesen werden")
+        return
+    connection.send_result(msg["id"], profile)
